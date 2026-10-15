@@ -116,6 +116,15 @@ public static class DemoEndpoints
             return Results.Ok(new InsightEventsDto(insight.Id, insight.Visuals, events));
         }));
 
+        demo.MapGet("/insights/{id}/agents", async (string id, string? lang, string? mode, string? team, string? player,
+            DemoSession s, AgentPipeline pipeline, CancellationToken ct) =>
+        {
+            var insight = s.Read((a, _) => a.Insights.FirstOrDefault(i => i.Id == id));
+            if (insight is null) return Results.NotFound();
+            var context = new NarrativeContext(new MatchRoster(s.Match), SnapshotBuilder.Profile(lang, mode, team, player));
+            return Results.Ok(await pipeline.RunAsync(insight, s.Match, context, ct));
+        });
+
         demo.MapGet("/highlights/{id}/events", (string id, DemoSession s) => s.Read((a, clock) =>
         {
             var highlight = HighlightRanker.Rank(a, clock).FirstOrDefault(h => h.Id == id);

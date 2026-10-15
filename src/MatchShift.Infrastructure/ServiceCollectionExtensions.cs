@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IAiInsightProvider>(),
             sp.GetRequiredService<VerificationAgent>(),
             TimeSpan.FromSeconds(foundry.TimeoutSeconds)));
+        services.AddSingleton<AgentPipeline>();
         return services;
     }
 }
