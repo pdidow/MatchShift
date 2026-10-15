@@ -138,6 +138,8 @@ public static class MetricsCalculator
                 _ => acc.RightAttackIds,
             }).AddRange(actions.Select(a => a.EventId));
             acc.AttackChannels.Add(channel);
+            if (!acc.ArrivalIds.TryGetValue(channel, out var arrivals)) acc.ArrivalIds[channel] = arrivals = [];
+            arrivals.Add(actions.First(x => x.Channel == channel).EventId);
         }
 
         foreach (var box in state.BoxEntries)
@@ -243,6 +245,7 @@ public static class MetricsCalculator
         public int PossessionsStarted, PossessionPasses, FastTransitions, CounterAttackShots;
         public readonly List<string> EntryIds = [], LeftAttackIds = [], CentreAttackIds = [], RightAttackIds = [], BoxEntryIds = [];
         public readonly List<AttackChannel> AttackChannels = [];
+        public readonly Dictionary<AttackChannel, List<string>> ArrivalIds = [];
         public int AttackingThirdActions;
         public readonly List<string> ShotIds = [], TurnoverIds = [], DangerousTurnoverIds = [], HighRecoveryIds = [];
         public readonly List<string> RecoveryIds = [], CornerIds = [], FastTransitionIds = [];
@@ -264,6 +267,7 @@ public static class MetricsCalculator
             CentreAttacks = AttackChannels.Count(c => c == AttackChannel.Centre),
             RightAttacks = AttackChannels.Count(c => c == AttackChannel.Right),
             AttackingThirdActions = AttackingThirdActions,
+            AttackArrivalIds = ArrivalIds.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<string>)kv.Value),
             BoxEntries = BoxEntryIds.Count,
             Shots = Shots,
             ShotsOnTarget = ShotsOnTarget,

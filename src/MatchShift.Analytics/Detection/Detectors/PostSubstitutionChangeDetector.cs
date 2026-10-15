@@ -56,7 +56,7 @@ public sealed class PostSubstitutionChangeDetector : IShiftDetector
                         ],
                         a.AttackIds(channel),
                         new Dictionary<string, string> { ["aspect"] = "channel", ["channel"] = channel.ToString() },
-                        [new VisualLayer("channel", VisualStyle.Channels, a.AttackIds(channel)), new VisualLayer("attacks", VisualStyle.Routes, a.AttackIds(channel))])));
+                        [new VisualLayer("channel", VisualStyle.Channels, a.AttackIds(channel)), new VisualLayer("attacks", VisualStyle.Routes, a.AttackArrivals(channel))])));
                 }
             }
 

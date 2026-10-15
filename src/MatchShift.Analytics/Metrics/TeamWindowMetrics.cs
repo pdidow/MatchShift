@@ -88,6 +88,13 @@ public sealed record TeamWindowMetrics
     public IReadOnlyList<string> CornerIds { get; init; } = [];
     public IReadOnlyList<string> FastTransitionIds { get; init; } = [];
 
+    /// <summary>For each attack, its first action in the channel it is classified to - one arrow per attack for SHOW ME.</summary>
+    public IReadOnlyDictionary<AttackChannel, IReadOnlyList<string>> AttackArrivalIds { get; init; } =
+        new Dictionary<AttackChannel, IReadOnlyList<string>>();
+
+    public IReadOnlyList<string> AttackArrivals(AttackChannel channel) =>
+        AttackArrivalIds.TryGetValue(channel, out var ids) ? ids : [];
+
     public IReadOnlyList<string> AttackIds(AttackChannel channel) => channel switch
     {
         AttackChannel.Left => LeftAttackIds,

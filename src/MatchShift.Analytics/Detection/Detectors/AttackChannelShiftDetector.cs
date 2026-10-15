@@ -74,7 +74,7 @@ public sealed class AttackChannelShiftDetector : IShiftDetector
                 facts["substitutePlayerId"] = substitution.PlayerOnId;
             }
 
-            var others = Channels.Where(x => x != c).SelectMany(r.AttackIds).ToList();
+            var others = Channels.Where(x => x != c).SelectMany(r.AttackArrivals).ToList();
             yield return new DetectionCandidate
             {
                 Type = Type,
@@ -99,7 +99,7 @@ public sealed class AttackChannelShiftDetector : IShiftDetector
                 Visuals =
                 [
                     new VisualLayer("channel", VisualStyle.Channels, channelIds),
-                    new VisualLayer("shiftedAttacks", VisualStyle.Routes, channelIds),
+                    new VisualLayer("shiftedAttacks", VisualStyle.Routes, r.AttackArrivals(c)),
                     new VisualLayer("otherAttacks", VisualStyle.Routes, others, Emphasised: false),
                 ],
                 InterpretationCode = substitution is not null ? "channel_after_substitution" : "channel_overload",
