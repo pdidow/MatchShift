@@ -122,17 +122,22 @@ public static class MetricsCalculator
             if (window.Contains(entry.Second)) For(entry.TeamId).EntryIds.Add(entry.EventId);
         }
 
-        foreach (var action in state.AttackingActions)
+        // Attacks: each attack's actions inside the window, classified by majority channel.
+        foreach (var attack in state.AttackingActions
+                     .Where(a => window.Contains(a.Second))
+                     .GroupBy(a => (a.TeamId, a.AttackId)))
         {
-            if (!window.Contains(action.Second)) continue;
-            var acc = For(action.TeamId);
-            acc.AttackPossessionIds.Add(action.PossessionId);
-            (action.Channel switch
+            var acc = For(attack.Key.TeamId);
+            var actions = attack.ToList();
+            acc.AttackingThirdActions += actions.Count;
+            var channel = ClassifyAttack(actions);
+            (channel switch
             {
                 AttackChannel.Left => acc.LeftAttackIds,
                 AttackChannel.Centre => acc.CentreAttackIds,
                 _ => acc.RightAttackIds,
-            }).Add(action.EventId);
+            }).AddRange(actions.Select(a => a.EventId));
+            acc.AttackChannels.Add(channel);
         }
 
         foreach (var box in state.BoxEntries)
@@ -196,6 +201,19 @@ public static class MetricsCalculator
         return null;
     }
 
+    /// <summary>
+    /// The channel of an attack is where most of its attacking-third actions happened;
+    /// ties go to the channel of the first action (where the attack arrived).
+    /// </summary>
+    public static AttackChannel ClassifyAttack(IReadOnlyList<AttackingAction> actions)
+    {
+        var counts = new int[3];
+        foreach (var a in actions) counts[(int)a.Channel]++;
+        var max = counts.Max();
+        var first = actions[0].Channel;
+        return counts[(int)first] == max ? first : (AttackChannel)Array.IndexOf(counts, max);
+    }
+
     /// <summary>Binary search the ordered event list for events with MatchSecond inside the window.</summary>
     public static (int Start, int End) IndexRange(IReadOnlyList<MatchEvent> events, AnalysisWindow window)
     {
@@ -224,7 +242,8 @@ public static class MetricsCalculator
         public int Recoveries, HighRecoveries, Tackles, Interceptions, Fouls;
         public int PossessionsStarted, PossessionPasses, FastTransitions, CounterAttackShots;
         public readonly List<string> EntryIds = [], LeftAttackIds = [], CentreAttackIds = [], RightAttackIds = [], BoxEntryIds = [];
-        public readonly HashSet<int> AttackPossessionIds = [];
+        public readonly List<AttackChannel> AttackChannels = [];
+        public int AttackingThirdActions;
         public readonly List<string> ShotIds = [], TurnoverIds = [], DangerousTurnoverIds = [], HighRecoveryIds = [];
         public readonly List<string> RecoveryIds = [], CornerIds = [], FastTransitionIds = [];
 
@@ -241,10 +260,10 @@ public static class MetricsCalculator
             LongBalls = LongBalls,
             FinalThirdPasses = FinalThirdPasses,
             FinalThirdEntries = EntryIds.Count,
-            LeftAttacks = LeftAttackIds.Count,
-            CentreAttacks = CentreAttackIds.Count,
-            RightAttacks = RightAttackIds.Count,
-            AttackingPossessions = AttackPossessionIds.Count,
+            LeftAttacks = AttackChannels.Count(c => c == AttackChannel.Left),
+            CentreAttacks = AttackChannels.Count(c => c == AttackChannel.Centre),
+            RightAttacks = AttackChannels.Count(c => c == AttackChannel.Right),
+            AttackingThirdActions = AttackingThirdActions,
             BoxEntries = BoxEntryIds.Count,
             Shots = Shots,
             ShotsOnTarget = ShotsOnTarget,

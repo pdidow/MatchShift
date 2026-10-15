@@ -23,10 +23,29 @@ public static class Calibration
             var chaos = ChaosIndex.Compute(w);
             Console.WriteLine(
                 $"{minute,3}  | {control.HomeControl,4:0} | {ph.Value,6:0} {pa.Value,6:0} | {chaos.Value,5:0} {chaos.State,-10} | " +
-                $"{w.Home.LeftAttacks,2}/{w.Home.CentreAttacks,2}/{w.Home.RightAttacks,2} p{w.Home.AttackingPossessions,2} {w.Away.LeftAttacks,2}/{w.Away.CentreAttacks,2}/{w.Away.RightAttacks,2} p{w.Away.AttackingPossessions,2}      | " +
+                $"{w.Home.LeftAttacks,2}/{w.Home.CentreAttacks,2}/{w.Home.RightAttacks,2} p{w.Home.Attacks,2} {w.Away.LeftAttacks,2}/{w.Away.CentreAttacks,2}/{w.Away.RightAttacks,2} p{w.Away.Attacks,2}      | " +
                 $"{w.Home.Shots,3} {w.Away.Shots,3} | {w.Home.Turnovers,3} {w.Away.Turnovers,3} | " +
                 $"{w.TotalPossessions / windowMinutes,5:0.0} {w.TotalFastTransitions,4}  " +
                 string.Join(" ", chaos.Components.Select(c => $"{c.Key[..4]}={c.RawValue:0.00}")));
+        }
+    }
+
+    public static void PrintChannels(Match match)
+    {
+        var state = MatchState.FromEvents(MatchContext.From(match), match.Events);
+        foreach (var team in new[] { match.HomeTeam.Id, match.AwayTeam.Id })
+        {
+            Console.WriteLine($"-- {team}: minute  base L/C/R (poss)   recent L/C/R (poss)   zRight zLeft");
+            for (var minute = 20; minute <= 90; minute += 2)
+            {
+                var now = minute * 60;
+                var b = MetricsCalculator.Compute(state, AnalysisWindow.MatchSoFar(now - 12 * 60)).For(team);
+                var r = MetricsCalculator.Compute(state, AnalysisWindow.Last(now, 12)).For(team);
+                var zr = MatchShift.Analytics.Detection.Statistics.TwoProportionZ(b.RightShare, b.Attacks, r.RightShare, r.Attacks);
+                var zl = MatchShift.Analytics.Detection.Statistics.TwoProportionZ(b.LeftShare, b.Attacks, r.LeftShare, r.Attacks);
+                Console.WriteLine($"   {minute,3}   {b.LeftShare:0.00}/{b.CentreShare:0.00}/{b.RightShare:0.00} ({b.Attacks,2},{b.AttackingThirdActions,3})   " +
+                                  $"{r.LeftShare:0.00}/{r.CentreShare:0.00}/{r.RightShare:0.00} ({r.Attacks,2},{r.AttackingThirdActions,3})   {zr,5:0.0} {zl,5:0.0}");
+            }
         }
     }
 }

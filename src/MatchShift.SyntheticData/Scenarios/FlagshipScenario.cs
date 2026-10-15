@@ -29,7 +29,7 @@ public static class FlagshipScenario
 {
     public const string MatchId = "MS-FLAGSHIP-001";
     public const string Name = "Flagship: Northbridge v Westhaven";
-    public const long Seed = 20260314;
+    public const long Seed = 20260327;
 
     public const int WesthavenSubstitutionSecond = 55 * 60;
     public const int DangerousTurnoverSecond = 72 * 60 + 5;
@@ -61,13 +61,14 @@ public static class FlagshipScenario
             new(45, 55, "Second half balance", balanced, balancedAway),
 
             new(55, 65, "Westhaven move the attack to the right",
-                balanced,
-                new TeamBehaviour { Control = 0.54, Progression = 0.56, Press = 0.52, Channels = new ChannelWeights(0.10, 0.20, 0.70) }),
+                new TeamBehaviour { Control = 0.46, Progression = 0.48, Press = 0.46 },
+                new TeamBehaviour { Control = 0.64, PassAccuracy = 0.87, Progression = 0.70, Press = 0.58,
+                    Channels = new ChannelWeights(0.05, 0.12, 0.83) }),
 
             new(65, 72, "Westhaven pressure rises",
                 new TeamBehaviour { Control = 0.38, PassAccuracy = 0.77, Progression = 0.40, Press = 0.40 },
                 new TeamBehaviour { Control = 0.68, PassAccuracy = 0.85, Progression = 0.64, Press = 0.80, ShotPropensity = 1.6,
-                    Channels = new ChannelWeights(0.14, 0.26, 0.60) }),
+                    Channels = new ChannelWeights(0.06, 0.16, 0.78) }),
 
             new(72, 75, "Major chance sequence",
                 new TeamBehaviour { Control = 0.40, Progression = 0.45, Press = 0.45 },

@@ -66,9 +66,9 @@ public sealed class Possession(int id, string teamId, int startSecond, Possessio
 public sealed record ThirdEntry(
     string EventId, int Second, string TeamId, int PossessionId, AttackChannel Channel, double X, double Y, string? PlayerId);
 
-/// <summary>An on-ball action located in the attacking third (see <see cref="MatchState.AttackingActions"/>).</summary>
+/// <summary>An on-ball action in the attack zone, tagged with the attack it belongs to (see <see cref="MatchState.AttackingActions"/>).</summary>
 public sealed record AttackingAction(
-    string EventId, int Second, string TeamId, int PossessionId, AttackChannel Channel, double X, double Y);
+    string EventId, int Second, string TeamId, int PossessionId, int AttackId, AttackChannel Channel, double X, double Y);
 
 public sealed record BoxEntry(string EventId, int Second, string TeamId, int PossessionId, double X, double Y, string? PlayerId);
 

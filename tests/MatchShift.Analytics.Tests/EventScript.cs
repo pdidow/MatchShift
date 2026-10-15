@@ -100,6 +100,28 @@ public sealed class EventScript
     }
 
     /// <summary>
+    /// A spell of sustained pressure: <paramref name="team"/> enters the box and shoots, the opponent
+    /// clears long, and <paramref name="team"/> wins the ball back high up the pitch.
+    /// </summary>
+    public EventScript PressureSpell(string team, double fromMinute, double toMinute)
+    {
+        var other = team == Home ? Away : Home;
+        At((int)(fromMinute * 60));
+        var end = (int)(toMinute * 60);
+        while (Second < end - 30)
+        {
+            Possession(team)
+                .Pass(55, 40, 72, 30, advance: 4)
+                .Pass(72, 30, 88, 45, advance: 4)
+                .Shot(88, 45, EventOutcome.OffTarget, advance: 15)
+                .Possession(other)
+                .Pass(6, 50, 35, 50, complete: false, advance: 2)
+                .Recovery(team, 65, 50, EventType.BallRecovery, advance: 2);
+        }
+        return this;
+    }
+
+    /// <summary>
     /// Generate a block of attacking possessions for <paramref name="team"/> between two minutes, with
     /// the given share of attacking-third actions on the right. Deterministic: no randomness.
     /// </summary>

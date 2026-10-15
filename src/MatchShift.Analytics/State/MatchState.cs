@@ -32,6 +32,9 @@ public sealed class MatchState
     private readonly List<ShotRecord> _shots = [];
     private readonly List<SubstitutionRecord> _substitutions = [];
     private Possession? _current;
+    private int _attackSequence;
+    private bool _ballRecycled = true;
+    private int _attackPossessionId = -1;
 
     public MatchState(MatchContext context) => Context = context;
 
@@ -49,6 +52,14 @@ public sealed class MatchState
     public int ClockSecond { get; private set; }
 
     public MatchEvent? FindEvent(string id) => _byId.GetValueOrDefault(id);
+
+    /// <summary>Goals scored by <paramref name="teamId"/> strictly before <paramref name="beforeSecond"/>.</summary>
+    public int GoalsBefore(string teamId, int beforeSecond) =>
+        _shots.Count(s => s.IsGoal && s.TeamId == teamId && s.Second < beforeSecond);
+
+    /// <summary>Goal difference from <paramref name="teamId"/>'s point of view.</summary>
+    public int GoalDifference(string teamId, int beforeSecond) =>
+        GoalsBefore(teamId, beforeSecond) - GoalsBefore(Context.Opponent(teamId), beforeSecond);
 
     public static MatchState FromEvents(MatchContext context, IEnumerable<MatchEvent> events)
     {
@@ -188,12 +199,22 @@ public sealed class MatchState
     }
 
     /// <summary>
-    /// On-ball actions in the attacking third, located by channel. Used for "attack sides":
-    /// completed passes/carries are located where the ball ends up, shots where they are taken.
-    /// Corner kicks are excluded so set pieces do not distort the open-play picture.
+    /// On-ball actions in the attack zone (beyond <see cref="Pitch.AttackZoneStartX"/>), located by channel and
+    /// grouped into attacks. Completed passes/carries are located where the ball ends up, shots where they
+    /// are taken. Corner kicks are excluded so set pieces do not distort the open-play picture.
     /// </summary>
     private void TrackAttackingAction(MatchEvent e)
     {
+        if (e.PossessionTeamId != e.TeamId) return;
+
+        // A new attack starts with a new possession, or after the team has recycled the ball
+        // back into its own half (x below RecycleX) and comes forward again.
+        if (e.PossessionId != _attackPossessionId)
+        {
+            _attackPossessionId = e.PossessionId;
+            _ballRecycled = true;
+        }
+
         double? x = null, y = null;
         if (e.Type is EventType.Pass or EventType.Carry && e.Outcome == EventOutcome.Complete)
         {
@@ -206,9 +227,25 @@ public sealed class MatchState
             x = e.StartX;
             y = e.StartY;
         }
-        if (x is null || y is null || !Pitch.IsInAttackingThird(x.Value)) return;
-        _attackingActions.Add(new AttackingAction(e.Id, e.MatchSecond, e.TeamId, e.PossessionId, Pitch.ChannelOf(y.Value), x.Value, y.Value));
+        if (x is null || y is null) return;
+
+        if (!Pitch.IsInAttackZone(x.Value))
+        {
+            if (x.Value < RecycleX) _ballRecycled = true;
+            return;
+        }
+
+        if (_ballRecycled)
+        {
+            _attackSequence++;
+            _ballRecycled = false;
+        }
+        _attackingActions.Add(new AttackingAction(e.Id, e.MatchSecond, e.TeamId, e.PossessionId, _attackSequence,
+            Pitch.ChannelOf(y.Value), x.Value, y.Value));
     }
+
+    /// <summary>Ball moved back below this line ends the current attack (a later push forward is a new attack).</summary>
+    public const double RecycleX = 45;
 
     private void TrackShot(MatchEvent e)
     {

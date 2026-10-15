@@ -20,6 +20,12 @@ public static class Pitch
     public const double DefensiveThirdEnd = 100.0 / 3.0;
     public const double AttackingThirdStart = 200.0 / 3.0;
     public const double PenaltyAreaStartX = 83.0;
+
+    /// <summary>
+    /// Start of the "attack zone" used to classify attack sides: possessions whose play reaches
+    /// beyond this line (into the opponent's half) count as attacks.
+    /// </summary>
+    public const double AttackZoneStartX = 55.0;
     public const double PenaltyAreaMinY = 21.0;
     public const double PenaltyAreaMaxY = 79.0;
     public const double LeftChannelEnd = 100.0 / 3.0;
@@ -33,6 +39,8 @@ public static class Pitch
     public static bool IsInAttackingThird(double x) => x >= AttackingThirdStart;
 
     public static bool IsInDefensiveThird(double x) => x < DefensiveThirdEnd;
+
+    public static bool IsInAttackZone(double x) => x >= AttackZoneStartX;
 
     public static bool IsInPenaltyArea(double x, double y) =>
         x >= PenaltyAreaStartX && y >= PenaltyAreaMinY && y <= PenaltyAreaMaxY;

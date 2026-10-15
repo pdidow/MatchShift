@@ -27,16 +27,17 @@ public sealed record TeamWindowMetrics
     public int FinalThirdEntries { get; init; }
 
     /// <summary>
-    /// "Attack sides": on-ball actions in the attacking third by channel (left / centre / right,
-    /// from the attacking team's perspective).
+    /// "Attack sides": attacks classified by the channel where most of their attack-zone play happened
+    /// (left / centre / right, from the attacking team's perspective). An attack is a spell of a possession
+    /// in the opponent's half; recycling the ball back into the own half and coming again starts a new attack.
     /// </summary>
     public int LeftAttacks { get; init; }
     public int CentreAttacks { get; init; }
     public int RightAttacks { get; init; }
-    public int AttackingThirdActions => LeftAttacks + CentreAttacks + RightAttacks;
+    public int Attacks => LeftAttacks + CentreAttacks + RightAttacks;
 
-    /// <summary>Distinct possessions contributing attacking-third actions - the independent sample size.</summary>
-    public int AttackingPossessions { get; init; }
+    /// <summary>On-ball actions in the attack zone (passes/carries received there, shots).</summary>
+    public int AttackingThirdActions { get; init; }
 
     public double LeftShare => Share(LeftAttacks);
     public double CentreShare => Share(CentreAttacks);
@@ -94,18 +95,18 @@ public sealed record TeamWindowMetrics
         _ => RightAttackIds,
     };
 
-    public int Attacks(AttackChannel channel) => channel switch
+    public int AttacksIn(AttackChannel channel) => channel switch
     {
         AttackChannel.Left => LeftAttacks,
         AttackChannel.Centre => CentreAttacks,
         _ => RightAttacks,
     };
 
-    public double ChannelShare(AttackChannel channel) => Share(Attacks(channel));
+    public double ChannelShare(AttackChannel channel) => Share(AttacksIn(channel));
 
     public double PerMinute(double count) => Window.Minutes <= 0 ? 0 : count / Window.Minutes;
 
-    private double Share(int count) => AttackingThirdActions == 0 ? 0 : (double)count / AttackingThirdActions;
+    private double Share(int count) => Attacks == 0 ? 0 : (double)count / Attacks;
 }
 
 /// <summary>Both teams over the same window.</summary>

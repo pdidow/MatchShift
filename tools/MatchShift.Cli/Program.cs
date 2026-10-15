@@ -1,28 +1,174 @@
+using MatchShift.Analytics;
+using MatchShift.Cli;
 using MatchShift.Core.Domain;
+using MatchShift.Core.Insights;
+using MatchShift.Infrastructure.Evaluation;
 using MatchShift.SyntheticData;
+using MatchShift.SyntheticData.Scenarios;
 
-var command = args.Length > 0 ? args[0] : "inspect";
+var command = args.Length > 0 ? args[0] : "help";
+var options = ParseOptions(args.Skip(1).ToArray());
 
 switch (command)
 {
     case "inspect":
-    {
-        var match = SyntheticMatchGenerator.GenerateFlagship().Match;
-        Inspect(match);
-        foreach (var seed in new long[] { 1, 2, 3, 42, 12345 })
-            Inspect(SyntheticMatchGenerator.GenerateMatch(seed));
+        Inspect(SyntheticMatchGenerator.GenerateFlagship().Match);
+        foreach (var seed in new long[] { 1, 2, 3 }) Inspect(SyntheticMatchGenerator.GenerateMatch(seed));
         break;
-    }
+
     case "calibrate":
+        Calibration.PrintTimeline(SyntheticMatchGenerator.GenerateFlagship().Match);
+        break;
+
+    case "analyze":
     {
-        MatchShift.Cli.Calibration.PrintTimeline(SyntheticMatchGenerator.GenerateFlagship().Match);
-        foreach (var seed in new long[] { 1, 2 })
-            MatchShift.Cli.Calibration.PrintTimeline(SyntheticMatchGenerator.GenerateMatch(seed));
+        var match = options.TryGetValue("seed", out var s)
+            ? options.TryGetValue("scenario", out var k)
+                ? SyntheticMatchGenerator.GenerateScenario(Enum.Parse<ScenarioKind>(k, true), long.Parse(s)).Match
+                : SyntheticMatchGenerator.GenerateMatch(long.Parse(s))
+            : SyntheticMatchGenerator.GenerateFlagship().Match;
+        PrintInsights(match);
         break;
     }
-    default:
-        Console.WriteLine("Usage: matchshift inspect");
+
+    case "evaluate":
+    {
+        var count = int.Parse(options.GetValueOrDefault("matches", "60"));
+        var start = long.Parse(options.GetValueOrDefault("seed", "1000"));
+        var mix = options.TryGetValue("scenario", out var only)
+            ? ScenarioMix.Only(Enum.Parse<ScenarioKind>(only, true))
+            : ScenarioMix.Default;
+        var dataset = SyntheticMatchGenerator.GenerateDataset(count, start, mix);
+        PrintEvaluation(DetectorEvaluator.Evaluate(dataset.Matches));
         break;
+    }
+
+    case "robustness":
+    {
+        // Same flagship script, different seeds: does the story survive the dice?
+        var count = int.Parse(options.GetValueOrDefault("matches", "20"));
+        var runs = Enumerable.Range(1, count).Select(i =>
+            new LabelledMatch(
+                MatchShift.SyntheticData.Simulation.MatchSimulator.Simulate(FlagshipScenario.Script(), FlagshipScenario.Seed + i),
+                FlagshipScenario.GroundTruth()));
+        PrintEvaluation(DetectorEvaluator.Evaluate(runs));
+        break;
+    }
+
+    case "sweep-channel":
+    {
+        var count = int.Parse(options.GetValueOrDefault("matches", "60"));
+        var matches = SyntheticMatchGenerator.GenerateDataset(count, 5000, ScenarioMix.Only(ScenarioKind.Stationary)).Matches
+            .Concat(SyntheticMatchGenerator.GenerateDataset(count, 6000, ScenarioMix.Only(ScenarioKind.AttackChannelShift)).Matches)
+            .Concat(Enumerable.Range(1, 10).Select(i => new LabelledMatch(
+                MatchShift.SyntheticData.Simulation.MatchSimulator.Simulate(FlagshipScenario.Script(), FlagshipScenario.Seed + i),
+                FlagshipScenario.GroundTruth())))
+            .ToList();
+        var detectors = new MatchShift.Analytics.Detection.IShiftDetector[] { new MatchShift.Analytics.Detection.Detectors.AttackChannelShiftDetector() };
+        foreach (var recent in new[] { 10.0, 12.0 })
+        foreach (var z in new[] { 2.4, 2.7 })
+        foreach (var ticks in new[] { 1, 2 })
+        {
+            var diff = 0.25;
+            var o = MatchShift.Analytics.Detection.DetectionOptions.Default with
+            {
+                RequiredConsecutiveTicks = ticks,
+                AttackChannel = MatchShift.Analytics.Detection.DetectionOptions.Default.AttackChannel with
+                {
+                    RecentMinutes = recent, MinZScore = z, MinShareIncrease = diff,
+                },
+            };
+            var report = DetectorEvaluator.Evaluate(matches, o, detectors: detectors);
+            var row = report.Types.FirstOrDefault(t => t.Type == InsightType.AttackChannelShift);
+            Console.WriteLine($"recent={recent} z={z} ticks={ticks}: recall={row?.Recall:0.00} precision={row?.Precision:0.00} " +
+                              $"falseAlarms/negMatch={row?.FalseAlarmsPerNegativeMatch:0.000} detections={row?.Detections} aftermath={row?.Aftermath}");
+        }
+        break;
+    }
+
+    case "seed-search":
+    {
+        // Find flagship seeds where every scripted pattern is discovered by the live detector.
+        var from = long.Parse(options.GetValueOrDefault("from", "20260300"));
+        var count = int.Parse(options.GetValueOrDefault("count", "40"));
+        var truth = FlagshipScenario.GroundTruth();
+        for (var seed = from; seed < from + count; seed++)
+        {
+            var match = MatchShift.SyntheticData.Simulation.MatchSimulator.Simulate(FlagshipScenario.Script(), seed);
+            var insights = LiveMatchAnalyzer.AnalyzeFull(match).Insights;
+            var hits = truth.ExpectedPatterns.Count(p => insights.Any(i =>
+                p.Pattern == i.Type && (p.TeamId == "*" || p.TeamId == i.TeamId) &&
+                i.DetectedAtSecond / 60.0 >= p.WindowStartMinute - 2 && i.DetectedAtSecond / 60.0 <= p.WindowEndMinute + 4));
+            var acs = insights.FirstOrDefault(i => i.Type == InsightType.AttackChannelShift && i.TeamId == "WHA");
+            var acsText = acs is null ? "-" : acs.DisplayMinute.ToString();
+            Console.WriteLine($"seed {seed}: {hits}/{truth.ExpectedPatterns.Count} patterns, insights={insights.Count}, WHA channel shift at {acsText}");
+        }
+        break;
+    }
+
+    case "fp-channel":
+    {
+        var detectors = new MatchShift.Analytics.Detection.IShiftDetector[] { new MatchShift.Analytics.Detection.Detectors.AttackChannelShiftDetector() };
+        foreach (var m in SyntheticMatchGenerator.GenerateDataset(30, 5000, ScenarioMix.Only(ScenarioKind.Stationary)).Matches)
+        foreach (var i in LiveMatchAnalyzer.AnalyzeFull(m.Match, null, detectors).Insights.Where(x => x.Type == InsightType.AttackChannelShift))
+        {
+            var p = i.PrimaryEvidence!;
+            var z = i.Evidence.First(e => e.Metric == "ShiftStrengthZ").RecentValue;
+            Console.WriteLine($"{m.Match.Id} {i.DisplayMinute}' {i.TeamId} {i.Fact("channel")} {p.BaselineValue:0.00}->{p.RecentValue:0.00} n={p.BaselineSampleSize}/{p.SampleSize} z={z:0.0}");
+        }
+        break;
+    }
+
+    case "effect":
+    {
+        double sumBase = 0, sumPhase = 0, nBase = 0, nPhase = 0; var k = 0;
+        foreach (var m in SyntheticMatchGenerator.GenerateDataset(40, 6000, ScenarioMix.Only(ScenarioKind.AttackChannelShift)).Matches)
+        {
+            var p = m.GroundTruth.ExpectedPatterns[0];
+            var state = MatchShift.Analytics.State.MatchState.FromEvents(MatchShift.Analytics.State.MatchContext.From(m.Match), m.Match.Events);
+            var ch = p.Note.Contains("right") ? AttackChannel.Right : AttackChannel.Left;
+            var b = MatchShift.Analytics.Metrics.MetricsCalculator.Compute(state, MatchShift.Analytics.Metrics.AnalysisWindow.OfMinutes(0, p.WindowStartMinute - 3)).For(p.TeamId);
+            var r = MatchShift.Analytics.Metrics.MetricsCalculator.Compute(state, MatchShift.Analytics.Metrics.AnalysisWindow.OfMinutes(p.WindowStartMinute - 3, p.WindowEndMinute)).For(p.TeamId);
+            sumBase += b.ChannelShare(ch); sumPhase += r.ChannelShare(ch); nBase += b.Attacks; nPhase += r.Attacks; k++;
+            Console.WriteLine($"{m.Match.Id} {p.TeamId} {ch} base {b.ChannelShare(ch):0.00} (n={b.Attacks}, {b.Attacks / Math.Max(1, (p.WindowStartMinute - 3.0)):0.00}/min)  phase {r.ChannelShare(ch):0.00} (n={r.Attacks}, {r.Attacks / (double)(p.WindowEndMinute - p.WindowStartMinute + 3):0.00}/min) actions/attack={r.AttackingThirdActions / Math.Max(1.0, r.Attacks):0.0}");
+        }
+        Console.WriteLine($"mean base share {sumBase / k:0.00}, phase share {sumPhase / k:0.00}, base n {nBase / k:0.0}, phase n {nPhase / k:0.0}");
+        break;
+    }
+
+    case "channels":
+    {
+        var labelled = options.TryGetValue("seed", out var s2)
+            ? SyntheticMatchGenerator.GenerateScenario(Enum.Parse<ScenarioKind>(options.GetValueOrDefault("scenario", "AttackChannelShift"), true), long.Parse(s2))
+            : SyntheticMatchGenerator.GenerateFlagship();
+        foreach (var p in labelled.GroundTruth.ExpectedPatterns) Console.WriteLine($"expect {p}");
+        foreach (var i in LiveMatchAnalyzer.AnalyzeFull(labelled.Match).Insights.Where(i => i.Type == InsightType.AttackChannelShift))
+            Console.WriteLine($"detected {i.DisplayMinute}' {i.TeamId} {i.Fact("channel")} z={i.Evidence.First(e => e.Metric == "ShiftStrengthZ").RecentValue}");
+        Calibration.PrintChannels(labelled.Match);
+        break;
+    }
+
+    default:
+        Console.WriteLine("""
+            MatchShift CLI (all data is synthetic)
+
+              inspect                         Summary of the flagship and a few seeded matches
+              calibrate                       Rolling index timeline for the flagship match
+              analyze [--seed N] [--scenario K]  Run the live detector and print insights
+              evaluate [--matches N] [--seed S] [--scenario K]  Precision/recall vs ground truth
+              robustness [--matches N]        Flagship script re-simulated with other seeds
+            """);
+        break;
+}
+
+static Dictionary<string, string> ParseOptions(string[] args)
+{
+    var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    for (var i = 0; i < args.Length - 1; i++)
+    {
+        if (args[i].StartsWith("--", StringComparison.Ordinal)) result[args[i][2..]] = args[++i];
+    }
+    return result;
 }
 
 static void Inspect(Match match)
@@ -31,15 +177,35 @@ static void Inspect(Match match)
     foreach (var team in new[] { match.HomeTeam, match.AwayTeam })
     {
         var ev = match.Events.Where(e => e.TeamId == team.Id).ToList();
-        Console.WriteLine($"{team.Code}: passes={ev.Count(e => e.Type == EventType.Pass)} " +
+        Console.WriteLine($"  {team.Code}: passes={ev.Count(e => e.Type == EventType.Pass)} " +
                           $"complete={ev.Count(e => e.Type == EventType.Pass && e.Outcome == EventOutcome.Complete)} " +
-                          $"shots={ev.Count(e => e.Type == EventType.Shot)} corners={ev.Count(e => e.Type == EventType.Corner)} " +
-                          $"fouls={ev.Count(e => e.Type == EventType.Foul)} tackles={ev.Count(e => e.Type == EventType.Tackle)}");
+                          $"shots={ev.Count(e => e.Type == EventType.Shot)} corners={ev.Count(e => e.Type == EventType.Corner)}");
     }
-    var st = MatchShift.Analytics.State.MatchState.FromEvents(MatchShift.Analytics.State.MatchContext.From(match), match.Events);
-    Console.WriteLine($"  entries H={st.Entries.Count(x => x.TeamId == match.HomeTeam.Id)} A={st.Entries.Count(x => x.TeamId == match.AwayTeam.Id)} " +
-                      $"box H={st.BoxEntries.Count(x => x.TeamId == match.HomeTeam.Id)} A={st.BoxEntries.Count(x => x.TeamId == match.AwayTeam.Id)} " +
-                      $"possessions={st.Possessions.Count} losses={st.Losses.Count}");
-    foreach (var e in match.Events.Where(e => e.Type is EventType.Goal or EventType.Substitution))
-        Console.WriteLine($"  {e}");
+}
+
+static void PrintInsights(Match match)
+{
+    var analyzer = LiveMatchAnalyzer.AnalyzeFull(match);
+    Console.WriteLine($"{match.Id}: {match.HomeTeam.Name} {match.ScoreAt(int.MaxValue)} {match.AwayTeam.Name}");
+    foreach (var i in analyzer.Insights)
+    {
+        var p = i.PrimaryEvidence;
+        var detail = p is null ? "" : $"{p.Metric} {p.BaselineValue?.ToString("0.###") ?? "-"} -> {p.RecentValue:0.###}";
+        Console.WriteLine($"{i.DisplayMinute,3}' {i.Type.Code(),-26} {i.TeamId ?? "-",-4} {i.Severity,-6} {i.Confidence,-6} " +
+                          $"imp={i.Importance,5:0.0} {detail} {string.Join(",", i.Facts.Select(f => $"{f.Key}={f.Value}"))}");
+    }
+}
+
+static void PrintEvaluation(EvaluationReport report)
+{
+    Console.WriteLine($"Matches: {report.Matches}   Forbidden-pattern violations: {report.ForbiddenViolations}");
+    Console.WriteLine($"{"Type",-26} {"Expected",8} {"Recalled",8} {"Recall",7} {"Detect",7} {"Matched",8} {"Precision",9} {"FA/neg",7} {"Unlabelled/match",16}");
+    foreach (var t in report.Types)
+    {
+        Console.WriteLine($"{t.Type.Code(),-26} {t.Expected,8} {t.Recalled,8} {Fmt(t.Recall),7} {t.Detections,7} {t.MatchedDetections,8} " +
+                          $"{(t.Strict ? Fmt(t.Precision) : "n/a"),9} {(t.Strict ? Fmt(t.FalseAlarmsPerNegativeMatch) : "n/a"),7} {t.UnlabelledPerMatch,16:0.00}");
+    }
+    foreach (var s in report.Scenarios) Console.WriteLine($"  {s.Scenario,-22} recall {s.Recalled}/{s.Expected} = {s.Recall:0.00}");
+
+    static string Fmt(double? v) => v is null ? "-" : v.Value.ToString("0.00");
 }

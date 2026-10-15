@@ -150,27 +150,33 @@ public sealed class MatchSimulator
 
     private void Pass(TeamBehaviour att, TeamBehaviour def, bool counter)
     {
-        var longBall = _rng.Chance(counter ? 0.35 : att.Directness);
+        var isKeeper = Holder.Position == Position.Goalkeeper;
+        var longBall = isKeeper ? _rng.Chance(0.45) : _rng.Chance(counter ? 0.35 : att.Directness);
         var dx = counter
             ? _rng.Range(10, 22)
             : longBall
                 ? _rng.Range(22, 40)
-                : _rng.NextGaussian(-1.0 + 15 * att.Progression * (0.5 + Holder.Profile.ForwardPassTendency), 9);
+                : isKeeper
+                    ? _rng.Range(8, 20)
+                    : _rng.NextGaussian(-1.0 + 15 * att.Progression * (0.5 + Holder.Profile.ForwardPassTendency), 9);
 
-        var endX = Math.Clamp(BallX + dx, 2, 97);
+        // Nobody plays the ball back into their own six-yard box in open play.
+        var endX = Math.Clamp(BallX + dx, Math.Min(BallX, 12), 97);
         double endY;
         var entersFinalThird = BallX < Pitch.AttackingThirdStart && endX >= Pitch.AttackingThirdStart;
-        if (entersFinalThird || (endX >= Pitch.AttackingThirdStart && _rng.Chance(0.2)))
+        var entersAttackZone = BallX < 55 && endX >= 55;
+        if (entersFinalThird || entersAttackZone || (endX >= 55 && _rng.Chance(0.35)))
         {
+            // Entering or building in the opponent's half: teams play into their favoured lanes.
             endY = LaneY(_rng.PickWeighted(att.Channels.AsArray()), 7);
         }
-        else if (_rng.Chance(0.25))
+        else if (_rng.Chance(0.2))
         {
-            endY = LaneY(_rng.PickWeighted(att.Channels.AsArray()), 11);
+            endY = LaneY(_rng.PickWeighted(att.Channels.AsArray()), 10);
         }
         else
         {
-            endY = BallY + _rng.NextGaussian(0, 14);
+            endY = BallY + _rng.NextGaussian(0, endX >= Pitch.AttackingThirdStart ? 9 : 14);
         }
         endY = Math.Clamp(endY, 2, 98);
 
@@ -180,7 +186,7 @@ public sealed class MatchSimulator
                       + (endX < 50 ? 0.08 : endX < Pitch.AttackingThirdStart ? 0.06 : 0.01)
                       - 0.005 * Math.Max(0, distance - 18)
                       - (endX >= Pitch.AttackingThirdStart ? 0.07 : 0)
-                      - (endX >= Pitch.PenaltyAreaStartX ? 0.06 : 0)
+                      - (endX >= Pitch.PenaltyAreaStartX ? 0.13 : 0)
                       - 0.14 * (def.Press - 0.5)
                       + (counter ? 0.05 : 0);
 

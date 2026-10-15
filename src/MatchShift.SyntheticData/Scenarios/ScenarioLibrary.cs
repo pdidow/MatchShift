@@ -49,11 +49,11 @@ public static class ScenarioLibrary
                 var start = rng.Next(25, 62);
                 var length = rng.Next(14, 20);
                 var toRight = rng.Chance(0.5);
-                var shifted = new ChannelWeights(toRight ? 0.1 : 0.7, 0.2, toRight ? 0.7 : 0.1);
+                var shifted = new ChannelWeights(toRight ? 0.05 : 0.83, 0.12, toRight ? 0.83 : 0.05);
                 phases.Add(new ScenarioPhase(0, start, "Baseline", homeBase, awayBase));
                 phases.Add(side == TeamSide.Home
-                    ? new ScenarioPhase(start, start + length, "Channel shift", homeBase with { Channels = shifted }, awayBase)
-                    : new ScenarioPhase(start, start + length, "Channel shift", homeBase, awayBase with { Channels = shifted }));
+                    ? new ScenarioPhase(start, start + length, "Channel shift", Commit(homeBase, shifted), awayBase)
+                    : new ScenarioPhase(start, start + length, "Channel shift", homeBase, Commit(awayBase, shifted)));
                 phases.Add(new ScenarioPhase(start + length, 90, "Baseline", homeBase, awayBase));
                 expected.Add(new ExpectedPattern(InsightType.AttackChannelShift, TeamOf(side, home, away).Id,
                     start + 3, start + length, toRight ? "Shift to the right" : "Shift to the left"));
@@ -111,11 +111,11 @@ public static class ScenarioLibrary
                 beats.RemoveAll(b => b.Description.StartsWith(team.Id, StringComparison.Ordinal));
                 beats.Add(new ScriptedBeat(subMinute * 60, $"{team.Id} impact substitution",
                     ctx => ctx.Substitute(side, 11, 17)));
-                var shifted = new ChannelWeights(0.1, 0.2, 0.7);
+                var shifted = new ChannelWeights(0.05, 0.12, 0.83);
                 phases.Add(new ScenarioPhase(0, subMinute, "Baseline", homeBase, awayBase));
                 phases.Add(side == TeamSide.Home
-                    ? new ScenarioPhase(subMinute, 90, "After substitution", homeBase with { Channels = shifted }, awayBase)
-                    : new ScenarioPhase(subMinute, 90, "After substitution", homeBase, awayBase with { Channels = shifted }));
+                    ? new ScenarioPhase(subMinute, 90, "After substitution", Commit(homeBase, shifted), awayBase)
+                    : new ScenarioPhase(subMinute, 90, "After substitution", homeBase, Commit(awayBase, shifted)));
                 expected.Add(new ExpectedPattern(InsightType.PostSubstitutionChange, team.Id, subMinute + 3, subMinute + 15,
                     "Pattern change after substitution"));
                 expected.Add(new ExpectedPattern(InsightType.AttackChannelShift, team.Id, subMinute + 3, subMinute + 18,
@@ -143,6 +143,14 @@ public static class ScenarioLibrary
         var match = MatchSimulator.Simulate(script, seed);
         return new LabelledMatch(match, new GroundTruth(matchId, kind.ToString(), seed, expected, forbidden));
     }
+
+    /// <summary>A team committing to one flank also commits more players forward.</summary>
+    private static TeamBehaviour Commit(TeamBehaviour baseline, ChannelWeights channels) => baseline with
+    {
+        Channels = channels,
+        Control = Math.Min(0.66, baseline.Control + 0.12),
+        Progression = Math.Min(0.72, baseline.Progression + 0.15),
+    };
 
     private static (Team Home, Team Away) PickFixture(DeterministicRandom rng)
     {

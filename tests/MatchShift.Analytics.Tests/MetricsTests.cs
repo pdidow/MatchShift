@@ -19,7 +19,7 @@ public class MetricsTests
         var state = new EventScript().Possession(Home).Pass(60, 50, 80, y).ToState();
         var action = Assert.Single(state.AttackingActions);
         Assert.Equal(expected, action.Channel);
-        Assert.Equal(1, MetricsCalculator.Compute(state, All).Home.Attacks(expected));
+        Assert.Equal(1, MetricsCalculator.Compute(state, All).Home.AttacksIn(expected));
     }
 
     [Fact]
