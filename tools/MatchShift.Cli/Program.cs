@@ -13,6 +13,13 @@ switch (command)
             Inspect(SyntheticMatchGenerator.GenerateMatch(seed));
         break;
     }
+    case "calibrate":
+    {
+        MatchShift.Cli.Calibration.PrintTimeline(SyntheticMatchGenerator.GenerateFlagship().Match);
+        foreach (var seed in new long[] { 1, 2 })
+            MatchShift.Cli.Calibration.PrintTimeline(SyntheticMatchGenerator.GenerateMatch(seed));
+        break;
+    }
     default:
         Console.WriteLine("Usage: matchshift inspect");
         break;
@@ -29,6 +36,10 @@ static void Inspect(Match match)
                           $"shots={ev.Count(e => e.Type == EventType.Shot)} corners={ev.Count(e => e.Type == EventType.Corner)} " +
                           $"fouls={ev.Count(e => e.Type == EventType.Foul)} tackles={ev.Count(e => e.Type == EventType.Tackle)}");
     }
+    var st = MatchShift.Analytics.State.MatchState.FromEvents(MatchShift.Analytics.State.MatchContext.From(match), match.Events);
+    Console.WriteLine($"  entries H={st.Entries.Count(x => x.TeamId == match.HomeTeam.Id)} A={st.Entries.Count(x => x.TeamId == match.AwayTeam.Id)} " +
+                      $"box H={st.BoxEntries.Count(x => x.TeamId == match.HomeTeam.Id)} A={st.BoxEntries.Count(x => x.TeamId == match.AwayTeam.Id)} " +
+                      $"possessions={st.Possessions.Count} losses={st.Losses.Count}");
     foreach (var e in match.Events.Where(e => e.Type is EventType.Goal or EventType.Substitution))
         Console.WriteLine($"  {e}");
 }

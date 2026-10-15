@@ -119,7 +119,7 @@ public sealed class MatchSimulator
         }
 
         var zone = BallX >= Pitch.AttackingThirdStart ? 1.5 : BallX < Pitch.DefensiveThirdEnd ? 0.8 : 1.0;
-        var dispossession = 0.042 * (0.55 + 0.9 * def.Press) * (1.5 - att.Control) * zone *
+        var dispossession = 0.021 * (0.55 + 0.9 * def.Press) * (1.5 - att.Control) * zone *
                             (0.6 + Holder.Profile.TurnoverTendency) * (counter ? 0.7 : 1.0);
         if (_rng.Chance(dispossession))
         {
@@ -155,7 +155,7 @@ public sealed class MatchSimulator
             ? _rng.Range(10, 22)
             : longBall
                 ? _rng.Range(22, 40)
-                : _rng.NextGaussian(-1.5 + 10 * att.Progression * (0.5 + Holder.Profile.ForwardPassTendency), 9);
+                : _rng.NextGaussian(-1.0 + 15 * att.Progression * (0.5 + Holder.Profile.ForwardPassTendency), 9);
 
         var endX = Math.Clamp(BallX + dx, 2, 97);
         double endY;
@@ -177,7 +177,8 @@ public sealed class MatchSimulator
         var distance = Math.Sqrt(Math.Pow((endX - BallX) * 1.05, 2) + Math.Pow((endY - BallY) * 0.68, 2));
         var success = att.PassAccuracy
                       + 0.12 * (att.Control - 0.5)
-                      - 0.006 * Math.Max(0, distance - 15)
+                      + (endX < 50 ? 0.08 : endX < Pitch.AttackingThirdStart ? 0.06 : 0.01)
+                      - 0.005 * Math.Max(0, distance - 18)
                       - (endX >= Pitch.AttackingThirdStart ? 0.07 : 0)
                       - (endX >= Pitch.PenaltyAreaStartX ? 0.06 : 0)
                       - 0.14 * (def.Press - 0.5)
@@ -269,7 +270,7 @@ public sealed class MatchSimulator
         var roll = _rng.NextDouble();
         if (roll < 0.24) return EventOutcome.Blocked;
         if (roll < 0.62) return EventOutcome.OffTarget;
-        if (_script.AllowRandomGoals && _rng.Chance(Math.Min(0.9, quality / 0.38))) return EventOutcome.Goal;
+        if (_script.AllowRandomGoals && _rng.Chance(Math.Min(0.9, quality / 0.38 * 0.6))) return EventOutcome.Goal;
         return EventOutcome.OnTarget;
     }
 
