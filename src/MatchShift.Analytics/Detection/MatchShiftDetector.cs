@@ -182,7 +182,7 @@ public static class ImportanceModel
     public static double BaseOf(InsightType type) => type switch
     {
         InsightType.Goal => 100,
-        InsightType.DangerousTurnover => 64,
+        InsightType.DangerousTurnover => 58,
         InsightType.AttackChannelShift => 70,
         InsightType.PostSubstitutionChange => 68,
         InsightType.ControlShift => 66,

@@ -86,6 +86,31 @@ switch (command)
         break;
     }
 
+    case "narrate":
+    {
+        var match = SyntheticMatchGenerator.GenerateFlagship().Match;
+        var analysis = LiveMatchAnalyzer.AnalyzeFull(match);
+        var profile = new MatchShift.Agents.Narrative.ViewerProfile(
+            Enum.Parse<MatchShift.Agents.Narrative.ViewerMode>(options.GetValueOrDefault("mode", "Analyst"), true),
+            options.GetValueOrDefault("lang", "en"), options.GetValueOrDefault("team"));
+        var ctx = new MatchShift.Agents.Narrative.NarrativeContext(new MatchShift.Agents.Narrative.MatchRoster(match), profile);
+        foreach (var i in MatchShift.Agents.Narrative.NarrativeFilter.Select(analysis.Insights, profile))
+        {
+            var n = MatchShift.Agents.Narrative.TemplateInsightProvider.Narrate(i, ctx);
+            Console.WriteLine($"[{i.DisplayMinute}'] {n.TypeLabel.ToUpperInvariant()} - {n.Headline}" + Environment.NewLine + $"   FACT: {n.Fact}" + Environment.NewLine + $"   INFERENCE: {n.Inference}" + Environment.NewLine + $"   EXPLANATION: {n.Explanation}");
+            if (n.Teaching is not null) Console.WriteLine($"   TEACH: {n.Teaching}");
+            if (n.Perspective is not null) Console.WriteLine($"   {n.Perspective}");
+            Console.WriteLine($"   STUDIO: {n.StudioLine}");
+        }
+        if (options.ContainsKey("recap"))
+        {
+            var facts = MatchShift.Analytics.Story.RecapBuilder.Build(analysis, RecapPeriod.FullTime);
+            Console.WriteLine(MatchShift.Agents.Narrative.RecapNarrator.Narrate(facts,
+                Enum.Parse<MatchShift.Agents.Narrative.RecapStyle>(options["recap"], true), ctx, analysis.Insights).Text);
+        }
+        break;
+    }
+
     case "recap":
     {
         var match = SyntheticMatchGenerator.GenerateFlagship().Match;
