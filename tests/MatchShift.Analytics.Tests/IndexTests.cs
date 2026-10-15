@@ -53,10 +53,10 @@ public class IndexTests
 
     [Theory]
     [InlineData(10, ChaosState.Controlled)]
-    [InlineData(34.9, ChaosState.Controlled)]
-    [InlineData(35, ChaosState.Balanced)]
-    [InlineData(59.9, ChaosState.Balanced)]
-    [InlineData(60, ChaosState.Chaotic)]
+    [InlineData(24.9, ChaosState.Controlled)]
+    [InlineData(25, ChaosState.Balanced)]
+    [InlineData(54.9, ChaosState.Balanced)]
+    [InlineData(55, ChaosState.Chaotic)]
     [InlineData(95, ChaosState.Chaotic)]
     public void Chaos_thresholds_are_documented_bands(double value, ChaosState expected) =>
         Assert.Equal(expected, ChaosIndex.Classify(value));

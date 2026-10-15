@@ -107,7 +107,7 @@ public sealed record ChaosOptions
     public double RecentMinutes { get; init; } = 10;
     public double BaselineMinutes { get; init; } = 15;
     public double MinIncrease { get; init; } = 15;
-    public double MaxBaseline { get; init; } = 58;
+    public double MaxBaseline { get; init; } = 45;
 }
 
 public sealed record ShotPressureOptions

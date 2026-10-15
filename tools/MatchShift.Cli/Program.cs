@@ -86,6 +86,26 @@ switch (command)
         break;
     }
 
+    case "recap":
+    {
+        var match = SyntheticMatchGenerator.GenerateFlagship().Match;
+        var analysis = LiveMatchAnalyzer.AnalyzeFull(match);
+        foreach (var period in new[] { RecapPeriod.HalfTime, RecapPeriod.FullTime })
+        {
+            var recap = MatchShift.Analytics.Story.RecapBuilder.Build(analysis, period);
+            Console.WriteLine($"== {period}: {recap.HomeScore}-{recap.AwayScore}  chaotic minutes {recap.ChaoticMinuteShare:P0}");
+            foreach (var m in recap.MomentumPeriods) Console.WriteLine($"  momentum {m.TeamId} {m.FromMinute}-{m.ToMinute} avg {m.AverageControl}");
+            foreach (var b in recap.Story) Console.WriteLine($"  {b.Minute,3}' {b.Code} {b.TeamId}");
+            foreach (var p in recap.KeyPlayers) Console.WriteLine($"  player {match.FindPlayer(p.PlayerId)?.Name} g{p.Goals} a{p.Assists} kp{p.KeyPasses} s{p.Shots} rec{p.Recoveries} m{p.InsightMentions} = {p.Score}");
+            Console.WriteLine($"  home: poss {recap.Home.PossessionShare:P0} shots {recap.Home.Shots} attacks L/C/R {recap.Home.LeftAttackShare:P0}/{recap.Home.CentreAttackShare:P0}/{recap.Home.RightAttackShare:P0}");
+            Console.WriteLine($"  away: poss {recap.Away.PossessionShare:P0} shots {recap.Away.Shots} attacks L/C/R {recap.Away.LeftAttackShare:P0}/{recap.Away.CentreAttackShare:P0}/{recap.Away.RightAttackShare:P0}");
+        }
+        Console.WriteLine("== Highlights");
+        foreach (var h in MatchShift.Analytics.Story.HighlightRanker.Rank(analysis).Take(12))
+            Console.WriteLine($"  {h.DisplayMinute,3}' {h.Kind,-18} {h.TeamId,-4} {h.ImportanceScore,5} {h.WhyItMattersCode}");
+        break;
+    }
+
     case "seed-search":
     {
         // Find flagship seeds where every scripted pattern is discovered by the live detector.

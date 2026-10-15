@@ -76,6 +76,7 @@ public sealed class MomentDetector
         var facts = new Dictionary<string, string>
         {
             ["scorerId"] = shot.PlayerId ?? "",
+            ["scoringSide"] = goal.TeamId == state.Context.HomeTeamId ? "home" : "away",
             ["homeScore"] = home.ToString(),
             ["awayScore"] = away.ToString(),
             ["fastBreak"] = fastBreak ? "true" : "false",
