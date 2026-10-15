@@ -88,7 +88,7 @@ Press **Play**. 1x = 30 match-seconds per real second (a full match in 3 minutes
 ## Tests and evaluation
 
 ```bash
-dotnet test                                               # ~190 xUnit tests
+dotnet test                                               # ~200 xUnit tests (core, data, analytics, agents, API)
 dotnet run --project tools/MatchShift.Cli -- evaluate --matches 120   # detector precision/recall vs ground truth
 dotnet run --project tools/MatchShift.Cli -- robustness   # flagship script re-simulated with 20 other seeds
 dotnet run --project tools/MatchShift.Cli -- analyze      # live insights for the flagship match
@@ -115,7 +115,7 @@ src/
   MatchShift.Infrastructure  Microsoft Foundry provider, DI, dataset exporter, detector evaluator
   MatchShift.Api             ASP.NET Core minimal API, playback engine, SSE stream, telemetry
   MatchShift.Web             React + TypeScript + Vite broadcast UI
-tests/                       xUnit: Core, SyntheticData, Analytics, Agents (+ narratives, export, Foundry)
+tests/                       xUnit: Core, SyntheticData, Analytics, Agents (+ narratives, export, Foundry), Api
 tools/MatchShift.Cli         Inspect, calibrate, analyze, evaluate, sweep, export, narrate
 infra/                       Bicep for Azure Container Apps (+ App Insights, ACR, Foundry access)
 docs/                        Design documentation
