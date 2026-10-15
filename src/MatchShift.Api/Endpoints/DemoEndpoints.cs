@@ -149,12 +149,16 @@ public static class DemoEndpoints
             var recapStyle = Enum.TryParse<RecapStyle>(style, true, out var rs) ? rs : RecapStyle.Casual;
             var context = new NarrativeContext(new MatchRoster(s.Match), SnapshotBuilder.Profile(lang, null, team, null));
             var narrative = await narration.RecapAsync(facts, recapStyle, context, insights, ct);
+            if (narrative.VerificationNote?.Contains("Template used", StringComparison.Ordinal) == true) MatchShiftMetrics.NarrativesFallback.Add(1);
             return Results.Ok(new { facts, narrative });
         });
 
         return app;
     }
 
-    private static SnapshotDto Snapshot(DemoSession s, ViewerProfile profile) =>
-        s.Read((a, clock) => SnapshotBuilder.Build(a, clock, s.Match, profile, s.IsPlaying, s.Speed));
+    private static SnapshotDto Snapshot(DemoSession s, ViewerProfile profile)
+    {
+        MatchShiftMetrics.SnapshotsServed.Add(1);
+        return s.Read((a, clock) => SnapshotBuilder.Build(a, clock, s.Match, profile, s.IsPlaying, s.Speed));
+    }
 }

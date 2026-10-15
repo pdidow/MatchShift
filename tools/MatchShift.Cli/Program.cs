@@ -86,6 +86,18 @@ switch (command)
         break;
     }
 
+    case "export":
+    {
+        var count = int.Parse(options.GetValueOrDefault("matches", "50"));
+        var start = long.Parse(options.GetValueOrDefault("seed", "1000"));
+        var outDir = options.GetValueOrDefault("out", Path.Combine("datasets", "out", $"matchshift-{start}-{count}"));
+        var dataset = SyntheticMatchGenerator.GenerateDataset(count, start);
+        var manifest = await MatchShift.Infrastructure.Export.DatasetExporter.ExportAsync(dataset, outDir, parquet: !options.ContainsKey("no-parquet"));
+        Console.WriteLine($"Exported {manifest.Matches} synthetic matches, {manifest.Events} events, {manifest.Insights} insights to {Path.GetFullPath(outDir)}");
+        foreach (var f in manifest.Files) Console.WriteLine($"  {f}");
+        break;
+    }
+
     case "narrate":
     {
         var match = SyntheticMatchGenerator.GenerateFlagship().Match;
@@ -202,6 +214,8 @@ switch (command)
               analyze [--seed N] [--scenario K]  Run the live detector and print insights
               evaluate [--matches N] [--seed S] [--scenario K]  Precision/recall vs ground truth
               robustness [--matches N]        Flagship script re-simulated with other seeds
+              export [--matches N] [--seed S] [--out DIR] [--no-parquet]  Fabric-ready dataset (JSONL/CSV/Parquet)
+              narrate [--lang en|fr|es] [--mode M] [--recap STYLE]  Print rendered narratives for the flagship
             """);
         break;
 }

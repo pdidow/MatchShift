@@ -13,6 +13,16 @@ import { WhyPanel } from './components/WhyPanel'
 type Tab = 'live' | 'highlights' | 'recap' | 'agents'
 
 const loadProfile = (): Profile => {
+  // URL parameters (?lang=fr&mode=TeachMe&team=WHA) override the remembered profile - handy for shareable links.
+  const q = new URLSearchParams(window.location.search)
+  if (q.get('lang') || q.get('mode')) {
+    return {
+      language: (q.get('lang') as Lang) ?? 'en',
+      mode: (q.get('mode') as ViewerMode) ?? 'Analyst',
+      focusTeamId: q.get('team'),
+      focusPlayerId: q.get('player'),
+    }
+  }
   try {
     const raw = localStorage.getItem('matchshift.profile')
     if (raw) return JSON.parse(raw) as Profile
@@ -27,8 +37,8 @@ export default function App() {
   const [profile, setProfile] = useState<Profile>(loadProfile)
   const [snap, setSnap] = useState<Snapshot | null>(null)
   const [connected, setConnected] = useState(false)
-  const [tab, setTab] = useState<Tab>('live')
-  const [selected, setSelected] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(window.location.search).get('tab') as Tab) ?? 'live')
+  const [selected, setSelected] = useState<string | null>(() => new URLSearchParams(window.location.search).get('select'))
   const [why, setWhy] = useState<InsightCard | null>(null)
   const [focus, setFocus] = useState<{ events: InsightEvents; caption: string; teamId?: string } | null>(null)
   const s = t(profile.language)

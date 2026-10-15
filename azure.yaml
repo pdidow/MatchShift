@@ -1,0 +1,15 @@
+# Azure Developer CLI: `azd up` provisions infra/main.bicep and deploys the container.
+name: matchshift
+metadata:
+  template: matchshift@1.0
+services:
+  web:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+infra:
+  provider: bicep
+  path: infra

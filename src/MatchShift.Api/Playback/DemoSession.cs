@@ -117,6 +117,14 @@ public sealed class DemoSession
 
     private void AdvanceLocked(int toSecond)
     {
+        var before = _analyzer.Insights.Count;
+        AdvanceEvents(toSecond);
+        var raised = _analyzer.Insights.Count - before;
+        if (raised > 0) MatchShiftMetrics.InsightsRaised.Add(raised);
+    }
+
+    private void AdvanceEvents(int toSecond)
+    {
         var events = Match.Events;
         while (_nextEventIndex < events.Count && events[_nextEventIndex].MatchSecond <= toSecond)
         {
