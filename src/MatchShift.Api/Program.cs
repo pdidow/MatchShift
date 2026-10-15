@@ -1,34 +1,39 @@
+using System.Text.Json.Serialization;
+using MatchShift.Agents.Agents;
+using MatchShift.Agents.Narrative;
+using MatchShift.Api.Endpoints;
+using MatchShift.Api.Playback;
+using MatchShift.Api;
+using MatchShift.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.ConfigureHttpJsonOptions(o =>
+{
+    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    o.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+});
+builder.Services.AddProblemDetails();
+builder.Services.AddSingleton<MatchCatalog>();
+builder.Services.AddSingleton<DemoSession>();
+builder.Services.AddHostedService<PlaybackService>();
+builder.Services.AddMatchShiftNarration(builder.Configuration);
+builder.Services.AddMatchShiftTelemetry(builder.Configuration);
+builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
+    .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173"])
+    .AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseExceptionHandler();
+app.UseCors();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-});
+app.MapGet("/health", () => Results.Ok(new { status = "ok", synthetic = true }));
+app.MapMatchShiftApi();
+app.MapFallbackToFile("index.html");
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+public partial class Program;

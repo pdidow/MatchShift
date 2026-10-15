@@ -50,8 +50,7 @@ public sealed class PostSubstitutionChangeDetector : IShiftDetector
                         [
                             EvidenceFactory.Change($"{channel}AttackShare", MetricUnit.Share, b.ChannelShare(channel), a.ChannelShare(channel),
                                 comparison, o.MinChannelShareIncrease, a.Attacks, b.Attacks, 5, primary: true),
-                            EvidenceFactory.Change($"{channel}Attacks", MetricUnit.Count, b.AttacksIn(channel), a.AttacksIn(channel), comparison, 0,
-                                a.Attacks, b.Attacks, 0),
+                            EvidenceFactory.Value($"{channel}Attacks", MetricUnit.Count, a.AttacksIn(channel), comparison.Recent, a.Attacks),
                             EvidenceFactory.Value("ShiftStrengthZ", MetricUnit.Statistic, z, comparison.Recent, a.Attacks,
                                 threshold: o.MinChannelZScore),
                         ],

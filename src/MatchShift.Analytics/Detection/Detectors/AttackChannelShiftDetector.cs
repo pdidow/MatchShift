@@ -87,8 +87,7 @@ public sealed class AttackChannelShiftDetector : IShiftDetector
                 [
                     EvidenceFactory.Change($"{name}AttackShare", MetricUnit.Share, baselineShare, recentShare, comparison,
                         o.MinShareIncrease, r.Attacks, b.Attacks, o.MinRecentAttacks, primary: true),
-                    EvidenceFactory.Change($"{name}Attacks", MetricUnit.Count, b.AttacksIn(c), r.AttacksIn(c), comparison, 0,
-                        r.Attacks, b.Attacks, o.MinRecentAttacks),
+                    EvidenceFactory.Value($"{name}Attacks", MetricUnit.Count, r.AttacksIn(c), comparison.Recent, r.Attacks),
                     EvidenceFactory.Value("ShiftStrengthZ", MetricUnit.Statistic, bestZ, comparison.Recent, r.Attacks, threshold: o.MinZScore),
                     .. keyPlayer is null
                         ? Array.Empty<EvidenceItem>()
