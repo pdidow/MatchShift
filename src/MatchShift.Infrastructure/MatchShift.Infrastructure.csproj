@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\MatchShift.Core\MatchShift.Core.csproj" />
+    <ProjectReference Include="..\MatchShift.Analytics\MatchShift.Analytics.csproj" />
+    <ProjectReference Include="..\MatchShift.Agents\MatchShift.Agents.csproj" />
+    <ProjectReference Include="..\MatchShift.SyntheticData\MatchShift.SyntheticData.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
