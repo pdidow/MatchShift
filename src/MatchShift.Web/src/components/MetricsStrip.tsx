@@ -1,14 +1,22 @@
 import type { Snapshot } from '../api'
 import type { Strings } from '../i18n'
+import { performanceLabels } from './PlayerPanel'
 import { AWAY_COLOR, HOME_COLOR } from './Pitch'
 
 const pct = (v: number) => `${Math.round(v * 100)}%`
 
 export function MetricsStrip({ snap, s }: { snap: Snapshot; s: Strings }) {
+  const labels = performanceLabels(snap.profile.language)
   const m = snap.metrics
   const home = Math.round(m.homeControl)
   return (
     <div className="metrics">
+      {snap.profile.mode === 'Analyst' && <section className="panel">
+        <h2 className="panel-title">{labels.passes}<small>{s.lastTen}</small></h2>
+        {[snap.home, snap.away].map((team, i) => { const m = i === 0 ? snap.metrics.home : snap.metrics.away; return <div key={team.id}>
+          <strong>{team.shortName}</strong><p>{labels.completed} {m.completedPasses}/{m.passes} · {labels.progressive} {m.progressivePasses} · {labels.long} {m.longBalls}</p>
+        </div> })}
+      </section>}
       <section className="panel" aria-label={s.matchControl}>
         <h2 className="panel-title">{s.matchControl}<small>{s.lastTen}</small></h2>
         <div className="metric-row" style={{ marginTop: 0 }}>
@@ -17,7 +25,7 @@ export function MetricsStrip({ snap, s }: { snap: Snapshot; s: Strings }) {
         </div>
         <div className="control-bar" role="meter" aria-valuenow={home} aria-valuemin={0} aria-valuemax={100} aria-label={`${snap.home.shortName} ${home}, ${snap.away.shortName} ${100 - home}`}>
           <div style={{ width: `${home}%`, background: HOME_COLOR }} />
-          <div style={{ width: `${100 - home}%`, background: AWAY_COLOR }} />
+          <div className="fill-away" style={{ width: `${100 - home}%`, background: AWAY_COLOR }} />
         </div>
         <div className="metric-row">
           <span>{snap.home.shortName}</span>
@@ -30,7 +38,8 @@ export function MetricsStrip({ snap, s }: { snap: Snapshot; s: Strings }) {
             const c = i === 0 ? HOME_COLOR : AWAY_COLOR
             return (
               <FragmentRow key={team.id} label={`${team.code} ${s.attackSides}`}>
-                <div className="sides-bar" title={`${s.left} ${pct(t.leftShare)} · ${s.centre} ${pct(t.centreShare)} · ${s.right} ${pct(t.rightShare)}`}>
+                <div className={`sides-bar ${i === 1 ? 'fill-away-group' : ''}`} role="img" aria-label={`${team.shortName}: ${s.left} ${pct(t.leftShare)}, ${s.centre} ${pct(t.centreShare)}, ${s.right} ${pct(t.rightShare)}`}
+                  title={`${s.left} ${pct(t.leftShare)} · ${s.centre} ${pct(t.centreShare)} · ${s.right} ${pct(t.rightShare)}`}>
                   {t.attacks === 0 ? <div style={{ width: '100%', background: 'var(--line)' }} /> : (
                     <>
                       <div style={{ width: `${t.leftShare * 100}%`, background: c, opacity: 0.55 }} />
@@ -52,9 +61,9 @@ export function MetricsStrip({ snap, s }: { snap: Snapshot; s: Strings }) {
             const t = i === 0 ? m.home : m.away
             return (
               <div className="pair-item" key={team.id}>
-                <span className="label"><i style={{ width: 8, height: 8, borderRadius: '50%', background: i === 0 ? HOME_COLOR : AWAY_COLOR, display: 'inline-block' }} />{team.shortName}</span>
+                <span className="label"><i className={i === 1 ? 'dot-away' : 'dot-home'} style={{ width: 8, height: 8, borderRadius: '50%', background: i === 0 ? HOME_COLOR : AWAY_COLOR, display: 'inline-block' }} />{team.shortName}</span>
                 <span className="big-number">{Math.round(t.pressure)}</span>
-                <div className="mini-bar"><div style={{ width: `${t.pressure}%`, background: i === 0 ? HOME_COLOR : AWAY_COLOR }} /></div>
+                <div className="mini-bar"><div className={i === 1 ? 'fill-away' : undefined} style={{ width: `${t.pressure}%`, background: i === 0 ? HOME_COLOR : AWAY_COLOR }} /></div>
                 <span className="label">{s.shots} {t.shots} · xQ {t.chanceQuality.toFixed(2)}</span>
               </div>
             )
@@ -68,7 +77,7 @@ export function MetricsStrip({ snap, s }: { snap: Snapshot; s: Strings }) {
           <span>{s.chaosStates[m.chaosState]}</span>
           <span className="big-number" style={{ fontSize: 22, color: 'var(--ink-secondary)' }}>{Math.round(m.chaos)}</span>
         </div>
-        <div className="chaos-meter" aria-hidden>
+        <div className="chaos-meter" role="meter" aria-valuenow={Math.round(m.chaos)} aria-valuemin={0} aria-valuemax={100} aria-label={`${s.chaos}: ${s.chaosStates[m.chaosState]}`}>
           <div className="needle" style={{ left: `${Math.min(100, m.chaos)}%` }} />
         </div>
         <div className="metric-row">

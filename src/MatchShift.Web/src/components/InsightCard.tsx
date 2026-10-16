@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { InsightCard as Card, ViewerMode } from '../api'
 import type { Strings } from '../i18n'
 
@@ -9,22 +10,35 @@ interface Props {
   teamName: (id?: string) => string
   onWhy: () => void
   onShow: () => void
+  onReplay: () => void
   onSelect: () => void
+  /** Simplified Insights (optional): a plain-language sentence shown instead of the full card until MORE DETAIL. */
+  simplified?: { text: string; more: string; less: string } | null
 }
 
 const SHIFT_TYPES = new Set(['ATTACK_CHANNEL_SHIFT', 'POST_SUBSTITUTION_CHANGE', 'CONTROL_SHIFT'])
 
-export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onShow, onSelect }: Props) {
+export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onShow, onReplay, onSelect, simplified }: Props) {
   const n = card.narrative
   const primary = n.evidence.find((e) => e.isPrimary)
   const compact = mode === 'WhatMatters'
   const studio = mode === 'Studio'
+  const [expanded, setExpanded] = useState(false)
+  const simple = !!simplified && !expanded
+  const headingId = `card-h-${card.id}`
 
   return (
     <article
-      className={`card ${SHIFT_TYPES.has(card.type) ? 'shift' : ''} ${selected ? 'selected' : ''}`}
+      className={`card ${SHIFT_TYPES.has(card.type) ? 'shift' : ''} ${selected ? 'selected' : ''} ${simple ? 'simple' : ''}`}
       onClick={onSelect}
-      aria-label={n.headline}
+      // Keyboard: the card itself is focusable; Enter or Space selects it (buttons inside keep their own keys).
+      tabIndex={0}
+      aria-labelledby={headingId}
+      aria-current={selected ? 'true' : undefined}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() }
+      }}
     >
       <div className="card-top">
         <span className="card-kicker">
@@ -34,8 +48,10 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
         <span className="card-minute">{card.minute}'</span>
       </div>
 
-      <h3 className="card-headline">{n.headline}</h3>
+      <small className="narrative-source" title={n.verificationNote}>{n.source === 'mock' ? 'Mock — no model call' : n.source === 'microsoft-foundry' ? 'Microsoft Foundry — verified selection' : 'Offline template'}</small>
+      <h3 className="card-headline" id={headingId}>{n.headline}</h3>
 
+      {simple ? <p className="card-simple">{simplified!.text}</p> : <>
       {primary?.baseline && !compact && (
         <div className="key-number" aria-label={`${primary.label}: ${primary.baseline} → ${primary.recent}`}>
           <span>{primary.baseline}</span>
@@ -63,10 +79,17 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
       {n.teaching && <div className="card-teach"><strong>{s.football101}: </strong>{n.teaching}</div>}
       {n.perspective && <p className="card-perspective">{n.perspective}</p>}
       {n.playerLine && <p className="card-sub">{n.playerLine}</p>}
+      </>}
+      {simplified && (
+        <button className="ghost more-detail" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded(v => !v) }}>
+          {expanded ? simplified.less : simplified.more}
+        </button>
+      )}
 
       <div className="card-actions">
         <button className="chip" onClick={(e) => { e.stopPropagation(); onWhy() }}>{s.why}</button>
         <button className="chip" onClick={(e) => { e.stopPropagation(); onShow() }}>{s.showMe}</button>
+        <button className="chip replay-btn" onClick={(e) => { e.stopPropagation(); onReplay() }}>{s.replay.button}</button>
         <span className="spacer" />
         <Confidence label={`${s.confidence}: ${n.confidenceLabel}`} level={card.confidence} />
       </div>

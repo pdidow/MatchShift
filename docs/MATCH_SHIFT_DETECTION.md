@@ -76,3 +76,12 @@ sweep-channel` reproduces the precision/recall trade-off used to choose the thre
 `AttackChannelShiftTests` (30% → 70% triggers; stable mix, small fluctuation and too-few-attacks do not; once
 per cooldown; away team / left flank), `DetectorTests` (determinism, **no look-ahead** at 30'/63'/75', flagship
 patterns, warm-up, cooldown, evidence re-computation, negative-control rate).
+
+## Passing-style addition
+
+PASSING_STYLE_SHIFT compares long-ball share across adjacent eight-minute windows, with at least 20
+passes per window, an absolute 0.30 change and the shared persistence/cooldown logic. Unit tests include
+a labelled change, stationary control, small samples and exact event references. A new seeded scenario
+changes directness after minute 30. Held-out seeds 82000?82011 produced 12/12 recalled labels; the
+120-match existing mix produced nine unlabelled passing detections, not an established precision score.
+See [upgrade validation](UPGRADE_STATUS.md) for limits and commands.

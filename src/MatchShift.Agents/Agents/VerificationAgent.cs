@@ -22,13 +22,14 @@ public sealed record VerificationResult(VerificationStatus Status, IReadOnlyList
 }
 
 /// <summary>
-/// VERIFICATION AGENT (mandatory). Every viewer-facing claim passes through here.
+/// VERIFICATION AGENT. Used by NarrationService for AI output and by AgentPipeline.
+/// Live snapshots first pass EvidenceGate. Provider selections additionally require exact canonical rendering.
 ///
 /// Input: generated sentences + the structured evidence they claim to describe.
 /// Checks:
 ///   1. Every number in the text matches a value in the evidence/slots (or a definitional
 ///      constant such as 90 minutes or the 0-100 index scale), within rounding tolerance.
-///   2. No unknown club names (only the two teams in this synthetic match).
+///   2. Reject club names supplied in otherClubNames (empty by default).
 ///   3. No claims of intent or certainty the data cannot support ("deliberately", "the manager decided"...).
 /// Output: Approved, or Rejected with issues. Failure behaviour: callers fall back to the
 /// deterministic template text, which is itself verified.

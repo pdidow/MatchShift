@@ -22,7 +22,7 @@ public enum AgentStatus
 
 public sealed record AgentStep(string Agent, string Responsibility, string Input, string Output, AgentStatus Status, long DurationMs);
 
-public sealed record AgentTrace(string InsightId, string Provider, IReadOnlyList<AgentStep> Steps, InsightNarrative Narrative);
+public sealed record AgentTrace(string InsightId, string Provider, IReadOnlyList<AgentStep> Steps, InsightNarrative Narrative, EvidenceAudit? EvidenceAudit = null);
 
 /// <summary>A factual finding, re-derived from raw events.</summary>
 public sealed record VerifiedFact(string Metric, double Cited, double Recomputed, bool Matches);
@@ -31,7 +31,8 @@ public sealed record VerifiedFact(string Metric, double Cited, double Recomputed
 /// The MatchShift multi-agent pipeline for one insight. Every agent has one responsibility,
 /// an explicit input and output, and a defined failure behaviour:
 ///
-/// 1. Event Analyst      - events -&gt; re-derived facts. Fails closed: a fact that cannot be recomputed is dropped.
+/// 1. Event Analyst      - events -&gt; re-derived supported metrics. Full replay and these diagnostics
+///                        must agree before narration; inconsistent evidence is withheld.
 /// 2. Pattern Detection  - detector output -&gt; structured pattern (type, team, severity, confidence, strength).
 /// 3. Football Reasoning - verified facts + pattern -&gt; cautious interpretation, from an allow-list per pattern.
 ///                         Fails safe: an interpretation not allowed for the pattern is withheld.
@@ -64,11 +65,13 @@ public sealed class AgentPipeline(NarrationService narration, VerificationAgent 
     public async Task<AgentTrace> RunAsync(Insight insight, Match match, NarrativeContext context, CancellationToken ct = default)
     {
         var steps = new List<AgentStep>();
+        EvidenceGate.Require(insight, match);
 
         // 1. Event Analyst
         var sw = Stopwatch.StartNew();
         var facts = EventAnalyst(insight, match);
         var mismatches = facts.Count(f => !f.Matches);
+        if (mismatches > 0) throw new InvalidDataException("Claim withheld: raw-event metric recomputation failed.");
         steps.Add(new AgentStep("Event Analyst Agent", "Re-derives every cited metric from the raw synthetic events",
             $"{insight.SupportingEventIds.Count} supporting events, {insight.Evidence.Count} evidence items",
             facts.Count == 0
@@ -129,11 +132,12 @@ public sealed class AgentPipeline(NarrationService narration, VerificationAgent 
         steps.Add(new AgentStep("Verification Agent", "Checks every number and claim against structured evidence",
             $"{narrative.Sentences().Count()} sentences",
             verification.Approved
-                ? $"approved - {verification.NumbersChecked} numbers checked, no unsupported claims"
+                ? $"approved - evidence binding verified, {verification.NumbersChecked} numeric occurrences checked"
                 : $"rejected: {string.Join("; ", verification.Issues.Take(2).Select(i => i.Problem))}",
             verification.Approved && mismatches == 0 ? AgentStatus.Approved : AgentStatus.Rejected, sw.ElapsedMilliseconds));
 
-        return new AgentTrace(insight.Id, narration.ProviderName, steps, final);
+        steps.InsertRange(3, narrative.Collaboration);
+        return new AgentTrace(insight.Id, narration.ProviderName, steps, final, EvidenceGate.Check(insight, match));
     }
 
     /// <summary>
@@ -177,6 +181,7 @@ public sealed class AgentPipeline(NarrationService narration, VerificationAgent 
             "Shots" => m.Shots,
             "Turnovers" => m.Turnovers,
             "FastTransitions" => m.FastTransitions,
+            "LongBallShare" => m.PassesAttempted == 0 ? 0 : (double)m.LongBalls / m.PassesAttempted,
             _ => null,
         };
     }

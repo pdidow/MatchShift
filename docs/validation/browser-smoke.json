@@ -1,0 +1,19 @@
+{
+  "provider": "mock",
+  "browser": "Microsoft Edge / Playwright",
+  "passed": true,
+  "checks": [
+    "live cards",
+    "shared trace narrative",
+    "WHY panel",
+    "player summary",
+    "French teaching",
+    "synthetic broadcast composition",
+    "transparent overlay",
+    "seek invalidation",
+    "disconnect clearing and reconnect",
+    "mock fulltime recap",
+    "independent browser session"
+  ],
+  "pageErrors": []
+}

@@ -9,7 +9,7 @@ namespace MatchShift.Api.Tests;
 
 public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
-    private HttpClient Client => factory.CreateClient();
+    private readonly HttpClient Client = factory.CreateClient();
 
     private async Task<JsonElement> Get(string url)
     {
@@ -125,5 +125,31 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
     {
         var res = await Client.PostAsJsonAsync("/api/demo/speed", new { speed = 7 });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Replay_endpoint_reconstructs_the_selected_insight()
+    {
+        await Client.PostAsJsonAsync("/api/demo/reset", new { matchId = "MS-FLAGSHIP-001" });
+        await Client.PostAsJsonAsync("/api/demo/seek", new { minute = 66 });
+        var insights = await Get("/api/demo/insights");
+        var turnover = insights.EnumerateArray().First(i => i.GetProperty("type").GetString() == "DANGEROUS_TURNOVER" && i.GetProperty("minute").GetInt32() == 35);
+        var id = turnover.GetProperty("id").GetString();
+
+        var replay = await Get($"/api/demo/insights/{id}/replay");
+        Assert.Equal(id, replay.GetProperty("insightId").GetString());
+        var clip = replay.GetProperty("clips")[0];
+        Assert.Equal(22, clip.GetProperty("tracks").GetArrayLength());
+        var labels = clip.GetProperty("events").EnumerateArray().Select(e => e.GetProperty("label").GetString()).ToList();
+        Assert.Contains("HIGH_PRESS_INTERCEPTION", labels);
+        Assert.Contains("GOAL", labels);
+        Assert.Contains(clip.GetProperty("tracks")[0].GetProperty("samples").EnumerateArray(),
+            s => s.GetProperty("provenance").GetString() is "ESTIMATED_POSITION" or "INTERPOLATED_POSITION" or "ACTUAL_EVENT_POSITION");
+
+        var shift = insights.EnumerateArray().First(i => i.GetProperty("type").GetString() == "ATTACK_CHANNEL_SHIFT");
+        var shiftReplay = await Get($"/api/demo/insights/{shift.GetProperty("id").GetString()}/replay");
+        Assert.Equal(["before", "after"], shiftReplay.GetProperty("clips").EnumerateArray().Select(c => c.GetProperty("key").GetString()));
+
+        Assert.Equal(HttpStatusCode.NotFound, (await Client.GetAsync("/api/demo/insights/NOPE/replay")).StatusCode);
     }
 }

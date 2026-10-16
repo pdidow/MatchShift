@@ -14,14 +14,19 @@ public static class DemoEndpoints
     {
         var api = app.MapGroup("/api");
 
-        api.MapGet("/meta", (NarrationService narration) => new MetaDto(
+        api.MapGet("/meta", (NarrationService narration, IConfiguration config) => new MetaDto(
             LexiconRegistry.Supported.Select(l => new LanguageDto(l.Code, l.Name)).ToList(),
             Enum.GetNames<ViewerMode>(),
             Enum.GetNames<RecapStyle>(),
             DemoSession.AllowedSpeeds,
             narration.ProviderName,
             narration.UsesAi,
-            "All football data in MatchShift is synthetic: fictional clubs, players, matches and events."));
+            "All football data in MatchShift is synthetic: fictional clubs, players, matches and events.",
+            config["Narration:Provider"] ?? (config.GetValue<bool>("Foundry:Enabled") ? "foundry" : "template"),
+            narration.ProviderName switch { "mock" => "Offline protocol simulator; no model calls.",
+                "microsoft-foundry" => "Configured; availability is established only by an accepted response.",
+                _ => "Offline templates. Foundry may be disabled or missing endpoint/deployment configuration." },
+            MatchShift.Infrastructure.Foundry.FoundryInsightProvider.PromptVersion));
 
         api.MapGet("/matches", (MatchCatalog catalog) => catalog.All.Select(m => SnapshotBuilder.Summary(m.Match)));
 
@@ -55,6 +60,11 @@ public static class DemoEndpoints
 
         demo.MapGet("/state", (string? lang, string? mode, string? team, string? player, DemoSession s) =>
             Snapshot(s, SnapshotBuilder.Profile(lang, mode, team, player)));
+        demo.MapGet("/overlay", (string? lang, DemoSession s) =>
+        {
+            var snap = Snapshot(s, SnapshotBuilder.Profile(lang, "Studio", null, null));
+            return Results.Ok(new { snap.SessionId, snap.Epoch, snap.MatchId, snap.Clock, overlay = snap.Overlay });
+        });
 
         demo.MapGet("/stream", async (string? lang, string? mode, string? team, string? player, DemoSession s, HttpContext http,
             IConfiguration config, CancellationToken ct) =>
@@ -95,15 +105,16 @@ public static class DemoEndpoints
         demo.MapGet("/highlights", (string? lang, string? mode, DemoSession s) =>
             Snapshot(s, SnapshotBuilder.Profile(lang, mode, null, null)).Highlights);
 
-        demo.MapGet("/insights/{id}/evidence", (string id, string? lang, string? mode, DemoSession s) => s.Read((a, _) =>
+        demo.MapGet("/insights/{id}/evidence", (string id, string? lang, string? mode, string? team, string? player, DemoSession s) => s.Read((a, _) =>
         {
             var insight = a.Insights.FirstOrDefault(i => i.Id == id);
             if (insight is null) return Results.NotFound();
-            var profile = SnapshotBuilder.Profile(lang, mode, null, null);
+            if (!EvidenceGate.Check(insight, s.Match).Approved) return Results.Conflict(new { message = "Evidence withheld." });
+            var profile = SnapshotBuilder.Profile(lang, mode, team, player);
             var lex = LexiconRegistry.Get(profile.Language);
             var labels = new[] { "why.title", "why.change", "why.threshold", "why.sample", "why.passed", "why.notMet", "why.confidence", "why.supporting", "why.comparison" }
                 .ToDictionary(k => k[4..], k => lex.Get(k));
-            var card = SnapshotBuilder.Card(insight, new NarrativeContext(new MatchRoster(s.Match), profile));
+            var card = SnapshotBuilder.Card(insight, new NarrativeContext(new MatchRoster(s.Match), profile), s.Narrative);
             return Results.Ok(new EvidenceResponseDto(card, lex.Get("why.title"), labels, insight.Evidence, insight.Facts));
         }));
 
@@ -116,13 +127,27 @@ public static class DemoEndpoints
             return Results.Ok(new InsightEventsDto(insight.Id, insight.Visuals, events));
         }));
 
-        demo.MapGet("/insights/{id}/agents", async (string id, string? lang, string? mode, string? team, string? player,
-            DemoSession s, AgentPipeline pipeline, CancellationToken ct) =>
+        // 3D tactical replay: a deterministic reconstruction of the sequence behind the insight.
+        demo.MapGet("/insights/{id}/replay", (string id, DemoSession s) => s.Read((a, _) =>
         {
-            var insight = s.Read((a, _) => a.Insights.FirstOrDefault(i => i.Id == id));
+            var insight = a.Insights.FirstOrDefault(i => i.Id == id);
             if (insight is null) return Results.NotFound();
-            var context = new NarrativeContext(new MatchRoster(s.Match), SnapshotBuilder.Profile(lang, mode, team, player));
-            return Results.Ok(await pipeline.RunAsync(insight, s.Match, context, ct));
+            if (!EvidenceGate.Check(insight, s.Match).Approved) return Results.Conflict(new { message = "Evidence withheld." });
+            return Results.Ok(MatchShift.Analytics.Replay.ReplayBuilder.ForInsight(s.Match, insight));
+        }));
+
+        demo.MapGet("/insights/{id}/agents", async (string id, string? lang, string? mode, string? team, string? player,
+            DemoSession s, CancellationToken ct) =>
+        {
+            var task = s.Read((a, _) =>
+            {
+                var insight = a.Insights.FirstOrDefault(i => i.Id == id);
+                if (insight is null || !EvidenceGate.Check(insight, s.Match).Approved) return null;
+                return s.Trace(insight, new NarrativeContext(new MatchRoster(s.Match), SnapshotBuilder.Profile(lang, mode, team, player)));
+            });
+            if (task is null) return Results.NotFound();
+            try { return Results.Ok(await task.WaitAsync(ct)); }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested) { return Results.Conflict(new { message = "Playback changed; reload this insight." }); }
         });
 
         demo.MapGet("/highlights/{id}/events", (string id, DemoSession s) => s.Read((a, clock) =>
@@ -142,13 +167,14 @@ public static class DemoEndpoints
                 : (RecapPeriod?)null;
             if (p is null) return Results.BadRequest("Period must be 'halftime' or 'fulltime'.");
             var needed = p == RecapPeriod.HalfTime ? Core.Domain.MatchClock.SecondHalfStartSecond : Core.Domain.MatchClock.FullTimeSecond;
-            var (facts, insights) = s.Read((a, clock) => clock < needed - 1
-                ? (null, a.Insights.ToList())
-                : (RecapBuilder.Build(a, p.Value), a.Insights.ToList()));
+            var (facts, insights, match, epoch) = s.Read((a, clock) => clock < needed - 1
+                ? (null, a.Insights.ToList(), s.Match, s.Epoch)
+                : (RecapBuilder.Build(a, p.Value), a.Insights.ToList(), s.Match, s.Epoch));
             if (facts is null) return Results.Conflict(new { message = $"The {period} recap is available once play reaches that point." });
             var recapStyle = Enum.TryParse<RecapStyle>(style, true, out var rs) ? rs : RecapStyle.Casual;
-            var context = new NarrativeContext(new MatchRoster(s.Match), SnapshotBuilder.Profile(lang, null, team, null));
+            var context = new NarrativeContext(new MatchRoster(match), SnapshotBuilder.Profile(lang, null, team, null));
             var narrative = await narration.RecapAsync(facts, recapStyle, context, insights, ct);
+            if (s.Epoch != epoch) return Results.Conflict(new { message = "Playback changed; request the recap again." });
             if (narrative.VerificationNote?.Contains("Template used", StringComparison.Ordinal) == true) MatchShiftMetrics.NarrativesFallback.Add(1);
             return Results.Ok(new { facts, narrative });
         });
@@ -158,7 +184,13 @@ public static class DemoEndpoints
 
     private static SnapshotDto Snapshot(DemoSession s, ViewerProfile profile)
     {
+        s.Touch();
         MatchShiftMetrics.SnapshotsServed.Add(1);
-        return s.Read((a, clock) => SnapshotBuilder.Build(a, clock, s.Match, profile, s.IsPlaying, s.Speed));
+        return s.Read((a, clock) =>
+        {
+            var snap = SnapshotBuilder.Build(a, clock, s.Match, profile, s.IsPlaying, s.Speed, s.Narrative)
+                with { SessionId = s.Id, Epoch = s.Epoch };
+            return snap with { Overlay = OverlayDto.From(snap) };
+        });
     }
 }

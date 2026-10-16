@@ -14,6 +14,7 @@ public sealed class MatchCatalog
         SyntheticMatchGenerator.GenerateScenario(ScenarioKind.AttackChannelShift, 6035),
         SyntheticMatchGenerator.GenerateScenario(ScenarioKind.ChaoticFinish, 9502),
         SyntheticMatchGenerator.GenerateScenario(ScenarioKind.Stationary, 12345),
+        SyntheticMatchGenerator.GenerateScenario(ScenarioKind.PassingStyleShift, 7001),
     ]);
 
     public IReadOnlyList<LabelledMatch> All => _matches.Value;

@@ -27,11 +27,12 @@ flowchart LR
         MATCH -->|one event at a time| STATE[MatchState<br/>possessions · attacks · losses · shots]
         STATE --> MET[Window metrics]
         MET --> IDX[Pressure · Control · Chaos]
-        MET --> DET[MatchShiftDetector<br/>11 shift detectors + moments]
+        MET --> DET[MatchShiftDetector<br/>12 shift detectors + moments]
         IDX --> DET
         DET --> INS[(Insights + evidence)]
         INS --> HL[HighlightRanker]
         INS --> RC[RecapBuilder]
+        INS --> RB[ReplayBuilder<br/>sequence · tracks · ball · provenance]
     end
 
     subgraph Agents
@@ -49,6 +50,8 @@ flowchart LR
     VA --> SSE
     TPL --> SSE
     SSE --> WEB[React broadcast UI]
+    RB -->|/insights/id/replay| R3D[3D tactical replay<br/>Three.js, lazy-loaded]
+    WEB -->|3D REPLAY| R3D
     GT --> EVAL[DetectorEvaluator]
     INS --> EVAL
     MATCH --> EXP[Dataset exporter] --> FABRIC[(Microsoft Fabric Lakehouse)]
@@ -58,7 +61,7 @@ flowchart LR
 |---|---|---|
 | `MatchShift.Core` | Event/team/player model, pitch conventions, `Insight`, `EvidenceItem`, `Highlight`, `RecapFacts` | - |
 | `MatchShift.SyntheticData` | Simulator, PRNG, clubs, flagship + scenario library, datasets, ground truth | Core |
-| `MatchShift.Analytics` | `MatchState`, `MetricsCalculator`, indices, detectors, `LiveMatchAnalyzer`, highlights, recaps | Core |
+| `MatchShift.Analytics` | `MatchState`, `MetricsCalculator`, indices, detectors, `LiveMatchAnalyzer`, highlights, recaps, 3D replay reconstruction (`Replay/`) | Core |
 | `MatchShift.Agents` | Lexicons, narrative rendering, viewer modes, recap narration, agents, verification | Core, Analytics |
 | `MatchShift.Infrastructure` | Foundry client/provider, DI, Fabric exporter, detector evaluator | all of the above |
 | `MatchShift.Api` | Minimal API, playback engine, SSE, telemetry | Infrastructure |
@@ -91,7 +94,8 @@ An adapter for an official hackathon schema only needs to produce `MatchEvent` r
 | GET | `/api/demo/events?since=` · `/analytics` · `/insights` · `/highlights` | raw feeds |
 | GET | `/api/demo/insights/{id}/evidence` | WHY? payload (raw + localised evidence) |
 | GET | `/api/demo/insights/{id}/events` | SHOW ME payload (layers + events) |
-| GET | `/api/demo/insights/{id}/agents` | run and trace the agent pipeline |
+| GET | `/api/demo/insights/{id}/replay` | 3D REPLAY payload (clips, events, player tracks with provenance, ball segments, overlays, camera hints) |
+| GET | `/api/demo/insights/{id}/agents` | retrieve the cached live agent result (or queue and await it) |
 | GET | `/api/demo/recap/{halftime\|fulltime}?style&lang` | verified recap (409 until play reaches that point) |
 | GET | `/health` | liveness |
 
@@ -100,3 +104,18 @@ An adapter for an official hackathon schema only needs to produce `MatchEvent` r
 Stored coordinates are **team-relative**: X 0-100 from the acting team's own goal line to the opponent's,
 Y 0-100 from that team's left touchline to its right. "Right-side attacks" therefore always means the attacking
 team's right. The API converts to an **absolute** frame for drawing (home attacks left→right in both halves).
+
+## Session, editorial and overlay upgrades
+
+Every demo endpoint accepts `session=<UUID>`; without it, the server issues a session cookie. Browser tabs
+generate their own IDs and pass them on every request, including SSE. Explicitly sharing an ID shares
+playback controls. Session epoch changes invalidate cached narration after seek/reset/match changes.
+
+A two-worker bounded queue handles editorial calls. Live/WHY/Agents share results keyed by insight and
+full viewer profile within the session epoch and startup provider/prompt configuration. See
+[AGENTS.md](AGENTS.md) for typed handoffs, limits, evidence gating and recovery.
+
+`GET /api/demo/overlay?session=<UUID>&lang=en` returns the versioned overlay contract or no active overlay.
+`/overlay` is a transparent browser source; `/broadcast` also renders original synthetic event animation.
+Match seconds drive expiry; disconnected overlays clear and reconnect using the current snapshot.
+This is demonstration timing, not synchronization to a professional video transport.

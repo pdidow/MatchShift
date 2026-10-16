@@ -1,0 +1,14 @@
+{
+  "provider": "mock",
+  "liveModel": false,
+  "promptVersion": "evidence-editor-v2",
+  "elapsedMs": 950,
+  "calls": 4,
+  "inputCharacters": 10296,
+  "outputCharacters": 2337,
+  "insightSource": "mock",
+  "verificationNote": "approved (evidence binding and 11 numeric occurrences checked)",
+  "recapSource": "mock",
+  "recapVerification": "approved (14 numbers checked)",
+  "passed": true
+}

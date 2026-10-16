@@ -9,15 +9,21 @@
 
 Built for the Microsoft + Premier League **"Inside the Game" Developer Hackathon**.
 
+**Submission status:** the local demo is working; submission requirements remain open. See the
+[rules audit and release checklist](docs/COMPLIANCE.md) and [judge testing instructions](docs/JUDGING.md).
+Local development uses offline templates or an explicitly labelled mock, with no Azure account or secrets.
+Microsoft Foundry remains the configurable production provider. See [provider setup](docs/FOUNDRY.md)
+and [completed upgrades and measured limits](docs/UPGRADE_STATUS.md). Mock results do not prove live AI execution.
+
 MatchShift watches a stream of football-realistic synthetic events and, live, answers:
 
 | Question | How |
 |---|---|
 | **What happened?** | Incremental match state: possessions, attacks, losses, shots, substitutions |
-| **What changed?** | 11 shift detectors + key-moment detection with thresholds, sample minimums, persistence and cooldowns |
+| **What changed?** | 12 shift detectors + key-moment detection with thresholds, sample minimums, persistence and cooldowns |
 | **Why does it matter?** | Importance model, highlight ranking, recap story beats |
 | **What evidence supports it?** | Every insight carries structured evidence: windows, before/after values, thresholds, sample sizes, z-scores, supporting event IDs |
-| **How should this viewer hear it?** | Five viewer modes × three languages (EN/FR/ES), template or Microsoft Foundry wording |
+| **How should this viewer hear it?** | Five viewer modes × three languages (EN/FR/ES), offline templates, mock or Foundry editorial selection |
 | **What story is emerging?** | Live narrative cards, highlight timeline, half-time and full-time recaps in four styles |
 
 ![MatchShift - WHY? panel for the 63rd-minute attack-channel shift](docs/img/why.png)
@@ -29,10 +35,11 @@ MatchShift watches a stream of football-realistic synthetic events and, live, an
 ## The core principle
 
 **The LLM never calculates match statistics.** Deterministic C# computes every count, window, share,
-index and detection and attaches the evidence *before* any words exist. Language - template or AI -
-only explains, personalises and translates verified facts. A mandatory **Verification Agent** checks
-every number in every generated sentence against the evidence and rejects claims of intent; rejected AI
-text is replaced by verified template text, so the demo never depends on a cloud service.
+index and detection and attaches evidence before wording. A replay gate withholds inconsistent claims.
+Foundry can choose evidence-bound editorial treatments and recap order; deterministic renderers retain
+control of factual wording and translations. An independent skeptical review can request one revision.
+Live cards update asynchronously and share accepted wording with WHY? and Agents. All three modes remain
+inspectable; mock mode is clearly labelled and is not a real AI service.
 
 ```
 synthetic events ──► MatchState ──► window metrics ──► detectors ──► Insight (semantic + evidence)
@@ -45,39 +52,133 @@ synthetic events ──► MatchState ──► window metrics ──► detecto
 ## What is in the box
 
 - **Synthetic data engine** - possession-based simulator with its own xoshiro256** PRNG (same seed ⇒ same
-  match on every machine), fictional clubs and behaviour profiles, a scripted **flagship match**, six
+  match on every machine), fictional clubs and behaviour profiles, a scripted **flagship match**, seven
   labelled scenario families, and batch dataset generation with ground truth kept *outside* the event stream.
 - **Explainable analytics** - attack sides, entries, chance quality, possession, field tilt, tempo,
   transitions, plus three transparent composite indices: **MatchShift Pressure Index**, **Match Control**,
   **Control-vs-Chaos**. All formulas documented; none is an official statistic.
 - **MatchShiftDetector** - live, no-look-ahead detection of ATTACK_CHANNEL_SHIFT, PRESSURE_INCREASE/DECREASE,
   CONTROL_SHIFT, TERRITORIAL_SHIFT, POSSESSION_SHIFT, TEMPO_SHIFT, CHAOS_INCREASE, SHOT_PRESSURE,
-  TURNOVER_SPIKE, POST_SUBSTITUTION_CHANGE, COUNTER_ATTACK_THREAT and moments (GOAL, BIG_CHANCE,
+  TURNOVER_SPIKE, POST_SUBSTITUTION_CHANGE, COUNTER_ATTACK_THREAT, PASSING_STYLE_SHIFT and moments (GOAL, BIG_CHANCE,
   DANGEROUS_TURNOVER) - **measured** against labelled scenarios (see [detection](docs/MATCH_SHIFT_DETECTION.md)).
 - **WHY?** and **SHOW ME** - every card opens its evidence table, and draws exactly the events behind it on the pitch.
-- **Multi-agent pipeline** - Event Analyst (re-derives cited metrics from raw events), Pattern Detection,
-  Football Reasoning, Storytelling, Personalization, Recap and Verification agents with a visible trace.
+- **3D REPLAY** - every insight can be replayed as an interactive Three.js reconstruction of the sequence that caused it
+  (BEFORE / AFTER clips for tactical shifts), with tactical overlays and four camera views. See below.
+- **Evidence-bound agent workflow** - deterministic analytics plus optional Interpreter → Skeptic → Editor calls,
+  typed handoffs, one bounded revision and a visible shared trace. See [agents](docs/AGENTS.md).
+- **Player focus and passing** - analyst passing totals, long-ball-share shift detection, player summaries with
+  event IDs and timelines, and player-related insights ranked first.
+- **Broadcast demonstration** - `/broadcast` composites original synthetic event animation with a timed overlay;
+  `/overlay` is a transparent browser source. Independent session IDs keep viewer controls separate.
 - **Broadcast UI** - React + TypeScript: live pitch, insight feed, momentum and pressure charts, highlight
   scrubber, playback at 1x/2x/5x/10x with seeking, recaps, language and viewer-mode switching.
 - **Microsoft stack** - Microsoft Foundry (keyless via managed identity), Azure Container Apps, Application
   Insights (OpenTelemetry), Fabric-ready exports (JSONL / CSV / Parquet), GitHub Actions, `azd up`.
 
+## Interactive 3D Tactical Replay
+
+Every insight card, the WHY? panel, the SHOW ME bar and the highlight timeline offer **3D REPLAY**: an
+interactive, broadcast-style reconstruction of the exact sequence behind the insight, rendered with Three.js
+inside the app. It is a tactical visualisation, not a game engine - its job is to show *why* MatchShift
+raised the insight.
+
+![3D replay - behind-goal view of the 34' press, left-channel attack and cutback](docs/img/replay-3d-behind-goal.png)
+
+**Why reconstruction.** The synthetic event stream records where each *event* happens (the passer, the pass
+destination, the interception point, the shot), not continuous tracking of all 22 players. MatchShift therefore
+reconstructs the scene - and says so.
+
+**From evidence to sequence** (`MatchShift.Analytics.Replay.ReplayBuilder`, server-side and unit tested):
+
+1. The insight's supporting and visual event IDs are grouped into possessions; the most telling one (shots, goals,
+   box entries, regains, evidence count) becomes the clip, padded backwards to include the turnover that started it.
+2. Tactical shifts (attack channel, post-substitution, control, territory, possession, tempo, passing style) get two
+   clips: **BEFORE SHIFT** - a typical attack from the baseline window - and **AFTER SHIFT** from the recent window.
+3. Events keep their match seconds; passes and carries end when the next action starts.
+4. The ball follows recorded start/end points; between actions it stays with its holder. Ball height is not in the
+   data, so arcs on long balls, crosses and shots are drawn as visual aids only.
+
+**Observed vs reconstructed positions.** Every player sample carries a provenance:
+
+| Provenance | Meaning | Shown as |
+|---|---|---|
+| `ACTUAL_EVENT_POSITION` | recorded in an event (actor, pass destination, interception point...) | bright ring |
+| `INTERPOLATED_POSITION` | between two nearby recorded positions, or blending towards one | half-opacity ring |
+| `ESTIMATED_POSITION` | not near any event: the player's anchor shifted with the ball - illustrative only | faint ring |
+
+**Works with any data in MatchShift's event model** - nothing is specific to the demo match. A player's anchor is
+their own observed event positions so far in the match, blended with a standard spot for their role (team-mates sharing
+a role are spread across the pitch). A generator-supplied behaviour profile is used only if present, so a feed with
+no profiles still produces a sensible shape (tested by stripping every profile from the flagship match).
+
+**Tactical overlays** come from the insight: the insight's channel (or the attack route actually taken), the
+attacking third for pressure/territory insights, ball-winning players in the press (pulsing), the turnover and shot
+locations, and the pass route drawn as the ball travels. The current event is captioned (e.g.
+`34:25 HIGH PRESS INTERCEPTION · #4 CASTELLANE`) and its players are highlighted.
+
+**Cameras:** Tactical (default, high angled, whole pitch), Sideline (TV-style, follows the ball), Behind goal (behind
+the goal being attacked), Player (follows the key player). Drag to orbit, scroll to zoom, right-drag to pan; *Reset
+camera* returns to the preset. A short fly-in plays the first time (skippable).
+
+**Player and ball models:** articulated human proportions, faces, numbered shirts and boots, plus a curved
+32-panel football with recessed seams. Players share geometry: 4,488 triangles nearby and 1,736 at distance,
+with one draw call per player body. The ball represents a 22 cm diameter; the same display scale is applied to
+players and ball. All models and textures are generated locally, with no external asset downloads.
+
+![Player and ball proportions at the same scale](docs/img/replay-model-proportions.png)
+
+**Playback:** play/pause, restart, previous/next event, a scrubber with event markers (evidence events highlighted,
+clip boundaries marked), 0.5× / 1× / 1.5× / 2×. Keyboard: space, ←/→, 1-4, Esc.
+
+**Why it helps explainability:** WHY? shows the numbers, SHOW ME shows the evidence events in 2D, and 3D REPLAY shows
+those same events unfolding in space and time - with every reconstructed position labelled as such.
+
+**Try it:** run the app, seek past 35', open the **Key moment** card "Westhaven lose it in their own half - Northbridge
+shoot" (35') and press **3D REPLAY**: Westhaven play out from the back, Northbridge's press intercepts, and they score
+straight through the left channel. For a BEFORE/AFTER example, use the 63' **Match shift** card. Deep link (same
+session): `/?session=<id>&replay=MS-FLAGSHIP-001-I005` (optional `&replayAt=7&replayCam=sideline&replayPause=1`).
+
+| Tactical view | After the shift (63' channel insight) |
+|---|---|
+| ![Tactical](docs/img/replay-3d-tactical.png) | ![After shift](docs/img/replay-3d-after-shift.png) |
+
+## Accessibility (optional, user-controlled)
+
+The default MatchShift experience is the full broadcast one. **Accessibility adaptations are opt-in**: open
+**Accessibility** in the top bar to pick a preset (Low vision, Audio-first, Reduced motion) or switch on individual options:
+
+- **Speech and audio:** spoken insights at three detail levels, an audio match mode, spoken recaps, 3D replay audio
+  description, READ EXPLANATION and READ WHAT CHANGED in WHY?, DESCRIBE THIS in SHOW ME, and optional sound cues.
+- **Text:** captions and a replayable transcript.
+- **Display:** high contrast, colour-vision modes (validated palettes plus shapes, dashes and hatching), and larger text.
+- **Motion:** reduced motion (follows the OS by default; direct camera cuts in 3D) and reduced flashing.
+- **Content:** simplified insights.
+
+Speech is queued (one voice, priority, no repeats, stale items dropped, critical news interrupts) and is generated only
+from the deterministic evidence. Keyboard navigation, focus management and selective screen-reader live regions are
+built in for everyone; press **?** for shortcuts. Details, keyboard map and test plan: [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md).
+
 ## Quick start (no keys, no cloud)
 
-Requirements: **.NET SDK 10**, **Node 20+**.
+Requirements: **.NET SDK 10**, **Node 22.12+** (Node 22 is used by CI and Docker).
 
 ```bash
 # 1. API (serves on http://localhost:5002)
 dotnet run --project src/MatchShift.Api --launch-profile http
 
 # 2. UI with hot reload (http://localhost:5173, proxies /api to :5002)
-cd src/MatchShift.Web && npm install && npm run dev
+cd src/MatchShift.Web
+npm ci
+npm run dev
 ```
 
 Or build the UI into the API and run a single process:
 
 ```bash
-cd src/MatchShift.Web && npm install && npm run build   # outputs to src/MatchShift.Api/wwwroot
+cd src/MatchShift.Web
+npm ci
+npm run build                                      # outputs to src/MatchShift.Api/wwwroot
+cd ../..
 dotnet run --project src/MatchShift.Api --launch-profile http   # open http://localhost:5002
 ```
 
@@ -88,7 +189,7 @@ Press **Play**. 1x = 30 match-seconds per real second (a full match in 3 minutes
 ## Tests and evaluation
 
 ```bash
-dotnet test                                               # ~200 xUnit tests (core, data, analytics, agents, API)
+dotnet test                                               # 218 xUnit tests (core, data, analytics, agents, API)
 dotnet run --project tools/MatchShift.Cli -- evaluate --matches 120   # detector precision/recall vs ground truth
 dotnet run --project tools/MatchShift.Cli -- robustness   # flagship script re-simulated with 20 other seeds
 dotnet run --project tools/MatchShift.Cli -- analyze      # live insights for the flagship match
@@ -98,10 +199,16 @@ dotnet run --project tools/MatchShift.Cli -- export --matches 50   # Fabric-read
 
 ## Optional: Microsoft Foundry and Azure
 
-Copy `.env.example` values into environment variables (or `appsettings`), e.g.
-`Foundry__Enabled=true`, `Foundry__Endpoint=...`, `Foundry__Deployment=...` (API key optional - Entra ID by default).
-Deploy with the Azure Developer CLI: `azd up` (provisions [infra/main.bicep](infra/main.bicep)).
-See [docs/MICROSOFT_INTEGRATION.md](docs/MICROSOFT_INTEGRATION.md).
+For an offline demonstration of the provider workflow:
+
+```powershell
+dotnet run --project src/MatchShift.Api --launch-profile http -- --Narration:Provider=mock
+```
+
+Use `--Narration:Provider=template` for deterministic templates. No credentials are required in either
+mode. [FOUNDRY.md](docs/FOUNDRY.md) documents endpoint/deployment settings and optional authentication
+when access is available, plus repeatable mock validation. [MICROSOFT_INTEGRATION.md](docs/MICROSOFT_INTEGRATION.md)
+describes the optional Azure deployment definitions; no deployment is required for local work.
 
 ## Repository layout
 
@@ -126,7 +233,10 @@ docs/                        Design documentation
 [Architecture](docs/ARCHITECTURE.md) · [Synthetic data](docs/SYNTHETIC_DATA.md) · [Analytics](docs/ANALYTICS.md) ·
 [Match shift detection](docs/MATCH_SHIFT_DETECTION.md) · [Explainability](docs/EXPLAINABILITY.md) ·
 [Agents](docs/AGENTS.md) · [Narratives](docs/NARRATIVES.md) · [Recaps](docs/RECAPS.md) ·
-[Microsoft integration](docs/MICROSOFT_INTEGRATION.md) · [Two-minute demo](docs/DEMO.md) · [Hackathon mapping](docs/HACKATHON.md)
+[Microsoft integration](docs/MICROSOFT_INTEGRATION.md) · [Demo under two minutes](docs/DEMO.md) · [Hackathon mapping](docs/HACKATHON.md) ·
+[Compliance audit](docs/COMPLIANCE.md) · [Judge instructions](docs/JUDGING.md) ·
+[Claims and upgrades](docs/CLAIMS_AND_UPGRADES.md) · [Project description](docs/PROJECT_DESCRIPTION.md) ·
+[Accessibility](docs/ACCESSIBILITY.md)
 
 ---
 

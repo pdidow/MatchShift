@@ -1,4 +1,5 @@
 using MatchShift.Agents.Narrative;
+using MatchShift.Agents.Agents;
 using MatchShift.Analytics;
 using MatchShift.Analytics.Indices;
 using MatchShift.Analytics.Metrics;
@@ -30,11 +31,12 @@ public static class SnapshotBuilder
         static double? R(double? v) => v is null ? null : Math.Round(v.Value, 1);
     }
 
-    public static InsightCardDto Card(Insight i, NarrativeContext context) =>
+    public static InsightCardDto Card(Insight i, NarrativeContext context, Func<Insight, NarrativeContext, InsightNarrative>? narrate = null) =>
         new(i.Id, i.Type.Code(), i.DisplayMinute, i.DetectedAtSecond, i.TeamId, i.Severity, i.Confidence, i.ConfidenceScore, i.Importance,
-            i.KeyPlayerId, i.Span, i.Visuals, i.SupportingEventIds.Count, TemplateInsightProvider.Narrate(i, context));
+            i.KeyPlayerId, i.Span, i.Visuals, i.SupportingEventIds.Count, narrate?.Invoke(i, context) ?? TemplateInsightProvider.Narrate(i, context));
 
-    public static SnapshotDto Build(LiveMatchAnalyzer analysis, int clock, Match match, ViewerProfile profile, bool playing, int speed)
+    public static SnapshotDto Build(LiveMatchAnalyzer analysis, int clock, Match match, ViewerProfile profile, bool playing, int speed,
+        Func<Insight, NarrativeContext, InsightNarrative>? narrate = null)
     {
         var context = new NarrativeContext(new MatchRoster(match), profile);
         var state = analysis.State;
@@ -48,11 +50,14 @@ public static class SnapshotBuilder
 
         TeamLiveMetricsDto TeamMetrics(TeamWindowMetrics m, TeamWindowMetrics p) => new(
             m.TeamId, Math.Round(m.PossessionShare, 3), PressureIndex.Compute(p).Value, m.Shots, m.ShotsOnTarget, Math.Round(m.ChanceQuality, 2),
-            m.Attacks, Math.Round(m.LeftShare, 3), Math.Round(m.CentreShare, 3), Math.Round(m.RightShare, 3), m.Turnovers, m.HighRecoveries);
+            m.Attacks, Math.Round(m.LeftShare, 3), Math.Round(m.CentreShare, 3), Math.Round(m.RightShare, 3), m.Turnovers, m.HighRecoveries,
+            m.PassesAttempted, m.PassesCompleted, m.ProgressivePasses, m.LongBalls);
 
         var insights = NarrativeFilter.Select(analysis.Insights, profile)
-            .OrderByDescending(i => i.DetectedAtSecond).ThenByDescending(i => i.Importance)
-            .Select(i => Card(i, context)).ToList();
+            .Where(i => EvidenceGate.Check(i, match).Approved)
+            .OrderByDescending(i => profile.FocusPlayerId is { } player && TemplateInsightProvider.Involvement(i, match, player) > 0)
+            .ThenByDescending(i => i.DetectedAtSecond).ThenByDescending(i => i.Importance)
+            .Select(i => Card(i, context, narrate)).ToList();
 
         var highlights = HighlightRanker.Rank(analysis, clock).Take(8)
             .Select(h =>
@@ -75,10 +80,10 @@ public static class SnapshotBuilder
             recent,
             new LiveMetricsDto(window.Label, TeamMetrics(w.Home, pressureWindow.Home), TeamMetrics(w.Away, pressureWindow.Away),
                 control.HomeControl, chaos.Value, chaos.State, control.Components, chaos.Components),
-            analysis.Timeline,
+            analysis.Timeline.ToArray(),
             insights,
             highlights,
-            profile);
+            profile, FocusedPlayer: match.FindPlayer(profile.FocusPlayerId) is { } p ? PlayerPerformance.Calculate(state, p.Id) : null);
     }
 
     public static ViewerProfile Profile(string? lang, string? mode, string? team, string? player) => new(

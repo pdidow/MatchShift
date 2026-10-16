@@ -3,7 +3,7 @@ import type { AgentTrace, HighlightCard, Profile, RecapResponse, RecapStyle, Sna
 import { api } from '../api'
 import type { Strings } from '../i18n'
 
-export function HighlightsPanel({ snap, s, onShow }: { snap: Snapshot; s: Strings; onShow: (h: HighlightCard) => void }) {
+export function HighlightsPanel({ snap, s, onShow, onReplay }: { snap: Snapshot; s: Strings; onShow: (h: HighlightCard) => void; onReplay: (insightId: string) => void }) {
   if (snap.highlights.length === 0) return <p className="empty">{s.waiting}</p>
   const teamName = (id?: string) => (id === snap.home.id ? snap.home.shortName : id === snap.away.id ? snap.away.shortName : '')
   return (
@@ -16,7 +16,10 @@ export function HighlightsPanel({ snap, s, onShow }: { snap: Snapshot; s: String
           </div>
           <h3 className="card-headline" style={{ fontSize: 18 }}>{h.headline}</h3>
           <p className="card-sub">{h.whyItMatters}</p>
-          <div className="card-actions"><button className="chip" onClick={() => onShow(h)}>{s.showMe}</button></div>
+          <div className="card-actions">
+            <button className="chip" onClick={() => onShow(h)}>{s.showMe}</button>
+            {h.insightId && <button className="chip replay-btn" onClick={() => onReplay(h.insightId!)}>{s.replay.button}</button>}
+          </div>
         </article>
       ))}
     </>
@@ -35,7 +38,7 @@ export function RecapPanel({ snap, s, profile, styles }: { snap: Snapshot; s: St
     setRecap('loading')
     api.recap(period, style, profile).then((r) => { if (!cancelled) setRecap(r) }).catch(() => { if (!cancelled) setRecap(null) })
     return () => { cancelled = true }
-  }, [period, style, profile.language, available]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [period, style, profile.language, profile.focusTeamId, snap.matchId, available])
 
   return (
     <div className="recap">
@@ -73,8 +76,12 @@ export function AgentPanel({ insightId, profile, s }: { insightId: string | null
     setTrace(null)
     setError(null)
     if (!insightId) return
-    api.agentTrace(insightId, profile).then(setTrace).catch((e: Error) => setError(e.message))
-  }, [insightId, profile.language, profile.mode]) // eslint-disable-line react-hooks/exhaustive-deps
+    let cancelled = false
+    api.agentTrace(insightId, profile)
+      .then((result) => { if (!cancelled) setTrace(result) })
+      .catch((e: Error) => { if (!cancelled) setError(e.message) })
+    return () => { cancelled = true }
+  }, [insightId, profile.language, profile.mode, profile.focusTeamId, profile.focusPlayerId])
 
   if (!insightId) return <p className="empty">{s.selectInsight}</p>
   if (error) return <p className="empty">{error}</p>
@@ -82,6 +89,16 @@ export function AgentPanel({ insightId, profile, s }: { insightId: string | null
   return (
     <div>
       <h2 className="panel-title">{s.pipeline}<small>{trace.provider}</small></h2>
+      <article className="card">
+        <h3 className="card-headline">{trace.narrative.headline}</h3>
+        <p className="card-fact">{trace.narrative.fact}</p>
+        <p className="card-sub"><b>{s.inference}: </b>{trace.narrative.inference}</p>
+        {trace.narrative.explanation && <p className="card-sub"><b>{s.possibleExplanation}: </b>{trace.narrative.explanation}</p>}
+        {trace.narrative.teaching && <p className="card-sub">{trace.narrative.teaching}</p>}
+        {trace.narrative.perspective && <p className="card-sub">{trace.narrative.perspective}</p>}
+        {trace.narrative.playerLine && <p className="card-sub">{trace.narrative.playerLine}</p>}
+        <p className="note">{trace.narrative.source}{trace.narrative.verificationNote ? ` · ${trace.narrative.verificationNote}` : ''}</p>
+      </article>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {trace.steps.map((step, i) => {
           const ok = step.status === 'Approved' || step.status === 'Completed'

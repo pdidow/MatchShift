@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import type { Team, TimelinePoint } from '../api'
 import type { Strings } from '../i18n'
+import { useOptionalA11y } from '../a11y/A11yContext'
 import { AWAY_COLOR, HOME_COLOR } from './Pitch'
+
+/** Colour-vision modes add texture/dashes for the away series (optional; off by default). */
+function usePatterns() {
+  const a11y = useOptionalA11y()
+  return !!a11y && a11y.prefs.colorVision !== 'default'
+}
 
 const VW = 600
 const VH = 96
@@ -62,6 +69,7 @@ export function MomentumChart({ points, home, away, s }: { points: TimelinePoint
   const above = points.length ? `M${x(points[0].minute)},${y(50)} ` + points.map((p) => `L${x(p.minute)},${y(Math.max(50, p.homeControl))}`).join(' ') + ` L${x(points[points.length - 1].minute)},${y(50)} Z` : ''
   const below = points.length ? `M${x(points[0].minute)},${y(50)} ` + points.map((p) => `L${x(p.minute)},${y(Math.min(50, p.homeControl))}`).join(' ') + ` L${x(points[points.length - 1].minute)},${y(50)} Z` : ''
   const last = points[points.length - 1]
+  const patterns = usePatterns()
 
   return (
     <div className="chart" style={{ position: 'relative' }}>
@@ -69,14 +77,22 @@ export function MomentumChart({ points, home, away, s }: { points: TimelinePoint
         <span>{s.matchControl} · {s.lastTen}</span>
         <span className="chart-legend">
           <span className="legend-key"><i style={{ background: HOME_COLOR, opacity: 0.6 }} />{home.shortName}</span>
-          <span className="legend-key"><i style={{ background: AWAY_COLOR, opacity: 0.6 }} />{away.shortName}</span>
+          <span className="legend-key"><i className="swatch-away" style={{ background: AWAY_COLOR, opacity: 0.6 }} />{away.shortName}</span>
         </span>
       </p>
       <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={onLeave} role="img"
-        aria-label={`${s.matchControl}: ${home.shortName} ${last ? Math.round(last.homeControl) : 50}`}>
+        aria-label={`${s.matchControl}: ${home.shortName} ${last ? Math.round(last.homeControl) : 50}, ${away.shortName} ${last ? 100 - Math.round(last.homeControl) : 50}`}>
+        {patterns && (
+          <defs>
+            <pattern id="hatch-away" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill={AWAY_COLOR} opacity={0.28} />
+              <line x1="0" y1="0" x2="0" y2="6" stroke={AWAY_COLOR} strokeWidth="2.5" />
+            </pattern>
+          </defs>
+        )}
         <Axes />
         <path d={above} fill={HOME_COLOR} opacity={0.28} />
-        <path d={below} fill={AWAY_COLOR} opacity={0.28} />
+        <path d={below} fill={patterns ? 'url(#hatch-away)' : AWAY_COLOR} opacity={patterns ? 0.6 : 0.28} />
         <path d={line} fill="none" stroke="var(--ink-secondary)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         {last && <EndDot cx={x(last.minute)} cy={y(last.homeControl)} color="var(--ink)" />}
         {hover && <line x1={x(hover.minute)} x2={x(hover.minute)} y1={PAD.t} y2={VH - PAD.b} stroke="var(--ink-muted)" strokeWidth={1} />}
@@ -95,19 +111,22 @@ export function PressureChart({ points, home, away, s }: { points: TimelinePoint
   const { hover, onMove, onLeave } = useHover(points)
   const path = (pick: (p: TimelinePoint) => number) => points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.minute)},${y(pick(p))}`).join(' ')
   const last = points[points.length - 1]
+  const patterns = usePatterns()
   return (
     <div className="chart" style={{ position: 'relative' }}>
       <p className="chart-title">
         <span>{s.pressure} · {s.lastFive}</span>
         <span className="chart-legend">
           <span className="legend-key"><i style={{ background: HOME_COLOR }} />{home.shortName}</span>
-          <span className="legend-key"><i style={{ background: AWAY_COLOR }} />{away.shortName}</span>
+          <span className="legend-key"><i className="swatch-away line" style={{ background: AWAY_COLOR }} />{away.shortName}</span>
         </span>
       </p>
-      <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={onLeave} role="img" aria-label={s.pressure}>
+      <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={onLeave} role="img"
+        aria-label={`${s.pressure}: ${home.shortName} ${last ? Math.round(last.homePressure) : 0}, ${away.shortName} ${last ? Math.round(last.awayPressure) : 0}`}>
         <Axes />
         <path d={path((p) => p.homePressure)} fill="none" stroke={HOME_COLOR} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        <path d={path((p) => p.awayPressure)} fill="none" stroke={AWAY_COLOR} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d={path((p) => p.awayPressure)} fill="none" stroke={AWAY_COLOR} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+          strokeDasharray={patterns ? '7 4' : undefined} />
         {last && (
           <>
             <EndDot cx={x(last.minute)} cy={y(last.homePressure)} color={HOME_COLOR} />

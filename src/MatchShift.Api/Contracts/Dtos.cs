@@ -23,7 +23,8 @@ public sealed record ClockDto(int Second, int Minute, int Period, string Label);
 
 public sealed record TeamLiveMetricsDto(
     string TeamId, double Possession, double Pressure, int Shots, int ShotsOnTarget, double ChanceQuality,
-    int Attacks, double LeftShare, double CentreShare, double RightShare, int Turnovers, int HighRecoveries);
+    int Attacks, double LeftShare, double CentreShare, double RightShare, int Turnovers, int HighRecoveries,
+    int Passes, int CompletedPasses, int ProgressivePasses, int LongBalls);
 
 public sealed record LiveMetricsDto(string Window, TeamLiveMetricsDto Home, TeamLiveMetricsDto Away, double HomeControl,
     double Chaos, ChaosState ChaosState, IReadOnlyList<IndexComponent> ControlComponents, IReadOnlyList<IndexComponent> ChaosComponents);
@@ -51,7 +52,11 @@ public sealed record SnapshotDto(
     IReadOnlyList<InsightCardDto> Insights,
     IReadOnlyList<HighlightCardDto> Highlights,
     ViewerProfile Profile,
-    bool Synthetic = true);
+    bool Synthetic = true,
+    string SessionId = "",
+    long Epoch = 0,
+    MatchShift.Analytics.Metrics.PlayerPerformance? FocusedPlayer = null,
+    OverlayDto? Overlay = null);
 
 public sealed record EvidenceResponseDto(InsightCardDto Insight, string WhyTitle, IReadOnlyDictionary<string, string> Labels,
     IReadOnlyList<EvidenceItem> RawEvidence, IReadOnlyDictionary<string, string> Facts);
@@ -64,6 +69,7 @@ public sealed record ResetRequest(string? MatchId);
 
 public sealed record MetaDto(
     IReadOnlyList<LanguageDto> Languages, IReadOnlyList<string> Modes, IReadOnlyList<string> RecapStyles, IReadOnlyList<int> Speeds,
-    string AiProvider, bool AiAvailable, string DataNotice);
+    string AiProvider, bool AiAvailable, string DataNotice,
+    string RequestedProvider = "template", string ProviderStatus = "", string PromptVersion = "");
 
 public sealed record LanguageDto(string Code, string Name);

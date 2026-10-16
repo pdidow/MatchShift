@@ -14,6 +14,7 @@ public enum ScenarioKind
     CounterAttackSwing,
     ChaoticFinish,
     SubstitutionImpact,
+    PassingStyleShift,
 }
 
 /// <summary>
@@ -38,6 +39,11 @@ public static class ScenarioLibrary
 
         switch (kind)
         {
+            case ScenarioKind.PassingStyleShift:
+                phases.Add(new ScenarioPhase(0, 30, "Short-passing baseline", homeBase with { Directness = .02 }, awayBase));
+                phases.Add(new ScenarioPhase(30, 90, "More long passes", homeBase with { Directness = .95, PassAccuracy = .90 }, awayBase));
+                expected.Add(new ExpectedPattern(InsightType.PassingStyleShift, home.Id, 34, 48, "Increased long-ball share"));
+                break;
             case ScenarioKind.Stationary:
                 phases.Add(new ScenarioPhase(0, 90, "Stable", homeBase, awayBase));
                 forbidden.AddRange([InsightType.AttackChannelShift, InsightType.PostSubstitutionChange]);
@@ -204,6 +210,7 @@ public static class ScenarioLibrary
         ScenarioKind.CounterAttackSwing => "CTR",
         ScenarioKind.ChaoticFinish => "CHAOS",
         ScenarioKind.SubstitutionImpact => "SUB",
+        ScenarioKind.PassingStyleShift => "PASS",
         _ => "GEN",
     };
 }

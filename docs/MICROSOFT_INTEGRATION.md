@@ -5,35 +5,34 @@ dependency of the demo.
 
 | Technology | Role in MatchShift | Where |
 |---|---|---|
-| **Microsoft Foundry** | Storytelling, personalisation, translation and recap prose over *verified* facts | `src/MatchShift.Infrastructure/Foundry` |
+| **Microsoft Foundry** | Evidence-bound editorial agents and recap ordering over deterministic localized facts | `src/MatchShift.Infrastructure/Foundry` |
 | **Azure Container Apps** | Hosts the single container (API + UI), managed identity, HTTP probe on `/health` | `infra/main.bicep`, `Dockerfile` |
 | **Azure Container Registry** | Image registry, pulled via managed identity (AcrPull) | `infra/main.bicep` |
 | **Application Insights / Azure Monitor** | OpenTelemetry traces, requests and custom `MatchShift` metrics | `src/MatchShift.Api/Telemetry.cs` |
-| **Microsoft Fabric** | Lakehouse for generated datasets, detector evaluation and pattern analysis | `matchshift export`, below |
+| **Microsoft Fabric** | Compatible export files and manual Lakehouse ingestion instructions; no automated/live Fabric connection | `matchshift export`, below |
 | **GitHub** | CI (build, test, detector evaluation, UI build, container build), Copilot guidance | `.github/` |
 | **Azure Developer CLI** | `azd up` provisions and deploys | `azure.yaml` |
 
 ## Microsoft Foundry
 
-Configuration (`appsettings` section `Foundry` or environment variables):
+See [FOUNDRY.md](FOUNDRY.md) for complete template/mock/Foundry settings, endpoint and deployment formats,
+authentication, timeouts, fallback and validation commands. No subscription, billing or secrets are
+needed locally. Mock mode runs the same handoff protocol without model calls and is labelled accordingly.
 
-```
-Foundry__Enabled=true
-Foundry__Endpoint=https://<resource>.services.ai.azure.com/openai/v1
-Foundry__Deployment=<model deployment name>
-Foundry__ApiKey=          # optional; empty = Microsoft Entra ID (DefaultAzureCredential / managed identity)
-```
-
-`FoundryChatClient` calls the OpenAI-compatible `chat/completions` endpoint with `response_format: json_object`.
-`FoundryInsightProvider` sends the **verified** template narrative and the evidence, with a system prompt that
-forbids calculating, inventing numbers, naming other clubs or claiming intent. The JSON response passes through
-the Verification agent; on rejection, timeout or error the template text is served and the reason is recorded in
-`verificationNote` (visible in WHY? and the Agents tab). `GET /api/meta` reports the active provider.
+The Foundry workflow uses separate Interpreter, Skeptic and Editor requests. It returns typed selections;
+strict application checks retain factual wording and reject unsupported references. Live snapshots use
+a bounded background queue and share accepted results with WHY? and Agents. Recaps use complete verified
+sections. `/api/meta` distinguishes the configured mode; inspect each narrative's `source` and
+`verificationNote` to distinguish accepted Foundry output, mock output and template fallback.
 
 For keyless access, pass `foundryResourceId` to the Bicep deployment: it grants the container app's managed
 identity **Cognitive Services OpenAI User** on the Foundry account (`infra/foundry-access.bicep`).
 
 ## Azure deployment
+
+These are deployment definitions, not evidence of a completed cloud deployment. Validate provisioning,
+image deployment, managed identity permissions and model availability in the target subscription before
+claiming the Azure category or supplying a hosted judging URL.
 
 ```bash
 azd auth login
@@ -44,7 +43,7 @@ azd up
 ```
 
 Provisioned: Log Analytics, Application Insights, Container Registry, Container Apps environment and app
-(system-assigned identity, external ingress on 8080, liveness probe). The demo session is in-memory, so the app
+(system-assigned identity, external ingress on 8080, liveness probe). The independent demo sessions are in-memory, so the app
 runs one replica; scaling out would move playback state to a shared store and fan snapshots out through Azure
 SignalR Service (the SSE contract maps directly onto SignalR groups per match).
 

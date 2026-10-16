@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useRef } from 'react'
+import type { ReactNode } from 'react'
 import type { InsightCard } from '../api'
 import type { Strings } from '../i18n'
+import { useDialog } from '../a11y/A11yContext'
 import { Confidence } from './InsightCard'
 
 interface Props {
@@ -8,22 +10,22 @@ interface Props {
   s: Strings
   onClose: () => void
   onShow: () => void
+  onReplay: () => void
+  /** Optional accessibility actions (READ EXPLANATION / READ WHAT CHANGED), shown only when speech is enabled. */
+  extraActions?: ReactNode
 }
 
 /** WHY? - the deterministic evidence behind an insight, before any wording. */
-export function WhyPanel({ card, s, onClose, onShow }: Props) {
+export function WhyPanel({ card, s, onClose, onShow, onReplay, extraActions }: Props) {
   const n = card.narrative
   const primary = n.evidence.find((e) => e.isPrimary) ?? n.evidence[0]
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const ref = useRef<HTMLDivElement>(null)
+  // Focus moves into the dialog, Tab stays inside, Escape closes, focus returns to the card.
+  useDialog(ref, onClose)
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="why-title" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="why-title" ref={ref} onClick={(e) => e.stopPropagation()}>
         <div className="card-top">
           <span className="card-kicker">{s.why} · {n.typeLabel} · {card.minute}'</span>
           <button className="ghost" onClick={onClose} aria-label={s.close}>✕</button>
@@ -64,8 +66,9 @@ export function WhyPanel({ card, s, onClose, onShow }: Props) {
         </div>
 
         <table className="evidence">
+          <caption className="sr-only">{s.evidence}</caption>
           <thead>
-            <tr><th>{s.metric}</th><th>{s.before}</th><th>{s.now}</th><th>{s.change}</th><th>{s.threshold}</th><th>{s.sample}</th></tr>
+            <tr><th scope="col">{s.metric}</th><th scope="col">{s.before}</th><th scope="col">{s.now}</th><th scope="col">{s.change}</th><th scope="col">{s.threshold}</th><th scope="col">{s.sample}</th></tr>
           </thead>
           <tbody>
             {n.evidence.map((e) => (
@@ -89,6 +92,8 @@ export function WhyPanel({ card, s, onClose, onShow }: Props) {
         </p>
         <div className="card-actions">
           <button className="primary" onClick={onShow}>{s.showMe}</button>
+          <button className="chip replay-btn" onClick={onReplay}>{s.replay.button}</button>
+          {extraActions}
           <button onClick={onClose}>{s.close}</button>
         </div>
       </div>

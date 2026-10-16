@@ -91,7 +91,7 @@ public class DetectorTests
         var goal = FlagshipAnalysis.Insights.First(i => i.Type == InsightType.Goal);
         Assert.Equal(ClubCatalog.NorthbridgeId, goal.TeamId);
         Assert.Equal("NBR-09", goal.Fact("scorerId"));
-        Assert.Equal("NBR-07", goal.Fact("assistId"));
+        Assert.Equal("NBR-11", goal.Fact("assistId"));
         Assert.Equal("1", goal.Fact("homeScore"));
         Assert.Equal("0", goal.Fact("awayScore"));
         Assert.Equal(100, goal.Importance);

@@ -19,7 +19,8 @@ public sealed class FoundryOptions
     public string? Deployment { get; set; }
     public string? ApiKey { get; set; }
     public double Temperature { get; set; } = 0.4;
-    public int MaxOutputTokens { get; set; } = 900;
+    public int MaxOutputTokens { get; set; } = 4096;
+    public string TokenScope { get; set; } = "https://ai.azure.com/.default";
     public int TimeoutSeconds { get; set; } = 20;
 
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(Endpoint) && !string.IsNullOrWhiteSpace(Deployment);

@@ -1,3 +1,5 @@
+import type { ReplaySequence } from './replay/types'
+
 // Typed client for the MatchShift API. All data served is synthetic.
 
 export type ViewerMode = 'TeachMe' | 'WhatMatters' | 'Analyst' | 'MyTeam' | 'Studio'
@@ -140,6 +142,10 @@ export interface TeamLiveMetrics {
   rightShare: number
   turnovers: number
   highRecoveries: number
+  passes: number
+  completedPasses: number
+  progressivePasses: number
+  longBalls: number
 }
 
 export interface IndexComponent {
@@ -151,7 +157,16 @@ export interface IndexComponent {
   contribution: number
 }
 
+export interface PlayerPerformance {
+  playerId: string; passes: number; completed: number; progressive: number; shots: number; recoveries: number; turnovers: number
+  events: { id: string; matchSecond: number; type: string; outcome: string; playerId: string }[]
+  passIds: string[]; completedIds: string[]; progressiveIds: string[]; shotIds: string[]; recoveryIds: string[]; turnoverIds: string[]
+}
 export interface Snapshot {
+  overlay?: { insightId: string; text: string; source: string; language: string; validFromSecond: number; validUntilSecond: number; evidenceReferences: string[] }
+  sessionId: string
+  epoch: number
+  focusedPlayer?: PlayerPerformance
   matchId: string
   isPlaying: boolean
   speed: number
@@ -245,7 +260,17 @@ export interface AgentTrace {
   insightId: string
   provider: string
   steps: AgentStep[]
+  narrative: Narrative
 }
+
+export const sessionId = new URLSearchParams(location.search).get('session') ?? (() => {
+  try {
+    const id = sessionStorage.getItem('matchshift.session') ?? crypto.randomUUID()
+    sessionStorage.setItem('matchshift.session', id)
+    return id
+  } catch { return crypto.randomUUID() }
+})()
+const sessionUrl = (path: string) => `${path}${path.includes('?') ? '&' : '?'}session=${encodeURIComponent(sessionId)}`
 
 const json = async <T,>(res: Response): Promise<T> => {
   if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
@@ -253,14 +278,14 @@ const json = async <T,>(res: Response): Promise<T> => {
 }
 
 const post = (path: string, body?: unknown) =>
-  fetch(path, {
+  fetch(sessionUrl(path), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 
 export const profileQuery = (p: Profile) => {
-  const q = new URLSearchParams({ lang: p.language, mode: p.mode })
+  const q = new URLSearchParams({ lang: p.language, mode: p.mode, session: sessionId })
   if (p.focusTeamId) q.set('team', p.focusTeamId)
   if (p.focusPlayerId) q.set('player', p.focusPlayerId)
   return q.toString()
@@ -275,8 +300,9 @@ export const api = {
   reset: (matchId?: string) => post('/api/demo/reset', { matchId: matchId ?? null }),
   speed: (speed: number) => post('/api/demo/speed', { speed }),
   seek: (minute: number) => post('/api/demo/seek', { minute }),
-  insightEvents: (id: string) => fetch(`/api/demo/insights/${id}/events`).then(json<InsightEvents>),
-  highlightEvents: (id: string) => fetch(`/api/demo/highlights/${id}/events`).then(json<InsightEvents>),
+  insightEvents: (id: string) => fetch(sessionUrl(`/api/demo/insights/${id}/events`)).then(json<InsightEvents>),
+  highlightEvents: (id: string) => fetch(sessionUrl(`/api/demo/highlights/${id}/events`)).then(json<InsightEvents>),
+  replay: (id: string) => fetch(sessionUrl(`/api/demo/insights/${id}/replay`)).then(json<ReplaySequence>),
   recap: (period: 'halftime' | 'fulltime', style: RecapStyle, p: Profile) =>
     fetch(`/api/demo/recap/${period}?style=${style}&${profileQuery(p)}`).then(async (r) =>
       r.status === 409 ? null : json<RecapResponse>(r),

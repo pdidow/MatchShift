@@ -24,26 +24,33 @@ public sealed class NarrationService
     }
 
     public string ProviderName => _primary.Name;
-    public bool UsesAi => _primary is not TemplateInsightProvider;
+    public bool UsesAi => _primary.Name == "microsoft-foundry";
+    public bool UsesProvider => _primary is not TemplateInsightProvider;
 
     public async Task<InsightNarrative> InsightAsync(Insight insight, NarrativeContext context, CancellationToken ct = default)
     {
+        EvidenceGate.Require(insight, context.Roster.Match);
         var template = TemplateInsightProvider.Narrate(insight, context);
-        if (!UsesAi) return template;
+        if (!UsesProvider) return template;
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(_timeout);
             var ai = await _primary.NarrateInsightAsync(insight, context, cts.Token);
+            if (ai.Selection is null || !ai.Selection.Matches(insight) ||
+                !ai.Sentences().SequenceEqual(ai.Selection.Render(insight, context, ai.Source).Sentences()))
+                return template with { VerificationNote = "AI text rejected: invalid evidence binding or unapproved prose. Template used." };
             var slots = NarrativeSlots.ForInsight(insight, context.Roster, LexiconRegistry.Get(context.Profile.Language), context.Profile);
             var result = _verifier.VerifyInsight(ai, insight, slots);
             return result.Approved
-                ? ai with { Evidence = template.Evidence, VerificationNote = $"approved ({result.NumbersChecked} numbers checked)" }
+                ? ai.Selection.Render(insight, context, _primary.Name) with { Collaboration = ai.Collaboration,
+                    VerificationNote = $"approved (evidence binding and {result.NumbersChecked} numeric occurrences checked)" }
                 : template with { VerificationNote = $"AI text rejected: {result.Issues[0].Problem} Template used." };
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            return template with { VerificationNote = $"AI unavailable ({ex.GetType().Name}). Template used." };
+            return template with { VerificationNote = $"AI unavailable or rejected ({ex.GetType().Name}). Template used.",
+                Collaboration = ex is EditorialRejectionException rejection ? rejection.Steps : [] };
         }
     }
 
@@ -51,16 +58,19 @@ public sealed class NarrationService
         IReadOnlyList<Insight> insights, CancellationToken ct = default)
     {
         var template = RecapNarrator.Narrate(recap, style, context, insights);
-        if (!UsesAi) return template;
+        if (!UsesProvider) return template;
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(_timeout);
             var ai = await _primary.NarrateRecapAsync(recap, style, context, insights, cts.Token);
-            var result = _verifier.Verify(ai.Sections.SelectMany(s => s.Paragraphs).Append(ai.Title),
+            if (ai.Title != template.Title || !ai.Sections.Select(s => System.Text.Json.JsonSerializer.Serialize(s)).Order()
+                .SequenceEqual(template.Sections.Select(s => System.Text.Json.JsonSerializer.Serialize(s)).Order()))
+                return template with { VerificationNote = "AI recap rejected: unsupported section or attribution. Template used." };
+            var result = _verifier.Verify(ai.Sections.SelectMany(s => s.Paragraphs.Prepend(s.Heading)).Append(ai.Title),
                 RecapEvidence.AllowedNumbers(recap, insights, context.Roster));
             return result.Approved
-                ? ai with { VerificationNote = $"approved ({result.NumbersChecked} numbers checked)" }
+                ? template with { Sections = ai.Sections, Source = _primary.Name, VerificationNote = $"approved ({result.NumbersChecked} numbers checked)" }
                 : template with { VerificationNote = $"AI recap rejected: {result.Issues[0].Problem} Template used." };
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)

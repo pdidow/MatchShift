@@ -43,6 +43,8 @@ public sealed record InsightNarrative
 
     /// <summary>"template", or the AI provider that produced the wording.</summary>
     public string Source { get; init; } = "template";
+    public NarrativeSelection? Selection { get; init; }
+    public IReadOnlyList<Agents.AgentStep> Collaboration { get; init; } = [];
 
     /// <summary>Verification outcome when an AI provider wrote the text.</summary>
     public string? VerificationNote { get; init; }

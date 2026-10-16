@@ -10,6 +10,14 @@ public sealed class SpanishLexicon() : Lexicon("es", "Español", CultureInfo.Get
 
     protected override IReadOnlyDictionary<string, string> Templates { get; } = new Dictionary<string, string>
     {
+        ["type.PASSING_STYLE_SHIFT"] = "Estilo de pase",
+        ["headline.PASSING_STYLE_SHIFT"] = "{team} cambia su mezcla de pases",
+        ["fact.PASSING_STYLE_SHIFT"] = "La proporci?n de balones largos de {team} pas? de {from} ({baselineWindow}) a {to} ({window}).",
+        ["inference.PASSING_STYLE_SHIFT"] = "La mezcla de pases ha cambiado; los eventos no establecen la causa.",
+        ["teach.PASSING_STYLE_SHIFT"] = "La proporci?n de balones largos divide los pases largos entre todos los pases intentados.",
+        ["ticker.PASSING_STYLE_SHIFT"] = "{team}: balones largos {from} ? {to}",
+        ["studio.PASSING_STYLE_SHIFT"] = "{team}: proporci?n de balones largos {from} ? {to} entre los per?odos comparados.",
+        ["metric.LongBallShare"] = "Proporci?n de balones largos",
         ["channel.Left"] = "izquierda",
         ["channel.Centre"] = "centro",
         ["channel.Right"] = "derecha",

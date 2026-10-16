@@ -45,7 +45,7 @@ happened" flag. The analytics engine has to **discover** every pattern from even
 |---|---|
 | 0-15 | balanced opening |
 | 15-30 | Northbridge gain territorial control |
-| 30-38 | sustained Northbridge pressure - **goal 34'** |
+| 30-38 | sustained Northbridge pressure - **goal 34'**: Westhaven try to play out from the back, Northbridge's press intercepts, and they score straight through the left channel (the 3D replay demo sequence) |
 | 38-45 | Westhaven counter-attack - **goal 43'** (1-1 at half-time) |
 | 46-55 | balance returns |
 | 55 | Westhaven substitution: **Tavian Brooks** (right winger) for Noah Penrose |
@@ -99,3 +99,9 @@ each record to `MatchEvent`:
 2. Convert coordinates to team-relative 0-100 (flip X and Y for the team attacking towards X = 0).
 3. Provide `PossessionId` / `PossessionTeamId` (derive from changes of team in control if absent).
 4. Emit in `SequenceNumber` order. Everything downstream - metrics, detectors, narratives - is unchanged.
+
+## Passing-style scenario
+
+`ScenarioKind.PassingStyleShift` keeps a short-passing home baseline for 30 minutes, then raises the
+simulator's long-ball tendency. It emits ordinary pass events and a separate evaluation label. The
+analytics project never reads that label. Seed 7001 is available in the demo match selector.

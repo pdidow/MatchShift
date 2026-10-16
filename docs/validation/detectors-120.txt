@@ -1,0 +1,20 @@
+Matches: 120   Forbidden-pattern violations: 7
+Type                       Expected Recalled  Recall  Detect  Matched Precision  FA/neg Unlabelled/match
+ATTACK_CHANNEL_SHIFT             49       28    0.57      51       29      0.62    0.16             0.18
+PRESSURE_INCREASE                18       18    1.00     154       18       n/a     n/a             1.13
+PRESSURE_DECREASE                 0        0       -      13        0       n/a     n/a             0.11
+TERRITORIAL_SHIFT                 0        0       -      98        0       n/a     n/a             0.82
+POSSESSION_SHIFT                  0        0       -      29        0       n/a     n/a             0.24
+TEMPO_SHIFT                       0        0       -      19        0       n/a     n/a             0.16
+CONTROL_SHIFT                     0        0       -     155        0       n/a     n/a             1.29
+CHAOS_INCREASE                   14       14    1.00      30       14       n/a     n/a             0.13
+SHOT_PRESSURE                     0        0       -      17        0       n/a     n/a             0.14
+TURNOVER_SPIKE                    0        0       -      18        0       n/a     n/a             0.15
+POST_SUBSTITUTION_CHANGE         23        8    0.35      50        8      0.16    0.40             0.35
+COUNTER_ATTACK_THREAT            18        9    0.50      84        9       n/a     n/a             0.62
+PASSING_STYLE_SHIFT               0        0       -       9        0       n/a     n/a             0.08
+  AttackChannelShift     recall 12/26 = 0.46
+  ChaoticFinish          recall 14/14 = 1.00
+  CounterAttackSwing     recall 9/18 = 0.50
+  SubstitutionImpact     recall 24/46 = 0.52
+  SustainedPressure      recall 18/18 = 1.00

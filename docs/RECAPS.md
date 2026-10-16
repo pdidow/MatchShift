@@ -43,5 +43,5 @@ number fails verification the template recap is served.
 Example (full time, casual, English):
 
 > Northbridge and Westhaven share the points in a 2-2 draw. … Owen Blackwood scored for Northbridge on 35
-> minutes, assisted by Kofi Asante-Marr. … Westhaven switch their attack down the right. Their attacking play has
+> minutes, assisted by Samir Haddadi. … Westhaven switch their attack down the right. Their attacking play has
 > shifted decisively towards the right flank. … All data in this recap is synthetic.

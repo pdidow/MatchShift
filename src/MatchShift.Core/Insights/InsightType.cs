@@ -24,6 +24,7 @@ public enum InsightType
     [JsonStringEnumMemberName("DANGEROUS_TURNOVER")] DangerousTurnover,
     [JsonStringEnumMemberName("BIG_CHANCE")] BigChance,
     [JsonStringEnumMemberName("GOAL")] Goal,
+    [JsonStringEnumMemberName("PASSING_STYLE_SHIFT")] PassingStyleShift,
 }
 
 public static class InsightTypeExtensions
@@ -50,6 +51,7 @@ public static class InsightTypeExtensions
         InsightType.DangerousTurnover => "DANGEROUS_TURNOVER",
         InsightType.BigChance => "BIG_CHANCE",
         InsightType.Goal => "GOAL",
+        InsightType.PassingStyleShift => "PASSING_STYLE_SHIFT",
         _ => type.ToString(),
     };
 }

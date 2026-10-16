@@ -99,3 +99,16 @@ median ≈ 30, p90 ≈ 50) versus scripted chaotic finishes (≈ 85-90); `matchs
 
 `LiveMatchAnalyzer` records one `TimelinePoint` per minute: Match Control (10-min window), both Pressure Indices
 (5-min window), Chaos (10-min window) and the score. It powers the momentum charts and recap momentum periods.
+
+## Passing and player upgrades (October 16, 2026)
+
+`PassingStyleShiftDetector` compares long-ball share (LongBall-tagged passes / all attempted passes)
+in adjacent eight-minute windows. Each needs at least 20 passes and a difference of 0.30. The standard
+persistence and cooldown rules apply. Evidence includes both windows, both samples and all pass IDs
+used in the comparison. This measures a passing mix, not a pass network or pass difficulty.
+
+`PlayerPerformance.Calculate` uses only observed events: passes, completed passes, progressive passes
+(the same predicate as team analytics), shots, recoveries and derived possession losses. Each total
+has a separate event-ID list. The timeline includes primary and related-player events; totals count
+primary actions, so receiving a pass is not counted as making one. Losses may only be recognized once
+the possession has ended. Selected-player insights rank ahead of other chronological insights.

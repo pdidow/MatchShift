@@ -1,5 +1,8 @@
 using MatchShift.Analytics;
 using MatchShift.Core.Domain;
+using MatchShift.Core.Insights;
+using MatchShift.Agents.Agents;
+using MatchShift.Agents.Narrative;
 
 namespace MatchShift.Api.Playback;
 
@@ -20,8 +23,17 @@ public sealed class DemoSession
     private int _nextEventIndex;
     private double _clock;
 
-    public DemoSession(MatchCatalog catalog)
+    private readonly NarrationQueue? _narration;
+    private readonly Dictionary<(string Id, ViewerProfile Profile), Task<AgentTrace>> _narratives = [];
+    private CancellationTokenSource _epochCancellation = new();
+    public string Id { get; init; } = Guid.NewGuid().ToString();
+    public long Epoch { get; private set; }
+    public DateTime LastAccess { get; private set; } = DateTime.UtcNow;
+    public void Touch() => LastAccess = DateTime.UtcNow;
+
+    public DemoSession(MatchCatalog catalog, NarrationQueue? narration = null)
     {
+        _narration = narration;
         Match = catalog.Default;
         _analyzer = new LiveMatchAnalyzer(Analytics.State.MatchContext.From(Match));
     }
@@ -39,6 +51,41 @@ public sealed class DemoSession
     {
         lock (_gate) return read(_analyzer, (int)_clock);
     }
+
+    public Task<AgentTrace>? Trace(Insight i, NarrativeContext context)
+    {
+        lock (_gate)
+        {
+            if (_narratives.TryGetValue((i.Id, context.Profile), out var cached)) return cached;
+            if (_narratives.Count >= 256) return null;
+            var epoch = Epoch;
+            var task = _narration?.Enqueue(i, Match, context, _epochCancellation.Token,
+                () => { lock (_gate) { if (Epoch == epoch) Version++; } });
+            if (task is not null) _narratives[(i.Id, context.Profile)] = task;
+            return task;
+        }
+    }
+
+    public InsightNarrative Narrative(Insight i, NarrativeContext context)
+    {
+        var task = Trace(i, context);
+        if (task?.IsCompletedSuccessfully == true) return task.Result.Narrative;
+        return TemplateInsightProvider.Narrate(i, context) with
+        { VerificationNote = task is null ? "Narration capacity reached; verified template." :
+            task.IsFaulted ? "Narration withheld; verified template." : "Verified template; editorial review pending." };
+    }
+
+    private void NewEpoch()
+    {
+        Epoch++;
+        _epochCancellation.Cancel();
+        _epochCancellation.Dispose();
+        _epochCancellation = new();
+        _narratives.Clear();
+    }
+
+    // Owned by SessionRegistry, never by the per-request DI scope.
+    public void Close() { lock (_gate) { IsPlaying = false; _epochCancellation.Cancel(); _epochCancellation.Dispose(); } }
 
     public void Load(Match match)
     {
@@ -81,6 +128,7 @@ public sealed class DemoSession
         matchSecond = Math.Clamp(matchSecond, 0, MatchClock.FullTimeSecond);
         lock (_gate)
         {
+            NewEpoch();
             if (matchSecond < _clock)
             {
                 _analyzer = new LiveMatchAnalyzer(Analytics.State.MatchContext.From(Match));
@@ -108,6 +156,7 @@ public sealed class DemoSession
 
     private void ResetLocked()
     {
+        NewEpoch();
         _analyzer = new LiveMatchAnalyzer(Analytics.State.MatchContext.From(Match));
         _nextEventIndex = 0;
         _clock = 0;
@@ -136,7 +185,7 @@ public sealed class DemoSession
 }
 
 /// <summary>Drives the demo clock at ~8 ticks per second.</summary>
-public sealed class PlaybackService(DemoSession session, ILogger<PlaybackService> logger) : BackgroundService
+public sealed class PlaybackService(SessionRegistry sessions, ILogger<PlaybackService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -147,12 +196,12 @@ public sealed class PlaybackService(DemoSession session, ILogger<PlaybackService
             var now = TimeProvider.System.GetTimestamp();
             try
             {
-                session.Tick(TimeProvider.System.GetElapsedTime(last, now));
+                foreach (var session in sessions.All) session.Tick(TimeProvider.System.GetElapsedTime(last, now));
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Playback tick failed");
-                session.Pause();
+                foreach (var session in sessions.All) session.Pause();
             }
             last = now;
         }

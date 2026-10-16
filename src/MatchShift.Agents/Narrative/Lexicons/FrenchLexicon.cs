@@ -10,6 +10,14 @@ public sealed class FrenchLexicon() : Lexicon("fr", "Français", CultureInfo.Get
 
     protected override IReadOnlyDictionary<string, string> Templates { get; } = new Dictionary<string, string>
     {
+        ["type.PASSING_STYLE_SHIFT"] = "Style de passe",
+        ["headline.PASSING_STYLE_SHIFT"] = "{team} modifie son jeu de passes",
+        ["fact.PASSING_STYLE_SHIFT"] = "La part de longs ballons de {team} est pass?e de {from} ({baselineWindow}) ? {to} ({window}).",
+        ["inference.PASSING_STYLE_SHIFT"] = "La r?partition des passes a chang? ; les ?v?nements ne permettent pas de savoir pourquoi.",
+        ["teach.PASSING_STYLE_SHIFT"] = "La part de longs ballons est le nombre de passes longues divis? par le total des passes tent?es.",
+        ["ticker.PASSING_STYLE_SHIFT"] = "{team} : longs ballons {from} ? {to}",
+        ["studio.PASSING_STYLE_SHIFT"] = "{team} : part de longs ballons {from} ? {to} entre les p?riodes compar?es.",
+        ["metric.LongBallShare"] = "Part de longs ballons",
         ["channel.Left"] = "gauche",
         ["channel.Centre"] = "axe",
         ["channel.Right"] = "droit",

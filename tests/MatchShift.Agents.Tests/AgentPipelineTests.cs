@@ -86,14 +86,12 @@ public class AgentPipelineTests
             var body = request.Content!.ReadAsStringAsync().Result;
             Assert.Contains("\"model\":\"matchshift-gpt\"", body);
             Assert.Contains("json_object", body);
-            Assert.Contains("90%", body); // the verified fact travels in the prompt
+            if (body.Contains("catalogue")) Assert.Contains("90%", body); // verified narrative is supplied to the interpreter
             Assert.Equal("secret", request.Headers.GetValues("api-key").Single());
-            var content = JsonSerializer.Serialize(new
-            {
-                headline = "Westhaven pour forward down the right",
-                fact = "90% of Westhaven's attacks in the 50'-62' spell went down the right, up from 31% earlier.",
-                inference = "Their attack now leans heavily to the right.",
-            });
+            using var requestBody = JsonDocument.Parse(body);
+            var messages = requestBody.RootElement.GetProperty("messages");
+            var content = new MockChatCompletionClient().CompleteJsonAsync(
+                messages[0].GetProperty("content").GetString()!, messages[1].GetProperty("content").GetString()!, default).GetAwaiter().GetResult();
             return JsonSerializer.Serialize(new { choices = new[] { new { message = new { role = "assistant", content } } } });
         });
         var options = Options.Create(new FoundryOptions { Enabled = true, Endpoint = "https://example.test/openai/v1", Deployment = "matchshift-gpt", ApiKey = "secret" });
@@ -102,9 +100,37 @@ public class AgentPipelineTests
         var narration = new NarrationService(provider);
         var narrative = await narration.InsightAsync(Shift, Context);
         Assert.Equal("microsoft-foundry", narrative.Source);
-        Assert.Equal("Westhaven pour forward down the right", narrative.Headline);
+        Assert.Equal(TemplateInsightProvider.Narrate(Shift, Context).Ticker, narrative.Headline);
         Assert.StartsWith("approved", narrative.VerificationNote);
         Assert.Equal("https://example.test/openai/v1/chat/completions", handler.LastUri);
+    }
+
+    [Fact]
+    public async Task Unsupported_numbers_in_recap_headings_are_rejected()
+    {
+        var narration = new NarrationService(new MisleadingHeadingProvider());
+        var facts = RecapBuilder.Build(Analysis, RecapPeriod.FullTime);
+        var recap = await narration.RecapAsync(facts, RecapStyle.Casual, Context, Analysis.Insights);
+
+        Assert.Equal("template", recap.Source);
+        Assert.Contains("AI recap rejected", recap.VerificationNote);
+        Assert.DoesNotContain("9999", recap.Text);
+    }
+
+    private sealed class MisleadingHeadingProvider : IAiInsightProvider
+    {
+        public string Name => "misleading-heading";
+        public Task<InsightNarrative> NarrateInsightAsync(Insight i, NarrativeContext c, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public Task<RecapNarrative> NarrateRecapAsync(RecapFacts r, RecapStyle s, NarrativeContext c, IReadOnlyList<Insight> i, CancellationToken ct = default)
+        {
+            var template = RecapNarrator.Narrate(r, s, c, i);
+            return Task.FromResult(template with
+            {
+                Source = Name,
+                Sections = template.Sections.Select(section => section with { Heading = "9999 goals" }).ToList(),
+            });
+        }
     }
 
     private sealed class LyingProvider : IAiInsightProvider
@@ -125,8 +151,7 @@ public class AgentPipelineTests
         public string Name => "faithful";
         public Task<InsightNarrative> NarrateInsightAsync(Insight insight, NarrativeContext context, CancellationToken ct = default)
         {
-            var t = TemplateInsightProvider.Narrate(insight, context);
-            return Task.FromResult(t with { Headline = "Westhaven head down the right", Inference = "The right flank is now their main route.", Source = Name });
+            return Task.FromResult(NarrativeSelection.For(insight, "brief").Render(insight, context, Name));
         }
         public Task<RecapNarrative> NarrateRecapAsync(RecapFacts r, RecapStyle s, NarrativeContext c, IReadOnlyList<Insight> i, CancellationToken ct = default) =>
             Task.FromResult(RecapNarrator.Narrate(r, s, c, i) with { Source = Name });

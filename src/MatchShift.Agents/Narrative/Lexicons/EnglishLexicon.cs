@@ -9,6 +9,14 @@ public sealed class EnglishLexicon() : Lexicon("en", "English", CultureInfo.GetC
     protected override IReadOnlyDictionary<string, string> Templates { get; } = new Dictionary<string, string>
     {
         // ---------------------------------------------------------------- vocabulary
+        ["type.PASSING_STYLE_SHIFT"] = "Passing style",
+        ["headline.PASSING_STYLE_SHIFT"] = "{team} change their passing mix",
+        ["fact.PASSING_STYLE_SHIFT"] = "{team}'s long-ball share changed from {from} in {baselineWindow} to {to} in {window}.",
+        ["inference.PASSING_STYLE_SHIFT"] = "The mix of long and shorter passes has changed; the events do not establish why.",
+        ["teach.PASSING_STYLE_SHIFT"] = "Long-ball share counts passes tagged as long balls divided by all attempted passes.",
+        ["ticker.PASSING_STYLE_SHIFT"] = "{team} long-ball share: {from} ? {to}",
+        ["studio.PASSING_STYLE_SHIFT"] = "{team}: long-ball share {from} ? {to} across the compared spells.",
+        ["metric.LongBallShare"] = "Long-ball share",
         ["channel.Left"] = "left",
         ["channel.Centre"] = "centre",
         ["channel.Right"] = "right",

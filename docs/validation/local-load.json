@@ -1,0 +1,12 @@
+{
+  "provider": "mock",
+  "sessions": 8,
+  "snapshots": 40,
+  "p50Ms": 19.4,
+  "p95Ms": 44.1,
+  "narrativeSourcesAcrossSnapshots": {
+    "template": 560
+  },
+  "errors": [],
+  "limitations": "Local 8-viewer burst only; templates include pending editorial work. Not sustained or cloud capacity testing."
+}

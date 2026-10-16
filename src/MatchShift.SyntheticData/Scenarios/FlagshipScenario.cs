@@ -14,7 +14,7 @@ namespace MatchShift.SyntheticData.Scenarios;
 ///
 ///  0-15  balanced opening
 /// 15-30  Northbridge gain territorial control
-/// 30-38  sustained Northbridge pressure (goal 34')
+/// 30-38  sustained Northbridge pressure (goal 34': press wins the ball, left-channel attack)
 /// 38-45  Westhaven counter-attack (goal 43')
 /// 46-55  balance returns
 ///   55   Westhaven substitution: Brooks (right winger) on for Penrose
@@ -89,13 +89,18 @@ public static class FlagshipScenario
 
         var beats = new List<ScriptedBeat>
         {
-            new(34 * 60 + 20, "Northbridge goal after sustained pressure", ctx => ctx
-                .Gain(TeamSide.Home, 4, 61, 46)
-                .Pass(8, 67, 63, 2)
-                .Pass(7, 81, 86, 3)
-                .Carry(90, 82, 3)
-                .Pass(9, 93, 53, 2, "Cross")
-                .Shot(EventOutcome.Goal, "Header")),
+            // Demo / 3D replay sequence: Westhaven try to play out from the back, Northbridge's press wins the ball,
+            // and Northbridge go straight through their left channel - a runner carries towards the box and
+            // cuts back for the finish. Same total duration (11 s to the shot) as the original beat, and no
+            // extra random draws, so the rest of the seeded match is unchanged.
+            new(34 * 60 + 20, "Northbridge press wins the ball and scores through the left channel", ctx => ctx
+                .Gain(TeamSide.Away, 5, 17, 58)
+                .Pass(4, 27, 50, 2)
+                .PassIntercepted(2, 37, 71, 4, 1)
+                .Pass(11, 76, 13, 2)
+                .Carry(87, 23, 2)
+                .Pass(9, 92, 45, 2, "Cutback")
+                .Shot(EventOutcome.Goal)),
 
             new(43 * 60 + 5, "Westhaven counter-attack goal", ctx => ctx
                 .Gain(TeamSide.Away, 4, 31, 56)

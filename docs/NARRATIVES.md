@@ -37,9 +37,13 @@ Adding a language = one lexicon class with the same keys; a test fails if any sl
 Live narrative forms: **ticker** one-liner, **commentator/studio** line, **analyst** notes (evidence lines),
 **fan** explanation (Teach me).
 
-## AI wording (optional)
+## Editorial selection (optional)
 
-`IAiInsightProvider` has two implementations: `TemplateInsightProvider` (offline, default) and
-`FoundryInsightProvider` (Microsoft Foundry). The Foundry prompt contains the already-verified template text and
-the evidence, and asks the model to rephrase for the viewer and language **without adding facts or numbers**,
-returning JSON. `NarrationService` verifies the result; anything rejected or failing is replaced by the template.
+`IAiInsightProvider` supports deterministic templates and `FoundryInsightProvider`, whose chat client
+is either the production Foundry client or an explicitly labelled local mock. The model chooses a
+constrained audience treatment, bound to metric/team/player IDs, values, windows and event references.
+It cannot replace factual sentences or introduce arbitrary prose. Recap AI chooses section order.
+
+`NarrationService` requires consistent underlying evidence and canonical rendering. Live cards show
+templates while background editorial work runs, then update to the accepted selection. WHY? and Agents
+reuse it. [FOUNDRY.md](FOUNDRY.md) documents all three modes and [AGENTS.md](AGENTS.md) explains recovery.

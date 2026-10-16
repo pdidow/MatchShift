@@ -33,6 +33,7 @@ jobs:
           cache-dependency-path: src/MatchShift.Web/package-lock.json
       - run: npm ci
       - run: npx tsc -b
+      - run: npm test
       - run: npx vite build --outDir dist
 
   container:

@@ -11,6 +11,10 @@ var options = ParseOptions(args.Skip(1).ToArray());
 
 switch (command)
 {
+    case "verify-ai":
+    case "compare-agents":
+        await NarrationValidation.Run(command, options);
+        break;
     case "inspect":
         Inspect(SyntheticMatchGenerator.GenerateFlagship().Match);
         foreach (var seed in new long[] { 1, 2, 3 }) Inspect(SyntheticMatchGenerator.GenerateMatch(seed));
@@ -82,6 +86,26 @@ switch (command)
             var row = report.Types.FirstOrDefault(t => t.Type == InsightType.AttackChannelShift);
             Console.WriteLine($"recent={recent} z={z} ticks={ticks}: recall={row?.Recall:0.00} precision={row?.Precision:0.00} " +
                               $"falseAlarms/negMatch={row?.FalseAlarmsPerNegativeMatch:0.000} detections={row?.Detections} aftermath={row?.Aftermath}");
+        }
+        break;
+    }
+
+    case "replay":
+    {
+        var match = SyntheticMatchGenerator.GenerateFlagship().Match;
+        var analysis = LiveMatchAnalyzer.AnalyzeFull(match);
+        var insight = options.TryGetValue("insight", out var iid)
+            ? analysis.Insights.First(i => i.Id == iid)
+            : analysis.Insights.First(i => i.Type == InsightType.DangerousTurnover && i.DisplayMinute == 35);
+        var replay = MatchShift.Analytics.Replay.ReplayBuilder.ForInsight(match, insight);
+        Console.WriteLine($"{insight.Id} {insight.Type.Code()} -> {replay.Clips.Count} clip(s), {replay.TotalDuration:0.0}s");
+        foreach (var clip in replay.Clips)
+        {
+            Console.WriteLine($"== {clip.Label} {MatchClock.Format(clip.StartSecond)}-{MatchClock.Format(clip.EndSecond)} attack={clip.Camera.AttackingTeamId} dir={clip.Camera.AttackDirection} focus={clip.Camera.FocusPlayerId}");
+            foreach (var e in clip.Events) Console.WriteLine($"   t={e.Time,6:0.00}-{e.EndTime,6:0.00} {e.Clock} {e.Label,-24} {e.PlayerId,-7} -> {e.RelatedPlayerId,-7} ({e.X},{e.Y})->({e.EndX},{e.EndY}){(e.IsEvidence ? " *" : "")}");
+            foreach (var o in clip.Overlays) Console.WriteLine($"   overlay {o.Kind} {o.Label} {o.X0},{o.Y0}..{o.X1},{o.Y1} players={string.Join(",", o.PlayerIds)}");
+            var prov = clip.Tracks.SelectMany(t => t.Samples).GroupBy(s => s.Provenance).Select(g => $"{g.Key}={g.Count()}");
+            Console.WriteLine($"   tracks={clip.Tracks.Count} samples: {string.Join(" ", prov)}  ball segments={clip.Ball.Count}");
         }
         break;
     }

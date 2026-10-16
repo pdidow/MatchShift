@@ -1,5 +1,7 @@
-import { useMemo } from 'react'
+import { createContext, useContext, useMemo } from 'react'
+import type { SVGProps } from 'react'
 import type { InsightEvents, PitchEvent, Team } from '../api'
+import { useOptionalA11y } from '../a11y/A11yContext'
 
 // Absolute frame from the API: X 0-100 along the pitch (home attacks towards X = 100), Y 0-100 across.
 const W = 105
@@ -9,6 +11,26 @@ const sy = (y: number) => (y * H) / 100
 
 export const HOME_COLOR = 'var(--series-home)'
 export const AWAY_COLOR = 'var(--series-away)'
+
+// Colour-vision modes (optional): the away team is also told apart by shape (squares) and dashed routes,
+// so team identity never relies on colour alone.
+const ShapeCoding = createContext<{ shapes: boolean; homeId: string }>({ shapes: false, homeId: '' })
+
+/** A point marker: a circle, or a square for the away team when shape coding is on. */
+function Mark({ teamId, cx, cy, r, ...rest }: { teamId: string; cx: number; cy: number; r: number } & SVGProps<SVGCircleElement & SVGRectElement>) {
+  const { shapes, homeId } = useContext(ShapeCoding)
+  if (shapes && teamId !== homeId) {
+    const side = r * 1.8
+    return <rect x={cx - side / 2} y={cy - side / 2} width={side} height={side} {...rest} />
+  }
+  return <circle cx={cx} cy={cy} r={r} {...rest} />
+}
+
+/** Dash pattern for an away route when shape coding is on (carries keep their own dotted look). */
+function useRouteDash() {
+  const { shapes, homeId } = useContext(ShapeCoding)
+  return (teamId: string, carry: boolean) => (carry ? '0.8 0.6' : shapes && teamId !== homeId ? '2 0.9' : undefined)
+}
 
 interface Props {
   home: Team
@@ -22,8 +44,11 @@ interface Props {
 export function Pitch({ home, away, trail, focus, focusTeamId, ariaLabel }: Props) {
   const colorOf = (teamId: string) => (teamId === home.id ? HOME_COLOR : AWAY_COLOR)
   const byId = useMemo(() => new Map((focus?.events ?? []).map((e) => [e.id, e])), [focus])
+  const a11y = useOptionalA11y()
+  const coding = useMemo(() => ({ shapes: !!a11y && a11y.prefs.colorVision !== 'default', homeId: home.id }), [a11y, home.id])
 
   return (
+    <ShapeCoding.Provider value={coding}>
     <svg className="pitch-svg" viewBox={`-3 -3 ${W + 6} ${H + 6}`} role="img" aria-label={ariaLabel}>
       <defs>
         {[['home', HOME_COLOR], ['away', AWAY_COLOR], ['muted', '#7c889e']].map(([k, c]) => (
@@ -52,6 +77,7 @@ export function Pitch({ home, away, trail, focus, focusTeamId, ariaLabel }: Prop
         <Trail trail={trail} colorOf={colorOf} home={home} />
       )}
     </svg>
+    </ShapeCoding.Provider>
   )
 }
 
@@ -86,6 +112,7 @@ function PitchMarkings() {
 }
 
 function Trail({ trail, colorOf, home }: { trail: PitchEvent[]; colorOf: (t: string) => string; home: Team }) {
+  const dash = useRouteDash()
   const shown = trail.filter((e) => e.x !== undefined && e.y !== undefined).slice(-12)
   const last = shown[shown.length - 1]
   const ball = last ? { x: last.endX ?? last.x!, y: last.endY ?? last.y! } : null
@@ -99,18 +126,18 @@ function Trail({ trail, colorOf, home }: { trail: PitchEvent[]; colorOf: (t: str
           return (
             <g key={e.id} opacity={opacity}>
               <line x1={sx(e.x!)} y1={sy(e.y!)} x2={sx(goalX)} y2={sy(e.endY ?? 50)} stroke={c} strokeWidth={0.45} strokeDasharray="1 0.6" />
-              <circle cx={sx(e.x!)} cy={sy(e.y!)} r={1.1} fill={c} stroke="var(--pitch)" strokeWidth={0.4} />
+              <Mark teamId={e.teamId} cx={sx(e.x!)} cy={sy(e.y!)} r={1.1} fill={c} stroke="var(--pitch)" strokeWidth={0.4} />
             </g>
           )
         }
         if ((e.type === 'Pass' || e.type === 'Carry') && e.endX !== undefined) {
           return (
             <line key={e.id} opacity={opacity} x1={sx(e.x!)} y1={sy(e.y!)} x2={sx(e.endX)} y2={sy(e.endY!)}
-              stroke={c} strokeWidth={e.type === 'Carry' ? 0.3 : 0.4} strokeDasharray={e.type === 'Carry' ? '0.8 0.6' : undefined}
+              stroke={c} strokeWidth={e.type === 'Carry' ? 0.3 : 0.4} strokeDasharray={dash(e.teamId, e.type === 'Carry')}
               strokeLinecap="round" />
           )
         }
-        return <circle key={e.id} opacity={opacity} cx={sx(e.x!)} cy={sy(e.y!)} r={0.7} fill={c} />
+        return <Mark key={e.id} teamId={e.teamId} opacity={opacity} cx={sx(e.x!)} cy={sy(e.y!)} r={0.7} fill={c} />
       })}
       {ball && (
         <g>
@@ -129,6 +156,7 @@ function FocusLayers({ focus, byId, colorOf, home, focusTeamId }: {
   home: Team
   focusTeamId?: string
 }) {
+  const dash = useRouteDash()
   // Draw de-emphasised layers first so the story sits on top.
   const layers = [...focus.layers].sort((a, b) => Number(a.emphasised) - Number(b.emphasised))
   return (
@@ -147,7 +175,7 @@ function FocusLayers({ focus, byId, colorOf, home, focusTeamId }: {
                 return (
                   <g key={e.id} opacity={dim}>
                     <line x1={sx(e.x!)} y1={sy(e.y!)} x2={sx(goalX)} y2={sy(e.endY ?? 50)} stroke={c} strokeWidth={0.4} strokeDasharray="1 0.6" />
-                    <circle cx={sx(e.x!)} cy={sy(e.y!)} r={e.outcome === 'Goal' ? 1.8 : 1.3} fill={c} stroke="var(--pitch)" strokeWidth={0.5} />
+                    <Mark teamId={e.teamId} cx={sx(e.x!)} cy={sy(e.y!)} r={e.outcome === 'Goal' ? 1.8 : 1.3} fill={c} stroke="var(--pitch)" strokeWidth={0.5} />
                     {e.outcome === 'Goal' && <circle cx={sx(e.x!)} cy={sy(e.y!)} r={2.8} fill="none" stroke="#fff" strokeWidth={0.3} />}
                   </g>
                 )
@@ -156,10 +184,10 @@ function FocusLayers({ focus, byId, colorOf, home, focusTeamId }: {
                 return (
                   <line key={e.id} opacity={dim} x1={sx(e.x!)} y1={sy(e.y!)} x2={sx(e.endX)} y2={sy(e.endY!)} stroke={c}
                     strokeWidth={layer.emphasised ? 0.45 : 0.3} strokeLinecap="round" markerEnd={`url(#arrow-${marker})`}
-                    strokeDasharray={e.type === 'Carry' ? '0.8 0.6' : undefined} />
+                    strokeDasharray={dash(e.teamId, e.type === 'Carry')} />
                 )
               }
-              return <circle key={e.id} opacity={dim} cx={sx(e.x!)} cy={sy(e.y!)} r={1.1} fill={c} stroke="var(--pitch)" strokeWidth={0.5} />
+              return <Mark key={e.id} teamId={e.teamId} opacity={dim} cx={sx(e.x!)} cy={sy(e.y!)} r={1.1} fill={c} stroke="var(--pitch)" strokeWidth={0.5} />
             })}
           </g>
         )
@@ -177,6 +205,6 @@ function ChannelShade({ events, home, colorOf }: { events: PitchEvent[]; home: T
   const team = events[0].teamId
   const attacksRight = team === home.id
   return (
-    <rect x={attacksRight ? sx(55) : 0} y={sy(band * 33.33)} width={sx(45)} height={sy(33.33)} fill={colorOf(team)} opacity={0.12} />
+    <rect className={team === home.id ? 'shade-home' : 'shade-away'} x={attacksRight ? sx(55) : 0} y={sy(band * 33.33)} width={sx(45)} height={sy(33.33)} fill={colorOf(team)} opacity={0.12} />
   )
 }

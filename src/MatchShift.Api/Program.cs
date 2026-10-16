@@ -13,7 +13,11 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 });
 builder.Services.AddProblemDetails();
 builder.Services.AddSingleton<MatchCatalog>();
-builder.Services.AddSingleton<DemoSession>();
+builder.Services.AddSingleton<NarrationQueue>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<NarrationQueue>());
+builder.Services.AddSingleton<SessionRegistry>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped(sp => sp.GetRequiredService<SessionRegistry>().Resolve(sp.GetRequiredService<IHttpContextAccessor>().HttpContext!));
 builder.Services.AddHostedService<PlaybackService>();
 builder.Services.AddMatchShiftNarration(builder.Configuration);
 builder.Services.AddMatchShiftTelemetry(builder.Configuration);

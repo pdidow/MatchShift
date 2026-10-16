@@ -18,7 +18,6 @@ public interface IChatCompletionClient
 /// </summary>
 public sealed class FoundryChatClient(HttpClient http, IOptions<FoundryOptions> options, TokenCredential? credential = null) : IChatCompletionClient
 {
-    private static readonly string[] Scopes = ["https://cognitiveservices.azure.com/.default"];
     private readonly FoundryOptions _options = options.Value;
 
     public async Task<string> CompleteJsonAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken)
@@ -32,7 +31,7 @@ public sealed class FoundryChatClient(HttpClient http, IOptions<FoundryOptions> 
         }
         else if (credential is not null)
         {
-            var token = await credential.GetTokenAsync(new TokenRequestContext(Scopes), cancellationToken);
+            var token = await credential.GetTokenAsync(new TokenRequestContext([_options.TokenScope]), cancellationToken);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
         }
 

@@ -20,6 +20,11 @@ public static class MetricsCalculator
 
     public const double HighRecoveryMinX = 60;
 
+    public static bool IsProgressivePass(MatchEvent e) => e.Type == EventType.Pass && e.Outcome == EventOutcome.Complete &&
+        e.StartX is not null && e.EndX is not null &&
+        ((e.EndX.Value - e.StartX.Value >= 15 && e.EndX.Value >= 50) ||
+        (e.EndY is not null && Pitch.IsInPenaltyArea(e.EndX.Value, e.EndY.Value) && !Pitch.IsInPenaltyArea(e.StartX.Value, e.StartY ?? 0)));
+
     public static WindowMetrics Compute(MatchState state, AnalysisWindow window)
     {
         var ctx = state.Context;
@@ -60,10 +65,7 @@ public static class MetricsCalculator
                     {
                         var gain = e.EndX.Value - e.StartX.Value;
                         if (gain >= ForwardPassMinGain) acc.ForwardPasses++;
-                        if (e.Outcome == EventOutcome.Complete &&
-                            ((gain >= 15 && e.EndX.Value >= 50) ||
-                             (e.EndY is not null && Pitch.IsInPenaltyArea(e.EndX.Value, e.EndY.Value) &&
-                              !Pitch.IsInPenaltyArea(e.StartX.Value, e.StartY ?? 0))))
+                        if (IsProgressivePass(e))
                             acc.ProgressivePasses++;
                         if (Pitch.IsInAttackingThird(e.StartX.Value)) acc.FinalThirdPasses++;
                     }

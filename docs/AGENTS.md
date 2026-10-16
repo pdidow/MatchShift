@@ -1,42 +1,62 @@
-# Agents
+﻿# Agent workflow
 
-MatchShift's agents are not text-forwarding wrappers: each has one responsibility, an explicit input and output,
-and a defined failure behaviour. The pipeline (`AgentPipeline`) runs per insight and returns a trace shown in the
-UI's **Agents** tab (`GET /api/demo/insights/{id}/agents`).
+MatchShift combines deterministic football analytics with an optional evidence-bound AI editorial workflow.
+The same production protocol is available through Microsoft Foundry or an explicitly labelled offline mock.
+There is no dependency on a live subscription for local development. See [FOUNDRY.md](FOUNDRY.md).
 
-| # | Agent | Input | Output | Failure behaviour | Implementation |
-|---|---|---|---|---|---|
-| 1 | **Event Analyst** | raw synthetic events up to detection time + cited evidence | re-derived facts (`cited = recomputed ✓/✗`) | any mismatch marks the step Rejected and forces verified template text | deterministic |
-| 2 | **Pattern Detection** | rolling metrics, detector output | structured pattern: type, team, severity, confidence, strength (z / rate ratio) | n/a (detector already applied thresholds & samples) | deterministic (`MatchShiftDetector`) |
-| 3 | **Football Reasoning** | verified facts + pattern + interpretation code | a cautious interpretation, allow-listed per pattern | withholds any interpretation not permitted for that pattern | deterministic rules |
-| 4 | **Storytelling** | facts + interpretation | headline, fact, inference, explanation, ticker, studio line | AI timeout/error → template text | template provider or **Microsoft Foundry** |
-| 5 | **Personalization** | viewer profile (mode, language, club, player) | wording/visibility per mode, Football 101 note, club perspective, player involvement | n/a | lexicons + `NarrativeFilter` |
-| 6 | **Recap** | verified timeline (`RecapFacts`) | half-time / full-time recap in 4 styles | AI recap failing verification → template recap | `RecapBuilder` + `RecapNarrator` / Foundry |
-| 7 | **Verification** (mandatory) | every generated sentence + evidence | Approved / Rejected with issues | rejected text is replaced by verified template text | deterministic (`VerificationAgent`) |
+## Data and editorial responsibilities
 
-## Verification rules
+| Component | Input and output | Failure behavior |
+|---|---|---|
+| Event analysis and pattern detection | Raw synthetic events → metrics → evidence-bearing insights | Sample floors, persistence, cooldown and deterministic replay gate |
+| EvidenceGate | Insight and raw events → exact comparison with replayed detector output | Withholds inconsistent evidence before prose generation; no fallback from corrupt input |
+| Rule-based football interpretation | Pattern and context → allow-listed cautious interpretation code | Unsupported interpretation withheld |
+| Interpreter | Authoritative evidence and audience catalogue → typed proposed editorial treatment | Invalid proposal is sent to review or rejected |
+| Skeptic | Original evidence plus proposal → approval or revision feedback | One bounded repair, then a second review; continued rejection uses a verified template |
+| Editor | Accepted selection and audience → final treatment | Cannot bypass the application evidence gate |
+| Personalization | Mode, language, club/player → filtering, deterministic wording and relevance ordering | Unknown player selection is cleared when matches change |
+| Verification | Selected claim binding and canonical wording → final accepted narrative | Changed attribution, numbers, windows, references or arbitrary prose are rejected |
+| Recap editor | Verified recap sections → section order | Invalid/missing/duplicate section references use the original recap |
 
-1. **Numbers** - every number in the text must match an evidence value, a slot derived from evidence (minutes,
-   windows, sample sizes, percentages), or a definitional constant (0, 1, 45, 50, 90, 100 - index scales and match
-   length). Rounded presentations are accepted within rounding tolerance; `75%` when the evidence says `90%` is not.
-2. **Clubs** - no club outside the two teams in the match.
-3. **Intent** - phrases claiming intent or instruction are rejected (EN/FR/ES lists).
+The custom C# orchestration uses real, separate provider calls for interpreter, skeptic and editor when
+Foundry is configured. These roles share typed state and revise on rejection. Deterministic analytics
+stages are not presented as autonomous model agents. No Agent Framework, A2A or MCP dependency is claimed.
+Model decisions are deliberately limited to editorial treatments and ordering; the model does not freely
+invent tactical explanations.
 
-Template text is verified too: every insight × 3 languages × 5 modes, and every recap × 4 styles, pass in tests.
+## Verification coverage
 
-## Example trace (63', French, My Club = Northbridge)
+`EvidenceGate` reconstructs default detector output from raw match events and compares the entire insight:
+all evidence items, attribution, windows, facts, thresholds, event IDs and visual references. Replay is
+memoized per immutable match. The replay engine is incremental; the candidate at each timestamp has no
+access to future events. Reusing the detector establishes consistency, not independent validation of its
+football assumptions or confidence calibration. Custom detector configurations require a matching gate.
 
-```
-Completed  Event Analyst Agent      RightAttackShare: cited 0.9 = recomputed 0.9 ✓; baseline 0.314 = 0.314 ✓
-Completed  Pattern Detection Agent  ATTACK_CHANNEL_SHIFT · team WHA · severity High · confidence High (0.95) · z 3.29
-Completed  Football Reasoning Agent interpretation 'channel_after_substitution' (hedged)
-Completed  Storytelling Agent       "Westhaven attaque désormais par le côté droit"
-Completed  Personalization Agent    shown in this mode · "Signal d'alerte pour Northbridge."
-Approved   Verification Agent       approved - 9 numbers checked, no unsupported claims
-```
+The trace includes `evidenceAudit` (approved, checked, skipped, reason). The older Event Analyst window
+checks remain additional diagnostics; unknown diagnostic metrics are covered by replay, not silently
+accepted as independently recomputed. Numeric/intent phrase checks are additional defenses. Exact
+canonical rendering protects against valid numbers attached to the wrong team or time window.
 
-## Tests
+## Live execution and recovery
 
-`AgentPipelineTests`: evidence re-derivation for all flagship insights; a provider that invents a number and
-claims intent is rejected and replaced; a faithful rephrasing is accepted; an outage falls back; the Foundry
-provider sends verified facts in the prompt, requests JSON, and its output is verified.
+Two background workers share a queue of 64 requests. Each session caches up to 256 insight/profile tasks.
+The cache is implicitly scoped to immutable match data, session epoch and the startup provider/prompt
+version. Completed cards, WHY? and Agents use the same narrative. While queued, cards show verified
+available templates. Queue saturation preserves those templates and is retried on a later snapshot.
+Seeking, resetting or changing a match cancels older tasks and clears the cache; completed older work
+cannot advance the new epoch. Profile keys include language, mode, team and player.
+
+Sessions are random capability IDs, separate per browser tab, with an explicit shared ID for a broadcast
+browser source. They are in memory (maximum 32; idle expiry 30 minutes). This is a bounded demo host,
+not durable multi-node production infrastructure or authenticated tenant isolation.
+
+## Measurements
+
+`compare-agents` runs a single-call baseline and the collaborating workflow on the same seeded matches,
+with clean output and injected wrong-team proposals. It records accepted selections, fallback, unsupported
+published bindings, retained explanations, revisions, latency and request/character counts. Character
+counts are not token counts. The mock has no billable cost; live token cost and human usefulness remain
+unmeasured. See [UPGRADE_STATUS.md](UPGRADE_STATUS.md) and the JSON report in `docs/validation`.
+
+Tests cover corrupt evidence, invented players, wrong teams, reversed values, windows, missing references,
+unsupported causal wording, failures, cancellation, bounded queuing, cache reuse and session isolation.
