@@ -1,4 +1,7 @@
 import type { ReplaySequence } from './replay/types'
+import { createDemoClient } from './demo/client'
+
+export const isStaticDemo = import.meta.env.MODE === 'pages'
 
 // Typed client for the MatchShift API. All data served is synthetic.
 
@@ -291,7 +294,7 @@ export const profileQuery = (p: Profile) => {
   return q.toString()
 }
 
-export const api = {
+const serverApi = {
   meta: () => fetch('/api/meta').then(json<Meta>),
   matches: () => fetch('/api/matches').then(json<MatchSummary[]>),
   match: (id: string) => fetch(`/api/matches/${id}`).then(json<MatchDetail>),
@@ -310,3 +313,7 @@ export const api = {
   agentTrace: (id: string, p: Profile) => fetch(`/api/demo/insights/${id}/agents?${profileQuery(p)}`).then(json<AgentTrace>),
   streamUrl: (p: Profile) => `/api/demo/stream?${profileQuery(p)}`,
 }
+
+const demo = isStaticDemo ? createDemoClient(sessionId) : undefined
+export const api = demo ?? serverApi
+export const subscribeDemo = demo?.subscribe

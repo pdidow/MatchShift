@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { HighlightCard, InsightCard, InsightEvents, Lang, MatchDetail, MatchSummary, Meta, Profile, Snapshot, ViewerMode } from './api'
-import { api, profileQuery, sessionId } from './api'
+import { api, profileQuery, sessionId, subscribeDemo } from './api'
 import { t } from './i18n'
 import { MomentumChart, PressureChart } from './components/Charts'
 import { InsightCardView } from './components/InsightCard'
@@ -80,33 +80,73 @@ export default function App() {
     api.matches().then(setMatches).catch(() => undefined)
   }, [])
 
-  // Live snapshots over Server-Sent Events (reconnecting when the viewer profile changes).
-  // Falls back to polling if SSE is blocked, or when ?transport=poll is set.
-  const [polling, setPolling] = useState(() => new URLSearchParams(window.location.search).get('transport') === 'poll')
+// Static GitHub Pages demo uses an in-browser playback subscription.
+  // Normal server/Azure mode continues to use SSE with polling fallback.
+  const [polling, setPolling] = useState(() =>
+    new URLSearchParams(window.location.search).get('transport') === 'poll'
+  )
+
   useEffect(() => {
+    // GitHub Pages / static demo mode
+    if (subscribeDemo) {
+      return subscribeDemo(
+        profile,
+        (next) => {
+          setSnap(next)
+          setConnected(true)
+        },
+        (ok) => setConnected(ok),
+      )
+    }
+
+    // Normal backend polling mode
     if (polling) {
       let stop = false
+
       const tick = async () => {
         try {
           const res = await fetch(`/api/demo/state?${profileQuery(profile)}`)
-          if (res.ok) { const next = (await res.json()) as Snapshot; if (!stop) { setSnap(next); setConnected(true) } }
-        } catch { setConnected(false) }
+          if (res.ok) {
+            const next = (await res.json()) as Snapshot
+            if (!stop) {
+              setSnap(next)
+              setConnected(true)
+            }
+          }
+        } catch {
+          setConnected(false)
+        }
+
         if (!stop) window.setTimeout(tick, 400)
       }
+
       void tick()
-      return () => { stop = true }
+      return () => {
+        stop = true
+      }
     }
+
+    // Normal backend SSE mode
     let errors = 0
     const source = new EventSource(api.streamUrl(profile))
-    source.addEventListener('snapshot', (e) => { errors = 0; setSnap(JSON.parse((e as MessageEvent).data) as Snapshot) })
+
+    source.addEventListener('snapshot', (e) => {
+      errors = 0
+      setSnap(JSON.parse((e as MessageEvent).data) as Snapshot)
+    })
+
     source.onopen = () => setConnected(true)
+
     source.onerror = () => {
       setConnected(false)
-      if (++errors >= 3) { source.close(); setPolling(true) }
+      if (++errors >= 3) {
+        source.close()
+        setPolling(true)
+      }
     }
+
     return () => source.close()
   }, [profile, polling])
-
   useEffect(() => {
     if (snap?.matchId && detail?.summary.id !== snap.matchId) api.match(snap.matchId).then(setDetail).catch(() => undefined)
   }, [snap?.matchId, detail?.summary.id])
@@ -310,7 +350,14 @@ export default function App() {
 
         <div className="controls-right">
           <A11yButton lang={profile.language} onOpen={() => setCenterOpen(true)} />
-          <a className="chip" href={`/broadcast?session=${sessionId}&lang=${profile.language}`} target="_blank" rel="noreferrer">Broadcast</a>
+    < a
+className = "chip"
+href = {`${import.meta.env.BASE_URL}broadcast?session=${sessionId}&lang=${profile.language}`}
+target = "_blank"
+rel = "noreferrer"
+    >
+    Broadcast
+    </a>
           <label className="control-label">{s.match}
             <select value={snap.matchId} onChange={(e) => { setFocus(null); setSelected(null); void api.reset(e.target.value) }}>
               {matches.map((m) => <option key={m.id} value={m.id}>{m.home.shortName} v {m.away.shortName} · {m.scenario.split(':')[0]}</option>)}

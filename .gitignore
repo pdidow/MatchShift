@@ -513,3 +513,4 @@ MSBuild_Logs/
 /AccesibilityPrompt.txt
 /MatchShiftScriptForVideoDRAFT.txt
 /chatGPTOutstandingFindings.txt
+src/MatchShift.Web/public/demo/

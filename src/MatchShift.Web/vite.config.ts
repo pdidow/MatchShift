@@ -2,7 +2,8 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // The API runs on :5002 in development (dotnet run --project src/MatchShift.Api).
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'pages' ? '/MatchShift/' : '/',
   plugins: [react()],
   server: {
     port: 5173,
@@ -12,7 +13,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../MatchShift.Api/wwwroot',
+    outDir: mode === 'pages' ? 'dist' : '../MatchShift.Api/wwwroot',
     emptyOutDir: true,
   },
-})
+}))
