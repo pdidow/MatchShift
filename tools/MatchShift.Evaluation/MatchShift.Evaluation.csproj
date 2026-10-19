@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Developer tooling only: MatchShift evaluation datasets, deterministic evaluators and the Microsoft Foundry
+       cloud-evaluation client. Not referenced by the production API. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MatchShift.Infrastructure\MatchShift.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

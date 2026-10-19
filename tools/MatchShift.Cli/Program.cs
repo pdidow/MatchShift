@@ -18,6 +18,9 @@ switch (command)
     case "agent-workflow":
         await AgentWorkflowCli.Run(options);
         break;
+    case "foundry-eval":
+        await FoundryEvalCli.Run(options);
+        break;
     case "inspect":
         Inspect(SyntheticMatchGenerator.GenerateFlagship().Match);
         foreach (var seed in new long[] { 1, 2, 3 }) Inspect(SyntheticMatchGenerator.GenerateMatch(seed));

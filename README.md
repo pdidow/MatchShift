@@ -197,7 +197,18 @@ dotnet run --project tools/MatchShift.Cli -- robustness   # flagship script re-s
 dotnet run --project tools/MatchShift.Cli -- analyze      # live insights for the flagship match
 dotnet run --project tools/MatchShift.Cli -- narrate --lang fr --mode TeachMe --recap Casual
 dotnet run --project tools/MatchShift.Cli -- export --matches 50   # Fabric-ready dataset
+dotnet run --project tools/MatchShift.Cli -- foundry-eval  # Foundry Evaluations: prints cost estimate; --confirm true runs it
 ```
+
+AI output quality is checked in three layers:
+- deterministic validation;
+- an independent Verification Agent;
+- Microsoft Foundry Evaluations (groundedness, relevance, coherence).
+
+The latest real Foundry evaluation run covered 39 rows in English, French and Spanish, including 11 adversarial
+defects. Published outputs averaged 4.86/5 groundedness. The deterministic layer caught 11 of 11 defects, the
+Verification Agent 11 of 11, and Foundry groundedness 4 of 11. See [EVALUATION.md](docs/EVALUATION.md) and the
+[latest report](docs/evaluations/latest.md).
 
 ## Optional: Microsoft Foundry and Azure
 
@@ -230,7 +241,8 @@ src/
   MatchShift.Api             ASP.NET Core minimal API, playback engine, SSE stream, telemetry
   MatchShift.Web             React + TypeScript + Vite broadcast UI
 tests/                       xUnit: Core, SyntheticData, Analytics, Agents (+ narratives, export, Foundry), Api
-tools/MatchShift.Cli         Inspect, calibrate, analyze, evaluate, sweep, export, narrate
+tools/MatchShift.Cli         Inspect, calibrate, analyze, evaluate, sweep, export, narrate, agent-workflow, foundry-eval
+tools/MatchShift.Evaluation  Microsoft Foundry Evaluations: live dataset, adversarial set, Evals API client, report
 infra/                       Bicep for Azure Container Apps (+ App Insights, ACR, Foundry access)
 docs/                        Design documentation
 ```
@@ -239,7 +251,7 @@ docs/                        Design documentation
 
 [Architecture](docs/ARCHITECTURE.md) · [Synthetic data](docs/SYNTHETIC_DATA.md) · [Analytics](docs/ANALYTICS.md) ·
 [Match shift detection](docs/MATCH_SHIFT_DETECTION.md) · [Explainability](docs/EXPLAINABILITY.md) ·
-[Agents](docs/AGENTS.md) · [Narratives](docs/NARRATIVES.md) · [Recaps](docs/RECAPS.md) ·
+[Agents](docs/AGENTS.md) · [Evaluation](docs/EVALUATION.md) · [Narratives](docs/NARRATIVES.md) · [Recaps](docs/RECAPS.md) ·
 [Microsoft integration](docs/MICROSOFT_INTEGRATION.md) · [Demo under two minutes](docs/DEMO.md) · [Hackathon mapping](docs/HACKATHON.md) ·
 [Compliance audit](docs/COMPLIANCE.md) · [Judge instructions](docs/JUDGING.md) ·
 [Claims and upgrades](docs/CLAIMS_AND_UPGRADES.md) · [Project description](docs/PROJECT_DESCRIPTION.md) ·

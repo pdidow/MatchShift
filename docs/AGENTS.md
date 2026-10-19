@@ -123,6 +123,22 @@ execution type/mode, provider, deployment, timings, superstep, status, handoffs,
 summaries, model calls, retries, failure codes, recovery actions, verifier decision and token counts.
 They never contain prompts, agent instructions, hidden reasoning, tokens or keys.
 
+## Evaluation
+
+The workflow's output is measured in three separate layers: deterministic validation, the Verification Agent, and
+Microsoft Foundry Evaluations (`builtin.groundedness`, `builtin.relevance`, `builtin.coherence`, judged by the same
+`gpt-4.1-mini` deployment). The latest real run, `eval_619a039d062c45ad8b2be61c0c0dd184`, covered 39 rows from 14 live
+workflow runs in English, French and Spanish plus 11 adversarial rows.
+
+| Adversarial defects caught (of 11) | Count |
+|---|---|
+| Deterministic validation | 11 |
+| Verification Agent alone | 11 |
+| Foundry groundedness | 4 |
+
+Published outputs scored a mean groundedness of 4.86/5, with all 28 passing. Developer-triggered with
+`foundry-eval`; see [EVALUATION.md](EVALUATION.md).
+
 ## The older deterministic narration pipeline
 
 `AgentPipeline` (event analyst, pattern detection, football reasoning, storytelling, personalization,
@@ -139,4 +155,6 @@ dotnet run --project tools/MatchShift.Cli -- agent-workflow --count 1 --credenti
 dotnet run --project src/MatchShift.Api --launch-profile http -- --AgentWorkflow:Credential=AzureCli
 # OFFLINE: no Azure contact.
 dotnet run --project tools/MatchShift.Cli -- agent-workflow --offline true
+# EVALUATION: prints the cost estimate; add --confirm true to run it (see EVALUATION.md).
+dotnet run --project tools/MatchShift.Cli -- foundry-eval
 ```

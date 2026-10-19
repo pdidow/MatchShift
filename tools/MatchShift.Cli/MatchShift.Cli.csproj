@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MatchShift.Infrastructure\MatchShift.Infrastructure.csproj" />
+    <ProjectReference Include="..\MatchShift.Evaluation\MatchShift.Evaluation.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

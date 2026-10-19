@@ -7,6 +7,7 @@ dependency of the demo.
 |---|---|---|
 | **Microsoft Agent Framework** | Workflow graph (`WorkflowBuilder`, fan-out/fan-in, shared workflow state) and four `ChatClientAgent`s that explain each meaningful insight; see [AGENTS.md](AGENTS.md) | `src/MatchShift.Agents/Workflow` |
 | **Microsoft Foundry** | Project model deployment (gpt-4.1-mini) behind the agents via `AIProjectClient.AsAIAgent`, Entra ID only; legacy editorial selection and recap ordering | `src/MatchShift.Infrastructure/Foundry` |
+| **Microsoft Foundry Evaluations** | Cloud evaluation of the agents' published output with `builtin.groundedness`, `builtin.relevance` and `builtin.coherence`; a real run is stored in the Foundry project, reported separately from deterministic validation and the Verification Agent | `tools/MatchShift.Evaluation`, [EVALUATION.md](EVALUATION.md) |
 | **Azure App Service (Free F1)** | Hosts the deployed app (API + React build); system-assigned managed identity calls Foundry with the Foundry User role | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | **Azure Container Apps** | Alternative, paid container deployment (not used for the hosted demo) | `infra/main.bicep`, `Dockerfile` |
 | **Azure Container Registry** | Image registry, pulled via managed identity (AcrPull) | `infra/main.bicep` |

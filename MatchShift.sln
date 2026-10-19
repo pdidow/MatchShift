@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MatchShift.Cli", "tools\Mat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MatchShift.Api.Tests", "tests\MatchShift.Api.Tests\MatchShift.Api.Tests.csproj", "{1A38F6B6-42B6-42BA-93D3-D11B8DB5674F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MatchShift.Evaluation", "tools\MatchShift.Evaluation\MatchShift.Evaluation.csproj", "{3A711F51-0A9B-4186-9E85-7824260E8339}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -187,6 +189,18 @@ Global
 		{1A38F6B6-42B6-42BA-93D3-D11B8DB5674F}.Release|x64.Build.0 = Release|Any CPU
 		{1A38F6B6-42B6-42BA-93D3-D11B8DB5674F}.Release|x86.ActiveCfg = Release|Any CPU
 		{1A38F6B6-42B6-42BA-93D3-D11B8DB5674F}.Release|x86.Build.0 = Release|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Debug|x64.Build.0 = Debug|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Debug|x86.Build.0 = Debug|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Release|x64.ActiveCfg = Release|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Release|x64.Build.0 = Release|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Release|x86.ActiveCfg = Release|Any CPU
+		{3A711F51-0A9B-4186-9E85-7824260E8339}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -204,5 +218,6 @@ Global
 		{02BF2D0C-BFA0-4437-8B02-7AF0E32594FE} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{DC6A49F2-6449-49E4-9A62-E7D53ED15463} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 		{1A38F6B6-42B6-42BA-93D3-D11B8DB5674F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{3A711F51-0A9B-4186-9E85-7824260E8339} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 	EndGlobalSection
 EndGlobal

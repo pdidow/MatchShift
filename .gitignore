@@ -63,7 +63,7 @@ BenchmarkDotNet.Artifacts/
 # .NET
 project.lock.json
 project.fragment.lock.json
-artifacts/
+**/artifacts/*
 
 # Tye
 .tye/
@@ -488,7 +488,9 @@ dist/
 .env.local
 *.local.json
 appsettings.*.local.json
-/artifacts/
+/artifacts/*
+# Evaluation results are deliverables (judge-readable; contain no secrets): keep them tracked.
+!/artifacts/evaluations/
 /datasets/out/
 .vite/
 
