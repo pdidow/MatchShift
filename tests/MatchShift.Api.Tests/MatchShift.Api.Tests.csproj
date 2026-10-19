@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MatchShift.Api\MatchShift.Api.csproj" />
+    <ProjectReference Include="..\MatchShift.Agents.Tests\MatchShift.Agents.Tests.csproj" />
   </ItemGroup>
 
 </Project>

@@ -36,8 +36,13 @@ public static class DemoEndpoints
         {
             runtime,
             warmUp = agents.WarmUp,
-            budget = new { runsLastHour = agents.RunsLastHour, options.MaxRunsPerHour, options.SessionAutoRunBudget, options.MaxConcurrentWorkflows,
-                options.MaxModelCallsPerWorkflow, options.MaxAttemptsPerAgent, options.AgentTimeoutSeconds, options.WorkflowTimeoutSeconds },
+            // Live-agent availability. Counts and caps only; no spend or billing information.
+            liveAgents = runtime.ExecutionMode != ExecutionMode.LiveFoundry ? "not configured"
+                : agents.Quota.Exhausted ? AgentWorkflowService.QuotaMessage : "available",
+            budget = new { agents.Quota.RunsLastHour, agents.Quota.RunsLast24Hours, agents.Quota.MaxPerHour, agents.Quota.MaxPerDay,
+                agents.Quota.MaxPerClientPerHour, persistedAcrossRestarts = agents.Quota.Durable, options.SessionAutoRunBudget,
+                options.MaxConcurrentWorkflows, options.MaxModelCallsPerWorkflow, options.MaxAttemptsPerAgent, options.AgentTimeoutSeconds,
+                options.WorkflowTimeoutSeconds },
             autoRun = new { enabled = options.AutoRunMeaningful && runtime.ExecutionMode == ExecutionMode.LiveFoundry, options.MeaningfulImportance },
             agents = MatchShiftAgents.All.Select(a => new { role = a.Role, a.Name, a.Responsibility, a.MaxOutputTokens }),
         });
@@ -164,7 +169,7 @@ public static class DemoEndpoints
             var started = agents.GetOrStart(s, insight, profile, a11y == true, WorkflowTrigger.OnDemand);
             return started.Handle is { } h
                 ? Results.Ok(h.Snapshot())
-                : Results.Json(new { message = started.Refusal, executionMode = agents.Mode }, statusCode: StatusCodes.Status429TooManyRequests);
+                : Results.Json(new { message = started.Refusal }, statusCode: StatusCodes.Status409Conflict);
         });
 
         // The older deterministic narration pipeline (event analyst, pattern detection, ... template verification). Deterministic code, not AI agents.

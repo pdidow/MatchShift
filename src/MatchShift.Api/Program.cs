@@ -21,6 +21,12 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<SessionRegistry>().Resolv
 builder.Services.AddHostedService<PlaybackService>();
 builder.Services.AddMatchShiftNarration(builder.Configuration);
 builder.Services.AddMatchShiftAgentWorkflow(builder.Configuration);
+builder.Services.AddSingleton(sp =>
+{
+    var o = sp.GetRequiredService<MatchShift.Infrastructure.Foundry.AgentWorkflowOptions>();
+    return new AgentRunQuota(o.MaxRunsPerHour, o.MaxRunsPerDay, o.MaxRunsPerClientPerHour, TimeProvider.System,
+        AgentRunQuota.DefaultStatePath(builder.Configuration), sp.GetRequiredService<ILoggerFactory>().CreateLogger<AgentRunQuota>());
+});
 builder.Services.AddSingleton<AgentWorkflowService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AgentWorkflowService>());
 builder.Services.AddMatchShiftTelemetry(builder.Configuration);

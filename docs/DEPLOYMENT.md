@@ -45,6 +45,8 @@ Do not use `Cognitive Services *` roles for Foundry projects (Microsoft guidance
 | `AgentWorkflow__Mode` | `LiveFoundry` |
 | `AgentWorkflow__Credential` | `ManagedIdentity` |
 | `AgentWorkflow__MaxRunsPerHour` | `10` (public site: caps model spend) |
+| `AgentWorkflow__MaxRunsPerDay` | `30` (rolling 24 h) |
+| `AgentWorkflow__MaxRunsPerClientPerHour` | `4` |
 | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | `true` (HTTPS terminates at the App Service front end) |
 
 ## Deploy
@@ -56,7 +58,7 @@ az webapp create -g <rg> -p <plan> -n <app> --runtime "dotnet:10" --assign-ident
 az role assignment create --assignee-object-id <app-principal-id> --assignee-principal-type ServicePrincipal `
   --role 53ca6127-db72-4b80-b1b0-d745d6d5456d --scope <foundry-project-resource-id>
 az webapp config appsettings set -g <rg> -n <app> --settings FOUNDRY_PROJECT_ENDPOINT=... AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4.1-mini `
-  AgentWorkflow__Mode=LiveFoundry AgentWorkflow__Credential=ManagedIdentity AgentWorkflow__MaxRunsPerHour=10 ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+  AgentWorkflow__Mode=LiveFoundry AgentWorkflow__Credential=ManagedIdentity AgentWorkflow__MaxRunsPerHour=10 AgentWorkflow__MaxRunsPerDay=30 AgentWorkflow__MaxRunsPerClientPerHour=4 ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 
 # Build: React into src/MatchShift.Api/wwwroot, then publish and zip-deploy
 cd src/MatchShift.Web; npm ci; npm run build; cd ../..
@@ -90,12 +92,12 @@ Central US (Windows). The web app therefore runs in Central US and calls the Eas
    **3D replay**, which still come from deterministic evidence.
 5. `/api/agents/status` shows mode, model, credential type, package versions and the run budget.
 
-At most 10 workflow executions per hour run on the public site (`429` with the deterministic insight kept beyond that).
+Live workflow executions on the public site are capped at 10 per hour, 30 per rolling day and 4 per client per hour. Beyond that, requests get an `OFFLINE_TEMPLATE` execution with "Live AI analysis is temporarily unavailable; deterministic match evidence remains available." and no Foundry call (see [AGENTS.md](AGENTS.md#cost-controls)). `/api/agents/status` shows `liveAgents` and the run counts.
 
 ## Free tier limits
 
 F1: 60 CPU minutes per day, 1 GB memory, 32-bit worker, no Always On (the app sleeps after idle and cold-starts),
-single instance. Demo sessions, the agent-run cache and the hourly agent budget are in memory, so they reset on restart.
+single instance. Demo sessions and the agent-run cache are in memory and reset on restart; the hourly and daily run caps are persisted in `%HOME%\data` and survive restarts (verified on the F1 host); the per-client cap is in memory.
 The web host is free; **Foundry model inference is billed separately** per token (about 4 calls and ~10k tokens per
 agent workflow execution with gpt-4.1-mini).
 

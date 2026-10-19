@@ -46,8 +46,20 @@ Code: `src/MatchShift.Agents/Workflow/` (graph, executors, agents, validation, t
 Code checks what code can check exactly (`GroundingValidator.cs`), before and after the verifier:
 
 - every cited evidence ID exists, is a supporting event, and is not after the insight (`UNKNOWN_EVIDENCE_ID`, `NOT_SUPPORTING_EVIDENCE`, `FUTURE_EVIDENCE`);
-- every number equals an authoritative value (metric values, baselines, changes, thresholds, samples, windows, score, minute), within rounding (`UNSUPPORTED_NUMBER`);
-- scores and times are correct and not in the future (`WRONG_SCORE`, `FUTURE_TIME`);
+- every number is checked **in its own category** (`NumericGrounding.cs`), never against a global list of every number
+  in the context: percentages only against share values; "N points" against share changes or index values; "X of Y"
+  only when X and Y are the numerator and sample of the *same* metric; counted nouns against that noun (attacks →
+  attack samples, events → supporting-event counts, goals → score; there is no grounded player count, so
+  "8 key players" is rejected even though a minimum sample of 8 exists); minimum samples only next to
+  "minimum/at least/required"; any other number only against metric values (`UNSUPPORTED_NUMBER`);
+- scores are checked as scores; match minutes, minute ranges and clocks must not be in the future and must be a
+  window boundary, supporting-event time or the insight time (`WRONG_SCORE`, `FUTURE_TIME`, `UNSUPPORTED_TIME`);
+- identifiers are not numbers: event IDs are validated as evidence, player IDs (`WHA-17`) must be players involved in
+  the evidence, other identifiers (`event-203`, `id:17`) are ignored; sentences copied verbatim from the deterministic
+  wording are grounded by construction;
+- English number words before a unit or counted noun ("ninety per cent", "eight key players", "thirty-four minutes
+  and thirty-three seconds") are normalised and checked; French and Spanish number words are not (the verifier is the
+  backstop there);
 - named players are involved in the evidence; other clubs are not mentioned (`UNKNOWN_PLAYER`, `FOREIGN_TEAM`);
 - no intent claims, no un-negated certainty words, no causes inside facts; confidence and sample wording match the deterministic inputs.
 
@@ -74,9 +86,25 @@ found blocking problems, and never labels anything verified unless the verifier 
 Only insight candidates raised by the deterministic engine are eligible — never raw events. Automatic runs
 require a fresh (≤ 2 match minutes), meaningful candidate (goal, big chance, or importance ≥ 70 with
 confidence ≥ Medium and all sample minimums met) while the match is playing, capped at 4 per session; any
-other insight runs only when a viewer opens it in the Agents tab. Process-wide: 40 executions per hour,
-2 concurrent, 8 model calls per execution, per-agent output token caps (350–600), compact prompts (≤ 12
-source events). A typical execution is 4 calls, ~7–12k input and ~1k output tokens.
+other insight runs only when a viewer opens it in the Agents tab. 2 concurrent executions, 8 model calls per
+execution, per-agent output token caps (350–600), compact prompts (≤ 12 source events). A typical execution is
+4 calls (3 when the accessibility branch is skipped), ~10–15k input and ~1–2k output tokens.
+
+**Live-run quota** (`AgentRunQuota.cs`): rolling hourly cap (`MaxRunsPerHour`, default 40, hosted 10), rolling
+24-hour cap (`MaxRunsPerDay`, default 60, hosted 30) and per-client cap (`MaxRunsPerClientPerHour`, default 4, keyed
+by a hash of the caller's IP, never stored). Only a run that will call Foundry reserves quota:
+
+- identical requests (same match, insight, audience, language, focus, accessibility) reuse the cached execution;
+- polling is read-only: the Agents tab sends one start request and then polls with `run=false`, which never starts a run;
+- a failed or quota-fallback result is shown to pollers and only re-run by a new start request after a 60 s cool-down;
+- when a cap is reached, an on-demand request gets an `OFFLINE_TEMPLATE` execution (no Foundry call, never verified)
+  with the notice "Live AI analysis is temporarily unavailable; deterministic match evidence remains available.";
+  automatic runs simply do not start.
+
+On Azure App Service the global run timestamps are saved to `%HOME%\data\matchshift\agent-quota.json` (persistent,
+private, free), so the hourly and daily caps survive restarts and redeploys; an unreadable file fails closed for the
+current hour. Locally (no `HOME`/`WEBSITE_SITE_NAME`) and for the per-client cap, counts are in memory and reset on
+restart. This is a single-instance limiter: it does not coordinate several scaled-out instances.
 
 ## Execution modes
 

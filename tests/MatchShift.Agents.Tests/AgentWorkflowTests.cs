@@ -244,14 +244,16 @@ public class AgentWorkflowTests
     [Fact]
     public void Template_outputs_always_pass_deterministic_validation()
     {
+        var failures = new List<string>();
         foreach (var insight in Insights)
         foreach (var mode in Enum.GetValues<ViewerMode>())
         foreach (var lang in new[] { "en", "fr", "es" })
         {
             var c = InsightContextBuilder.Build(insight, Flagship, new ViewerProfile(mode, lang), AccessibilityRequirements.All, "wf");
             var report = CandidateSanitizer.Validate(c, new NarrativeCandidate(TemplateOutputs.Tactical(c), TemplateOutputs.Audience(c), TemplateOutputs.Accessibility(c)));
-            Assert.True(report.Clean, $"{insight.Id} {mode} {lang}: {string.Join("; ", report.Issues.Select(i => $"{i.Field} {i.Message}"))}");
+            failures.AddRange(report.Issues.Select(i => $"{insight.Id} {insight.Type.Code()} {mode} {lang} {i.Field}: {i.Message}"));
         }
+        Assert.True(failures.Count == 0, string.Join("\n", failures.Distinct().Take(40)));
     }
 
     // ----- Verification and rejection -----

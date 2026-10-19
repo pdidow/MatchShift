@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using MatchShift.Agents.Agents;
 
@@ -14,6 +14,7 @@ public static class IssueCodes
     public const string NotSupportingEvidence = "NOT_SUPPORTING_EVIDENCE";
     public const string UnsupportedNumber = "UNSUPPORTED_NUMBER";
     public const string WrongScore = "WRONG_SCORE";
+    public const string UnsupportedTime = "UNSUPPORTED_TIME";
     public const string FutureTime = "FUTURE_TIME";
     public const string UnknownPlayer = "UNKNOWN_PLAYER";
     public const string ForeignTeam = "FOREIGN_TEAM";
@@ -51,42 +52,9 @@ public static partial class GroundingValidator
         "because", "caused", "due to", "led to", "resulted in", "as a result", "parce que", "à cause", "porque", "debido a",
     ];
 
-    public static IReadOnlyList<double> AllowedNumbers(InsightContext c)
-    {
-        var n = new List<double>(VerificationAgent.DefinitionalConstants)
-        {
-            c.DisplayMinute, c.MatchSecond / 60, c.Score.Home, c.Score.Away, c.SupportingEventIds.Length, c.SourceEvents.Length,
-            c.ConfidenceInputs.Score, Math.Round(c.ConfidenceInputs.Score * 100),
-        };
-        foreach (var m in c.DeterministicMetrics)
-        {
-            AddValue(n, m.Current, m.Unit);
-            if (m.Baseline is { } b) AddValue(n, b, m.Unit);
-            if (m.Change is { } d) AddValue(n, Math.Abs(d), m.Unit);
-            if (m.Threshold is { } t) AddValue(n, Math.Abs(t), m.Unit);
-            n.Add(m.SampleSize);
-            if (m.MinimumSample is { } min) n.Add(min);
-            foreach (var w in new[] { m.BaselineWindow, m.CurrentWindow })
-                if (w is not null) { n.Add(w.FromMinute); n.Add(w.ToMinute); n.Add(w.ToMinute - w.FromMinute); }
-            foreach (var text in new[] { m.DisplayBaseline, m.DisplayCurrent, m.DisplayChange, m.DisplayThreshold, m.Comparison })
-                if (text is not null) n.AddRange(VerificationAgent.ExtractNumbers(text));
-        }
-        foreach (var e in c.SourceEvents) { n.Add(e.Second / 60); n.Add(e.Second % 60); n.Add(e.Second / 60 + 1); }
-        var w0 = c.DeterministicNarrative;
-        foreach (var text in new[] { w0.Headline, w0.Fact, w0.Inference, w0.PossibleExplanation, w0.Ticker, w0.StudioLine, w0.Teaching })
-            if (text is not null) n.AddRange(VerificationAgent.ExtractNumbers(text));
-        return n;
-
-        static void AddValue(List<double> list, double value, string unit)
-        {
-            list.Add(value);
-            if (unit == "Share") { list.Add(Math.Round(value * 100)); list.Add(Math.Round(value * 100, 1)); }
-        }
-    }
-
     /// <summary>All deterministic checks for one field of generated text.</summary>
     public static IReadOnlyList<GroundingIssue> CheckText(InsightContext c, string agent, string field, string? text, TextKind kind,
-        bool required = false, IReadOnlyList<double>? allowed = null)
+        bool required = false)
     {
         var issues = new List<GroundingIssue>();
         void Add(string code, string message) => issues.Add(new(agent, field, code, message));
@@ -98,38 +66,13 @@ public static partial class GroundingValidator
         }
         if (text.Length > MaxFieldLength) Add(IssueCodes.TooLong, $"Text is {text.Length} characters (limit {MaxFieldLength}).");
 
-        allowed ??= AllowedNumbers(c);
         var lower = text.ToLowerInvariant();
 
         foreach (Match m in EventIdPattern().Matches(text))
             issues.AddRange(CheckEvidenceIds(c, agent, field, [m.Value]));
 
-        // Mask event IDs and clock times before number checks so their digits are judged by the dedicated checks.
-        var masked = EventIdPattern().Replace(text, " ");
-        foreach (Match m in ClockPattern().Matches(masked))
-        {
-            var seconds = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) * 60 + int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
-            if (seconds > c.MatchSecond) Add(IssueCodes.FutureTime, $"Time {m.Value} is after the insight ({c.MatchTime}).");
-        }
-        masked = ClockPattern().Replace(masked, " ");
-
-        foreach (Match m in MinutePattern().Matches(masked))
-        {
-            var value = int.Parse(m.Groups["n"].Value, CultureInfo.InvariantCulture);
-            if (value > c.DisplayMinute) Add(IssueCodes.FutureTime, $"Minute {value} is after the insight (minute {c.DisplayMinute}).");
-        }
-
-        foreach (Match m in ScorePattern().Matches(masked))
-        {
-            int a = m.Groups[1].Value[0] - '0', b = m.Groups[2].Value[0] - '0';
-            var isScore = (a == c.Score.Home && b == c.Score.Away) || (a == c.Score.Away && b == c.Score.Home);
-            var isWindow = c.DeterministicMetrics.Any(x => x.CurrentWindow is { } w && w.FromMinute == a && w.ToMinute == b);
-            if (!isScore && !isWindow) Add(IssueCodes.WrongScore, $"'{m.Value}' does not match the score at {c.MatchTime} ({c.Score}).");
-        }
-
-        foreach (var number in VerificationAgent.ExtractNumbers(masked))
-            if (!allowed.Any(a => VerificationAgent.Matches(number, a)))
-                Add(IssueCodes.UnsupportedNumber, $"Number {number.ToString(CultureInfo.InvariantCulture)} is not an authoritative value.");
+        // Every number is checked against the authoritative values of its own category (see NumericGrounding).
+        foreach (var p in NumericGrounding.Check(c, text)) Add(p.Code, p.Message);
 
         var allowedIds = c.Players.Select(p => p.Id).ToHashSet();
         var allowedSurnames = c.Players.Select(p => Surname(p.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -181,14 +124,13 @@ public static partial class GroundingValidator
     public static IReadOnlyList<GroundingIssue> CheckTactical(InsightContext c, TacticalAnalystResult t)
     {
         const string a = "Tactical Analyst";
-        var allowed = AllowedNumbers(c);
         var issues = new List<GroundingIssue>();
-        for (var i = 0; i < t.FactsUsed.Count; i++) issues.AddRange(CheckText(c, a, $"factsUsed[{i}]", t.FactsUsed[i], TextKind.Fact, allowed: allowed));
-        issues.AddRange(CheckText(c, a, "inference", t.Inference, TextKind.Interpretation, required: true, allowed: allowed));
-        issues.AddRange(CheckText(c, a, "possibleExplanation", t.PossibleExplanation, TextKind.Interpretation, allowed: allowed));
-        issues.AddRange(CheckText(c, a, "tacticalSignificance", t.TacticalSignificance, TextKind.Interpretation, allowed: allowed));
-        issues.AddRange(CheckText(c, a, "confidenceQualification", t.ConfidenceQualification, TextKind.Interpretation, allowed: allowed));
-        for (var i = 0; i < t.Limitations.Count; i++) issues.AddRange(CheckText(c, a, $"limitations[{i}]", t.Limitations[i], TextKind.Interpretation, allowed: allowed));
+        for (var i = 0; i < t.FactsUsed.Count; i++) issues.AddRange(CheckText(c, a, $"factsUsed[{i}]", t.FactsUsed[i], TextKind.Fact));
+        issues.AddRange(CheckText(c, a, "inference", t.Inference, TextKind.Interpretation, required: true));
+        issues.AddRange(CheckText(c, a, "possibleExplanation", t.PossibleExplanation, TextKind.Interpretation));
+        issues.AddRange(CheckText(c, a, "tacticalSignificance", t.TacticalSignificance, TextKind.Interpretation));
+        issues.AddRange(CheckText(c, a, "confidenceQualification", t.ConfidenceQualification, TextKind.Interpretation));
+        for (var i = 0; i < t.Limitations.Count; i++) issues.AddRange(CheckText(c, a, $"limitations[{i}]", t.Limitations[i], TextKind.Interpretation));
         issues.AddRange(CheckEvidenceIds(c, a, "evidenceIds", t.EvidenceIds));
         if (t.EvidenceIds.Count == 0 && c.SourceEvents.Length > 0)
             issues.Add(new(a, "evidenceIds", IssueCodes.MissingCitation, "The interpretation cites no supporting event."));
@@ -198,39 +140,36 @@ public static partial class GroundingValidator
     public static IReadOnlyList<GroundingIssue> CheckAudience(InsightContext c, AudienceNarrativeResult r)
     {
         const string a = "Audience Narrative";
-        var allowed = AllowedNumbers(c);
         return
         [
-            .. CheckText(c, a, "headline", r.Headline, TextKind.Narrative, required: true, allowed: allowed),
-            .. CheckText(c, a, "summary", r.Summary, TextKind.Narrative, required: true, allowed: allowed),
-            .. CheckText(c, a, "detail", r.Detail, TextKind.Narrative, allowed: allowed),
-            .. CheckText(c, a, "keyTakeaway", r.KeyTakeaway, TextKind.Narrative, allowed: allowed),
+            .. CheckText(c, a, "headline", r.Headline, TextKind.Narrative, required: true),
+            .. CheckText(c, a, "summary", r.Summary, TextKind.Narrative, required: true),
+            .. CheckText(c, a, "detail", r.Detail, TextKind.Narrative),
+            .. CheckText(c, a, "keyTakeaway", r.KeyTakeaway, TextKind.Narrative),
         ];
     }
 
     public static IReadOnlyList<GroundingIssue> CheckAccessibility(InsightContext c, AccessibilityNarrativeResult r)
     {
         const string a = "Accessibility Narrator";
-        var allowed = AllowedNumbers(c);
         return
         [
-            .. CheckText(c, a, "spokenSummary", r.SpokenSummary, TextKind.Narrative, required: true, allowed: allowed),
-            .. CheckText(c, a, "visualDescription", r.VisualDescription, TextKind.Narrative, allowed: allowed),
-            .. CheckText(c, a, "simplifiedExplanation", r.SimplifiedExplanation, TextKind.Narrative, required: true, allowed: allowed),
-            .. CheckText(c, a, "replayAudioDescription", r.ReplayAudioDescription, TextKind.Narrative, allowed: allowed),
+            .. CheckText(c, a, "spokenSummary", r.SpokenSummary, TextKind.Narrative, required: true),
+            .. CheckText(c, a, "visualDescription", r.VisualDescription, TextKind.Narrative),
+            .. CheckText(c, a, "simplifiedExplanation", r.SimplifiedExplanation, TextKind.Narrative, required: true),
+            .. CheckText(c, a, "replayAudioDescription", r.ReplayAudioDescription, TextKind.Narrative),
         ];
     }
 
     public static IReadOnlyList<GroundingIssue> CheckCorrection(InsightContext c, CorrectedNarrative r)
     {
         const string a = "Verification Agent";
-        var allowed = AllowedNumbers(c);
         return
         [
-            .. CheckText(c, a, "corrected.headline", r.Headline, TextKind.Narrative, required: true, allowed: allowed),
-            .. CheckText(c, a, "corrected.summary", r.Summary, TextKind.Narrative, required: true, allowed: allowed),
-            .. CheckText(c, a, "corrected.inference", r.Inference, TextKind.Interpretation, allowed: allowed),
-            .. CheckText(c, a, "corrected.spokenSummary", r.SpokenSummary, TextKind.Narrative, allowed: allowed),
+            .. CheckText(c, a, "corrected.headline", r.Headline, TextKind.Narrative, required: true),
+            .. CheckText(c, a, "corrected.summary", r.Summary, TextKind.Narrative, required: true),
+            .. CheckText(c, a, "corrected.inference", r.Inference, TextKind.Interpretation),
+            .. CheckText(c, a, "corrected.spokenSummary", r.SpokenSummary, TextKind.Narrative),
         ];
     }
 
@@ -252,15 +191,6 @@ public static partial class GroundingValidator
     [GeneratedRegex(@"\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-E\d{5}\b")]
     private static partial Regex EventIdPattern();
 
-    [GeneratedRegex(@"(?<![\d:])(\d{1,2}):([0-5]\d)(?![\d:])")]
-    private static partial Regex ClockPattern();
-
-    [GeneratedRegex(@"(?<![\d.,])(?<n>\d{1,3})\s*(?:'|’|′)|\b(?:minute|minuto)\s+(?<n>\d{1,3})\b|\b(?<n>\d{1,3})(?:st|nd|rd|th|e|º|ª)?\s*(?:minute|min)\b(?!s)", RegexOptions.IgnoreCase)]
-    private static partial Regex MinutePattern();
-
-    // A single-digit pair such as "2-1"; a trailing full stop or comma ends a sentence, but "3-0.5" is not a score.
-    [GeneratedRegex(@"(?<![\d'’′.,:-])(\d)\s*[-–]\s*(\d)(?![\d'’′%:–-]|[.,]\d)")]
-    private static partial Regex ScorePattern();
 }
 
 /// <summary>The combined outputs of the agent stages, as one candidate for verification.</summary>

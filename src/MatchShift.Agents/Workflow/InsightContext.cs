@@ -33,6 +33,7 @@ public sealed record MetricFact(
     WindowFact? BaselineWindow,
     WindowFact? CurrentWindow,
     int SampleSize,
+    int? BaselineSampleSize,
     int? MinimumSample,
     bool SampleRequirementMet,
     string? Comparison,
@@ -169,7 +170,7 @@ public static class InsightContextBuilder
             DeterministicMetrics = [.. insight.Evidence.Zip(lines, (e, l) => new MetricFact(
                 e.Metric, l.Label, e.Unit.ToString(), Round(e.BaselineValue), Round(e.RecentValue)!.Value, Round(e.Difference), Round(e.Threshold),
                 l.Baseline, l.Recent, l.Change, l.Threshold, Window(e.BaselineWindow), Window(e.RecentWindow),
-                e.SampleSize, e.MinimumSampleSize, e.SampleRequirementMet, e.Comparison, e.IsPrimary))],
+                e.SampleSize, e.BaselineSampleSize, e.MinimumSampleSize, e.SampleRequirementMet, e.Comparison, e.IsPrimary))],
             ConfidenceInputs = new ConfidenceInputs(insight.Confidence.ToString(), Math.Round(insight.ConfidenceScore, 3),
                 insight.Evidence.All(e => e.SampleRequirementMet), insight.Severity.ToString()),
             Facts = insight.Facts.ToImmutableSortedDictionary(),

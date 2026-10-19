@@ -154,7 +154,7 @@ public class AgentWorkflowApiTests(WebApplicationFactory<Program> factory) : ICl
         var time = new ManualTime();
         var runner = new InsightWorkflowRunner(new ChatClientAgentFactory(model, ExecutionMode.LiveFoundry, "microsoft-foundry", "gpt-test"));
         var service = new AgentWorkflowService(runner, new MatchShift.Infrastructure.Foundry.AgentWorkflowOptions(),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentWorkflowService>.Instance, time);
+            new AgentRunQuota(40, 60, 40, time), Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentWorkflowService>.Instance, time);
         var session = new DemoSession(new MatchCatalog());
         session.Seek(66 * 60);
         var insight = session.Read((a, _) => a.Insights.First(i => i.Type == InsightType.AttackChannelShift));
@@ -181,7 +181,8 @@ public class AgentWorkflowApiTests(WebApplicationFactory<Program> factory) : ICl
     public void Meaningful_policy_only_admits_fresh_high_value_candidates()
     {
         var service = new AgentWorkflowService(new InsightWorkflowRunner(new OfflineTemplateAgentFactory()),
-            new MatchShift.Infrastructure.Foundry.AgentWorkflowOptions(), Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentWorkflowService>.Instance);
+            new MatchShift.Infrastructure.Foundry.AgentWorkflowOptions(), new AgentRunQuota(40, 60, 4),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentWorkflowService>.Instance);
         var insights = LiveMatchAnalyzer.AnalyzeFull(new MatchCatalog().Default).Insights;
         var goal = insights.First(i => i.Type == InsightType.Goal);
         Assert.True(service.IsMeaningful(goal, goal.DetectedAtSecond + 30));

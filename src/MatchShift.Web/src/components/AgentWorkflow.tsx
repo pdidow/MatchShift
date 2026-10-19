@@ -139,11 +139,15 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible }: { 
     if (!insightId) return
     let cancelled = false
     let timer: number | undefined
+    // Only the first request may start a workflow; every poll after it is read-only (run=false), so polling can never
+    // trigger an additional (billed) execution.
+    let first = true
     const load = async () => {
       try {
-        const next = await api.agentTrace(insightId, { ...profile, accessible })
+        const next = await api.agentTrace(insightId, { ...profile, accessible }, first)
+        first = false
         if (cancelled) return
-        setX(next)
+        if (next) setX(next)
         if (next?.status === 'RUNNING') timer = window.setTimeout(load, 700)
       } catch (e) {
         if (!cancelled) setError(e instanceof AgentRefusal ? e.message : `Agent workflow unavailable: ${(e as Error).message}`)

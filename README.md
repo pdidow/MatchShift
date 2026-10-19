@@ -191,7 +191,7 @@ Press **Play**. 1x = 30 match-seconds per real second (a full match in 3 minutes
 ## Tests and evaluation
 
 ```bash
-dotnet test                                               # 269 xUnit tests (core, data, analytics, agents + workflow, API)
+dotnet test                                               # 300 xUnit tests (core, data, analytics, agents + workflow, API)
 dotnet run --project tools/MatchShift.Cli -- evaluate --matches 120   # detector precision/recall vs ground truth
 dotnet run --project tools/MatchShift.Cli -- robustness   # flagship script re-simulated with 20 other seeds
 dotnet run --project tools/MatchShift.Cli -- analyze      # live insights for the flagship match

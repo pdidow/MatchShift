@@ -31,6 +31,12 @@ public sealed class AgentWorkflowOptions
     public double MeaningfulImportance { get; set; } = 70;
     public int SessionAutoRunBudget { get; set; } = 4;
     public int MaxRunsPerHour { get; set; } = 40;
+
+    /// <summary>Rolling 24-hour cap on live executions (persisted on App Service, see AgentRunQuota).</summary>
+    public int MaxRunsPerDay { get; set; } = 60;
+
+    /// <summary>Live executions one client (IP address) may start per rolling hour.</summary>
+    public int MaxRunsPerClientPerHour { get; set; } = 4;
     public int MaxConcurrentWorkflows { get; set; } = 2;
     public int AgentTimeoutSeconds { get; set; } = 30;
     public int WorkflowTimeoutSeconds { get; set; } = 120;
