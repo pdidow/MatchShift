@@ -64,8 +64,10 @@ synthetic events ──► MatchState ──► window metrics ──► detecto
 - **WHY?** and **SHOW ME** - every card opens its evidence table, and draws exactly the events behind it on the pitch.
 - **3D REPLAY** - every insight can be replayed as an interactive Three.js reconstruction of the sequence that caused it
   (BEFORE / AFTER clips for tactical shifts), with tactical overlays and four camera views. See below.
-- **Evidence-bound agent workflow** - deterministic analytics plus optional Interpreter → Skeptic → Editor calls,
-  typed handoffs, one bounded revision and a visible shared trace. See [agents](docs/AGENTS.md).
+- **Microsoft Agent Framework multi-agent workflow** - four code-first agents on Microsoft Foundry (Tactical Analyst →
+  concurrent Audience Narrative + Accessibility Narrator → Verification Agent) in a `WorkflowBuilder` graph with shared
+  workflow state, fan-out/fan-in, deterministic validation before and after the verifier, bounded recovery, and a live
+  topology + trace in the Agents tab. See [agents](docs/AGENTS.md).
 - **Player focus and passing** - analyst passing totals, long-ball-share shift detection, player summaries with
   event IDs and timelines, and player-related insights ranked first.
 - **Broadcast demonstration** - `/broadcast` composites original synthetic event animation with a timed overlay;
@@ -189,7 +191,7 @@ Press **Play**. 1x = 30 match-seconds per real second (a full match in 3 minutes
 ## Tests and evaluation
 
 ```bash
-dotnet test                                               # 218 xUnit tests (core, data, analytics, agents, API)
+dotnet test                                               # 268 xUnit tests (core, data, analytics, agents + workflow, API)
 dotnet run --project tools/MatchShift.Cli -- evaluate --matches 120   # detector precision/recall vs ground truth
 dotnet run --project tools/MatchShift.Cli -- robustness   # flagship script re-simulated with 20 other seeds
 dotnet run --project tools/MatchShift.Cli -- analyze      # live insights for the flagship match

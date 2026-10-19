@@ -100,9 +100,14 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
         var events = await Get($"/api/demo/insights/{id}/events");
         Assert.True(events.GetProperty("events").GetArrayLength() > 5);
 
-        var trace = await Get($"/api/demo/insights/{id}/agents");
+        // The older deterministic narration pipeline is still served, under an honest name.
+        var trace = await Get($"/api/demo/insights/{id}/narration-trace");
         Assert.Equal(6, trace.GetProperty("steps").GetArrayLength());
         Assert.Equal("Approved", trace.GetProperty("steps")[5].GetProperty("status").GetString());
+
+        // /agents is now the Microsoft Agent Framework workflow (OFFLINE_TEMPLATE in tests: no model is called).
+        var workflow = await Get($"/api/demo/insights/{id}/agents");
+        Assert.Equal("OFFLINE_TEMPLATE", workflow.GetProperty("executionMode").GetString());
     }
 
     [Fact]

@@ -4,6 +4,24 @@ Microsoft Foundry is MatchShift's production AI provider. Running or developing 
 require an Azure subscription, payment information, credentials, or network access to a model.
 Initial dependency installation requires the usual package downloads.
 
+## Agent Framework workflow (primary)
+
+The four-agent Microsoft Agent Framework workflow ([AGENTS.md](AGENTS.md)) reads the standard variables and needs no key:
+
+```powershell
+$env:FOUNDRY_PROJECT_ENDPOINT = 'https://<resource>.services.ai.azure.com/api/projects/<project>'
+$env:AZURE_AI_MODEL_DEPLOYMENT_NAME = 'gpt-4.1-mini'
+az login
+dotnet run --project src/MatchShift.Api --launch-profile http -- --AgentWorkflow:Credential=AzureCli
+```
+
+`AgentWorkflow:Credential` is `Default` (DefaultAzureCredential), `AzureCli` (fastest locally) or `ManagedIdentity`.
+The identity needs data-plane access to the Foundry project (for example the **Azure AI User** role). Without the two
+variables, or with `AgentWorkflow:Mode=OfflineTemplate`, the same workflow runs with deterministic templates and no
+model calls. `/api/agents/status` reports which mode is active.
+
+The provider settings below configure the older, optional editorial-selection path only.
+
 ## Choose a provider
 
 | `Narration__Provider` | Behavior | Output source |

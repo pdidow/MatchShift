@@ -1,6 +1,7 @@
 using Azure.Identity;
 using MatchShift.Agents.Agents;
 using MatchShift.Agents.Narrative;
+using MatchShift.Agents.Workflow;
 using MatchShift.Infrastructure.Foundry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +50,44 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<VerificationAgent>(),
             TimeSpan.FromSeconds(foundry.TimeoutSeconds)));
         services.AddSingleton<AgentPipeline>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the Microsoft Agent Framework insight workflow. LIVE_FOUNDRY when a Foundry project endpoint and model
+    /// deployment are configured (FOUNDRY_PROJECT_ENDPOINT / AZURE_AI_MODEL_DEPLOYMENT_NAME, or AgentWorkflow:*), otherwise
+    /// OFFLINE_TEMPLATE. Mode is decided once at start-up and reported honestly by <see cref="AgentRuntimeInfo"/>.
+    /// </summary>
+    public static IServiceCollection AddMatchShiftAgentWorkflow(this IServiceCollection services, IConfiguration configuration)
+    {
+        var options = configuration.GetSection(AgentWorkflowOptions.Section).Get<AgentWorkflowOptions>() ?? new AgentWorkflowOptions();
+        options.ProjectEndpoint ??= configuration["FOUNDRY_PROJECT_ENDPOINT"];
+        options.ModelDeployment ??= configuration["AZURE_AI_MODEL_DEPLOYMENT_NAME"];
+        var mode = options.Mode.Trim().ToLowerInvariant();
+        if (mode is not ("auto" or "livefoundry" or "offlinetemplate"))
+            throw new InvalidOperationException("AgentWorkflow:Mode must be Auto, LiveFoundry or OfflineTemplate.");
+
+        var configured = Uri.TryCreate(options.ProjectEndpoint, UriKind.Absolute, out var endpoint) && endpoint.Scheme == Uri.UriSchemeHttps
+                         && !string.IsNullOrWhiteSpace(options.ModelDeployment);
+        string? note = null;
+        IInsightAgentFactory factory;
+        if (mode != "offlinetemplate" && configured)
+        {
+            factory = new FoundryAgentFactory(endpoint!, options.ModelDeployment!.Trim(), FoundryAgentFactory.CreateCredential(options.Credential), options.Credential);
+        }
+        else
+        {
+            if (mode == "livefoundry") note = "LiveFoundry requested but FOUNDRY_PROJECT_ENDPOINT (https) or AZURE_AI_MODEL_DEPLOYMENT_NAME is missing; running OFFLINE_TEMPLATE.";
+            else if (mode == "auto") note = "Foundry project endpoint or model deployment not configured; running OFFLINE_TEMPLATE.";
+            factory = new OfflineTemplateAgentFactory();
+        }
+
+        var foundry = factory as FoundryAgentFactory;
+        services.AddSingleton(options);
+        services.AddSingleton(factory);
+        services.AddSingleton(new AgentRuntimeInfo(factory.Mode, factory.Provider, factory.ModelDeployment, foundry?.EndpointHost, foundry?.CredentialName,
+            Agents.Workflow.WorkflowTraceRecorder.OrchestratorName, AgentRuntimeInfo.PackageVersions(), note));
+        services.AddSingleton(new Agents.Workflow.InsightWorkflowRunner(factory, options.Limits));
         return services;
     }
 }

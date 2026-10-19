@@ -32,7 +32,8 @@ public sealed record LiveMetricsDto(string Window, TeamLiveMetricsDto Home, Team
 public sealed record InsightCardDto(
     string Id, string Type, int Minute, int Second, string? TeamId, Severity Severity, ConfidenceLevel Confidence, double ConfidenceScore,
     double Importance, string? KeyPlayerId, TimeSpanRef Span, IReadOnlyList<VisualLayer> Visuals, int SupportingEventCount,
-    InsightNarrative Narrative);
+    InsightNarrative Narrative,
+    MatchShift.Agents.Workflow.PublishedInsight? Agent = null);
 
 public sealed record HighlightCardDto(string Id, HighlightKind Kind, int Minute, int Second, string? TeamId, double Importance,
     string? InsightId, string Headline, string WhyItMatters, int RelevantEventCount);
@@ -70,6 +71,6 @@ public sealed record ResetRequest(string? MatchId);
 public sealed record MetaDto(
     IReadOnlyList<LanguageDto> Languages, IReadOnlyList<string> Modes, IReadOnlyList<string> RecapStyles, IReadOnlyList<int> Speeds,
     string AiProvider, bool AiAvailable, string DataNotice,
-    string RequestedProvider = "template", string ProviderStatus = "", string PromptVersion = "");
+    string RequestedProvider = "template", string ProviderStatus = "", string PromptVersion = "", object? AgentWorkflow = null);
 
 public sealed record LanguageDto(string Code, string Name);

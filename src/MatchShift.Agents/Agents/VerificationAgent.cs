@@ -39,7 +39,7 @@ public sealed partial class VerificationAgent
     /// <summary>Numbers that are definitions, not statistics: index scales, match length, halves.</summary>
     public static readonly IReadOnlySet<double> DefinitionalConstants = new HashSet<double> { 0, 1, 45, 50, 90, 100 };
 
-    private static readonly string[] IntentClaims =
+    public static readonly IReadOnlyList<string> IntentClaims =
     [
         "deliberately", "on purpose", "the manager decided", "the coach decided", "instructed", "game plan was", "clearly intended",
         "délibérément", "exprès", "l'entraîneur a décidé", "a ordonné",

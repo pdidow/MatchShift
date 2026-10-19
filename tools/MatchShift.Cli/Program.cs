@@ -15,6 +15,9 @@ switch (command)
     case "compare-agents":
         await NarrationValidation.Run(command, options);
         break;
+    case "agent-workflow":
+        await AgentWorkflowCli.Run(options);
+        break;
     case "inspect":
         Inspect(SyntheticMatchGenerator.GenerateFlagship().Match);
         foreach (var seed in new long[] { 1, 2, 3 }) Inspect(SyntheticMatchGenerator.GenerateMatch(seed));

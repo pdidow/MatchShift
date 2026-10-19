@@ -20,6 +20,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped(sp => sp.GetRequiredService<SessionRegistry>().Resolve(sp.GetRequiredService<IHttpContextAccessor>().HttpContext!));
 builder.Services.AddHostedService<PlaybackService>();
 builder.Services.AddMatchShiftNarration(builder.Configuration);
+builder.Services.AddMatchShiftAgentWorkflow(builder.Configuration);
+builder.Services.AddSingleton<AgentWorkflowService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<AgentWorkflowService>());
 builder.Services.AddMatchShiftTelemetry(builder.Configuration);
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173"])

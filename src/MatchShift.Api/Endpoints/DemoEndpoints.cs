@@ -1,6 +1,8 @@
 using System.Text.Json;
 using MatchShift.Agents.Agents;
 using MatchShift.Agents.Narrative;
+using MatchShift.Agents.Workflow;
+using MatchShift.Infrastructure.Foundry;
 using MatchShift.Analytics.Story;
 using MatchShift.Api.Contracts;
 using MatchShift.Api.Playback;
@@ -14,7 +16,7 @@ public static class DemoEndpoints
     {
         var api = app.MapGroup("/api");
 
-        api.MapGet("/meta", (NarrationService narration, IConfiguration config) => new MetaDto(
+        api.MapGet("/meta", (NarrationService narration, IConfiguration config, AgentRuntimeInfo agentRuntime) => new MetaDto(
             LexiconRegistry.Supported.Select(l => new LanguageDto(l.Code, l.Name)).ToList(),
             Enum.GetNames<ViewerMode>(),
             Enum.GetNames<RecapStyle>(),
@@ -26,7 +28,19 @@ public static class DemoEndpoints
             narration.ProviderName switch { "mock" => "Offline protocol simulator; no model calls.",
                 "microsoft-foundry" => "Configured; availability is established only by an accepted response.",
                 _ => "Offline templates. Foundry may be disabled or missing endpoint/deployment configuration." },
-            MatchShift.Infrastructure.Foundry.FoundryInsightProvider.PromptVersion));
+            MatchShift.Infrastructure.Foundry.FoundryInsightProvider.PromptVersion,
+            new { agentRuntime.ExecutionMode, agentRuntime.Provider, agentRuntime.ModelDeployment, agentRuntime.ConfigurationNote }));
+
+        // Judge-visible agent runtime: mode, provider, model deployment, endpoint host, credential type and package versions. No secrets.
+        api.MapGet("/agents/status", (AgentRuntimeInfo runtime, AgentWorkflowService agents, AgentWorkflowOptions options) => new
+        {
+            runtime,
+            warmUp = agents.WarmUp,
+            budget = new { runsLastHour = agents.RunsLastHour, options.MaxRunsPerHour, options.SessionAutoRunBudget, options.MaxConcurrentWorkflows,
+                options.MaxModelCallsPerWorkflow, options.MaxAttemptsPerAgent, options.AgentTimeoutSeconds, options.WorkflowTimeoutSeconds },
+            autoRun = new { enabled = options.AutoRunMeaningful && runtime.ExecutionMode == ExecutionMode.LiveFoundry, options.MeaningfulImportance },
+            agents = MatchShiftAgents.All.Select(a => new { role = a.Role, a.Name, a.Responsibility, a.MaxOutputTokens }),
+        });
 
         api.MapGet("/matches", (MatchCatalog catalog) => catalog.All.Select(m => SnapshotBuilder.Summary(m.Match)));
 
@@ -58,16 +72,16 @@ public static class DemoEndpoints
         });
         demo.MapPost("/seek", (SeekRequest r, DemoSession s) => { s.Seek((int)Math.Round(r.Minute * 60)); return Results.NoContent(); });
 
-        demo.MapGet("/state", (string? lang, string? mode, string? team, string? player, DemoSession s) =>
-            Snapshot(s, SnapshotBuilder.Profile(lang, mode, team, player)));
-        demo.MapGet("/overlay", (string? lang, DemoSession s) =>
+        demo.MapGet("/state", (string? lang, string? mode, string? team, string? player, bool? a11y, DemoSession s, AgentWorkflowService agents) =>
+            Snapshot(s, SnapshotBuilder.Profile(lang, mode, team, player), agents, a11y == true));
+        demo.MapGet("/overlay", (string? lang, DemoSession s, AgentWorkflowService agents) =>
         {
-            var snap = Snapshot(s, SnapshotBuilder.Profile(lang, "Studio", null, null));
+            var snap = Snapshot(s, SnapshotBuilder.Profile(lang, "Studio", null, null), agents, false);
             return Results.Ok(new { snap.SessionId, snap.Epoch, snap.MatchId, snap.Clock, overlay = snap.Overlay });
         });
 
-        demo.MapGet("/stream", async (string? lang, string? mode, string? team, string? player, DemoSession s, HttpContext http,
-            IConfiguration config, CancellationToken ct) =>
+        demo.MapGet("/stream", async (string? lang, string? mode, string? team, string? player, bool? a11y, DemoSession s, HttpContext http,
+            AgentWorkflowService agents, CancellationToken ct) =>
         {
             var profile = SnapshotBuilder.Profile(lang, mode, team, player);
             http.Response.Headers.ContentType = "text/event-stream";
@@ -82,7 +96,7 @@ public static class DemoEndpoints
                 {
                     lastVersion = s.Version;
                     lastSent = DateTime.UtcNow;
-                    var json = JsonSerializer.Serialize(Snapshot(s, profile), options);
+                    var json = JsonSerializer.Serialize(Snapshot(s, profile, agents, a11y == true), options);
                     await http.Response.WriteAsync($"event: snapshot\ndata: {json}\n\n", ct);
                     await http.Response.Body.FlushAsync(ct);
                 }
@@ -99,13 +113,13 @@ public static class DemoEndpoints
             return new { snap.Clock, snap.Score, snap.Metrics, snap.Timeline };
         }));
 
-        demo.MapGet("/insights", (string? lang, string? mode, string? team, string? player, DemoSession s) =>
-            Snapshot(s, SnapshotBuilder.Profile(lang, mode, team, player)).Insights);
+        demo.MapGet("/insights", (string? lang, string? mode, string? team, string? player, bool? a11y, DemoSession s, AgentWorkflowService agents) =>
+            Snapshot(s, SnapshotBuilder.Profile(lang, mode, team, player), agents, a11y == true).Insights);
 
-        demo.MapGet("/highlights", (string? lang, string? mode, DemoSession s) =>
-            Snapshot(s, SnapshotBuilder.Profile(lang, mode, null, null)).Highlights);
+        demo.MapGet("/highlights", (string? lang, string? mode, DemoSession s, AgentWorkflowService agents) =>
+            Snapshot(s, SnapshotBuilder.Profile(lang, mode, null, null), agents, false).Highlights);
 
-        demo.MapGet("/insights/{id}/evidence", (string id, string? lang, string? mode, string? team, string? player, DemoSession s) => s.Read((a, _) =>
+        demo.MapGet("/insights/{id}/evidence", (string id, string? lang, string? mode, string? team, string? player, bool? a11y, DemoSession s, AgentWorkflowService agents) => s.Read((a, _) =>
         {
             var insight = a.Insights.FirstOrDefault(i => i.Id == id);
             if (insight is null) return Results.NotFound();
@@ -114,7 +128,8 @@ public static class DemoEndpoints
             var lex = LexiconRegistry.Get(profile.Language);
             var labels = new[] { "why.title", "why.change", "why.threshold", "why.sample", "why.passed", "why.notMet", "why.confidence", "why.supporting", "why.comparison" }
                 .ToDictionary(k => k[4..], k => lex.Get(k));
-            var card = SnapshotBuilder.Card(insight, new NarrativeContext(new MatchRoster(s.Match), profile), s.Narrative);
+            var card = SnapshotBuilder.Card(insight, new NarrativeContext(new MatchRoster(s.Match), profile), s.Narrative,
+                (i, c) => agents.Published(s.Match, i, c.Profile, a11y == true));
             return Results.Ok(new EvidenceResponseDto(card, lex.Get("why.title"), labels, insight.Evidence, insight.Facts));
         }));
 
@@ -136,7 +151,24 @@ public static class DemoEndpoints
             return Results.Ok(MatchShift.Analytics.Replay.ReplayBuilder.ForInsight(s.Match, insight));
         }));
 
-        demo.MapGet("/insights/{id}/agents", async (string id, string? lang, string? mode, string? team, string? player,
+        // The Microsoft Agent Framework workflow for one insight. Starts it on demand (bounded by budgets) and returns the
+        // live trace; clients poll while Status is RUNNING. Pass run=false to only read an existing execution.
+        demo.MapGet("/insights/{id}/agents", (string id, string? lang, string? mode, string? team, string? player, bool? a11y, bool? run,
+            DemoSession s, AgentWorkflowService agents) =>
+        {
+            var insight = s.Read((a, _) => a.Insights.FirstOrDefault(i => i.Id == id));
+            if (insight is null) return Results.NotFound();
+            var profile = SnapshotBuilder.Profile(lang, mode, team, player);
+            if (run == false)
+                return agents.Find(s.Match, insight, profile, a11y == true) is { } existing ? Results.Ok(existing.Snapshot()) : Results.NoContent();
+            var started = agents.GetOrStart(s, insight, profile, a11y == true, WorkflowTrigger.OnDemand);
+            return started.Handle is { } h
+                ? Results.Ok(h.Snapshot())
+                : Results.Json(new { message = started.Refusal, executionMode = agents.Mode }, statusCode: StatusCodes.Status429TooManyRequests);
+        });
+
+        // The older deterministic narration pipeline (event analyst, pattern detection, ... template verification). Deterministic code, not AI agents.
+        demo.MapGet("/insights/{id}/narration-trace", async (string id, string? lang, string? mode, string? team, string? player,
             DemoSession s, CancellationToken ct) =>
         {
             var task = s.Read((a, _) =>
@@ -182,15 +214,20 @@ public static class DemoEndpoints
         return app;
     }
 
-    private static SnapshotDto Snapshot(DemoSession s, ViewerProfile profile)
+    private static SnapshotDto Snapshot(DemoSession s, ViewerProfile profile, AgentWorkflowService agents, bool accessibility)
     {
         s.Touch();
         MatchShiftMetrics.SnapshotsServed.Add(1);
-        return s.Read((a, clock) =>
+        var (snapshot, fresh, clock) = s.Read((a, clock) =>
         {
-            var snap = SnapshotBuilder.Build(a, clock, s.Match, profile, s.IsPlaying, s.Speed, s.Narrative)
+            var snap = SnapshotBuilder.Build(a, clock, s.Match, profile, s.IsPlaying, s.Speed, s.Narrative,
+                    (i, c) => agents.Published(s.Match, i, c.Profile, accessibility))
                 with { SessionId = s.Id, Epoch = s.Epoch };
-            return snap with { Overlay = OverlayDto.From(snap) };
+            var ids = snap.Insights.Select(c => c.Id).ToHashSet();
+            return (snap with { Overlay = OverlayDto.From(snap) }, a.Insights.Where(i => ids.Contains(i.Id)).ToList(), clock);
         });
+        // Only insight candidates raised by the deterministic engine are considered, never raw events (outside the session lock).
+        agents.ConsiderAutoRun(s, fresh, profile, accessibility, clock);
+        return snapshot;
     }
 }

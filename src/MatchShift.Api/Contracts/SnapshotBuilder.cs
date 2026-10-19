@@ -31,12 +31,14 @@ public static class SnapshotBuilder
         static double? R(double? v) => v is null ? null : Math.Round(v.Value, 1);
     }
 
-    public static InsightCardDto Card(Insight i, NarrativeContext context, Func<Insight, NarrativeContext, InsightNarrative>? narrate = null) =>
+    public static InsightCardDto Card(Insight i, NarrativeContext context, Func<Insight, NarrativeContext, InsightNarrative>? narrate = null,
+        Func<Insight, NarrativeContext, MatchShift.Agents.Workflow.PublishedInsight?>? agent = null) =>
         new(i.Id, i.Type.Code(), i.DisplayMinute, i.DetectedAtSecond, i.TeamId, i.Severity, i.Confidence, i.ConfidenceScore, i.Importance,
-            i.KeyPlayerId, i.Span, i.Visuals, i.SupportingEventIds.Count, narrate?.Invoke(i, context) ?? TemplateInsightProvider.Narrate(i, context));
+            i.KeyPlayerId, i.Span, i.Visuals, i.SupportingEventIds.Count, narrate?.Invoke(i, context) ?? TemplateInsightProvider.Narrate(i, context),
+            agent?.Invoke(i, context));
 
     public static SnapshotDto Build(LiveMatchAnalyzer analysis, int clock, Match match, ViewerProfile profile, bool playing, int speed,
-        Func<Insight, NarrativeContext, InsightNarrative>? narrate = null)
+        Func<Insight, NarrativeContext, InsightNarrative>? narrate = null, Func<Insight, NarrativeContext, MatchShift.Agents.Workflow.PublishedInsight?>? agent = null)
     {
         var context = new NarrativeContext(new MatchRoster(match), profile);
         var state = analysis.State;
@@ -57,7 +59,7 @@ public static class SnapshotBuilder
             .Where(i => EvidenceGate.Check(i, match).Approved)
             .OrderByDescending(i => profile.FocusPlayerId is { } player && TemplateInsightProvider.Involvement(i, match, player) > 0)
             .ThenByDescending(i => i.DetectedAtSecond).ThenByDescending(i => i.Importance)
-            .Select(i => Card(i, context, narrate)).ToList();
+            .Select(i => Card(i, context, narrate, agent)).ToList();
 
         var highlights = HighlightRanker.Rank(analysis, clock).Take(8)
             .Select(h =>

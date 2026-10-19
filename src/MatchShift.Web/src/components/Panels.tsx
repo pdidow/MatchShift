@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentTrace, HighlightCard, Profile, RecapResponse, RecapStyle, Snapshot } from '../api'
+import type { HighlightCard, Profile, RecapResponse, RecapStyle, Snapshot } from '../api'
 import { api } from '../api'
 import type { Strings } from '../i18n'
 
@@ -64,58 +64,6 @@ export function RecapPanel({ snap, s, profile, styles }: { snap: Snapshot; s: St
           <p className="note">{recap.narrative.source}{recap.narrative.verificationNote ? ` · ${recap.narrative.verificationNote}` : ''}</p>
         </>
       )}
-    </div>
-  )
-}
-
-export function AgentPanel({ insightId, profile, s }: { insightId: string | null; profile: Profile; s: Strings }) {
-  const [trace, setTrace] = useState<AgentTrace | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setTrace(null)
-    setError(null)
-    if (!insightId) return
-    let cancelled = false
-    api.agentTrace(insightId, profile)
-      .then((result) => { if (!cancelled) setTrace(result) })
-      .catch((e: Error) => { if (!cancelled) setError(e.message) })
-    return () => { cancelled = true }
-  }, [insightId, profile.language, profile.mode, profile.focusTeamId, profile.focusPlayerId])
-
-  if (!insightId) return <p className="empty">{s.selectInsight}</p>
-  if (error) return <p className="empty">{error}</p>
-  if (!trace) return <p className="empty">…</p>
-  return (
-    <div>
-      <h2 className="panel-title">{s.pipeline}<small>{trace.provider}</small></h2>
-      <article className="card">
-        <h3 className="card-headline">{trace.narrative.headline}</h3>
-        <p className="card-fact">{trace.narrative.fact}</p>
-        <p className="card-sub"><b>{s.inference}: </b>{trace.narrative.inference}</p>
-        {trace.narrative.explanation && <p className="card-sub"><b>{s.possibleExplanation}: </b>{trace.narrative.explanation}</p>}
-        {trace.narrative.teaching && <p className="card-sub">{trace.narrative.teaching}</p>}
-        {trace.narrative.perspective && <p className="card-sub">{trace.narrative.perspective}</p>}
-        {trace.narrative.playerLine && <p className="card-sub">{trace.narrative.playerLine}</p>}
-        <p className="note">{trace.narrative.source}{trace.narrative.verificationNote ? ` · ${trace.narrative.verificationNote}` : ''}</p>
-      </article>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {trace.steps.map((step, i) => {
-          const ok = step.status === 'Approved' || step.status === 'Completed'
-          const bad = step.status === 'Rejected'
-          return (
-            <div className="agent-step" key={i}>
-              <div className={`num ${ok ? 'ok' : bad ? 'bad' : ''}`}>{i + 1}</div>
-              <div>
-                <div className="agent-name">{step.agent} <span className="conf">· {step.status} · {step.durationMs} ms</span></div>
-                <div className="agent-io">{step.responsibility}</div>
-                <div className="agent-io"><code>in</code> {step.input}</div>
-                <div className="agent-io"><code>out</code> {step.output}</div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
     </div>
   )
 }

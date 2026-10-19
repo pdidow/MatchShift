@@ -1,5 +1,6 @@
 import type { ReplaySequence } from './replay/types'
 import { createDemoClient } from './demo/client'
+import { AgentRefusal } from './agentRefusal'
 
 export const isStaticDemo = import.meta.env.MODE === 'pages'
 
@@ -14,6 +15,8 @@ export interface Profile {
   language: Lang
   focusTeamId?: string | null
   focusPlayerId?: string | null
+  /** Request accessible (spoken / nonvisual) agent output for this viewer. Not persisted server-side. */
+  accessible?: boolean
 }
 
 export interface Team {
@@ -104,6 +107,8 @@ export interface InsightCard {
   visuals: VisualLayer[]
   supportingEventCount: number
   narrative: Narrative
+  /** Outcome of the agent workflow for this insight, once one has finished. AI text only when agent.verified. */
+  agent?: PublishedInsight
 }
 
 export interface HighlightCard {
@@ -203,6 +208,7 @@ export interface Meta {
   aiProvider: string
   aiAvailable: boolean
   dataNotice: string
+  agentWorkflow?: { executionMode: ExecutionMode; provider: string; modelDeployment?: string; configurationNote?: string }
 }
 
 export interface MatchSummary {
@@ -250,21 +256,119 @@ export interface RecapResponse {
   }
 }
 
-export interface AgentStep {
-  agent: string
+// ---- Microsoft Agent Framework insight workflow (see docs/AGENTS.md) ----
+
+export type ExecutionMode = 'LIVE_FOUNDRY' | 'OFFLINE_TEMPLATE' | 'RECORDED_DEMO'
+export type ExecutionType = 'DETERMINISTIC' | 'MICROSOFT_AGENT_FRAMEWORK'
+export type StageStatus = 'RUNNING' | 'COMPLETED' | 'TEMPLATE' | 'SKIPPED' | 'DEGRADED' | 'FALLBACK' | 'FAILED' | 'CANCELLED'
+export type WorkflowOutcome = 'APPROVED' | 'APPROVED_WITH_CHANGES' | 'REJECTED' | 'FALLBACK_UNVERIFIED' | 'DETERMINISTIC_ONLY' | 'CANCELLED'
+
+export interface TraceStep {
+  sequence: number
+  stage: string
+  agentName: string
   responsibility: string
-  input: string
-  output: string
-  status: 'Completed' | 'Approved' | 'Rejected' | 'Fallback' | 'Skipped'
-  durationMs: number
+  executionType: ExecutionType
+  executionMode: ExecutionMode
+  provider: string
+  modelDeployment?: string
+  startedAt: string
+  completedAt?: string
+  durationMs?: number
+  superstep?: number
+  status: StageStatus
+  handoffFrom: string[]
+  handoffTo: string[]
+  evidenceIds: string[]
+  evidenceCount: number
+  inputSummary: string
+  outputSummary: string
+  modelCalls: number
+  retryCount: number
+  attemptFailures: string[]
+  recoveryAction?: string
+  verificationDecision?: string
+  inputTokens: number
+  outputTokens: number
+  findings: string[]
 }
 
-export interface AgentTrace {
+/** The viewer-facing result. AI wording is present only when verified is true. */
+export interface PublishedInsight {
+  workflowExecutionId: string
   insightId: string
-  provider: string
-  steps: AgentStep[]
-  narrative: Narrative
+  executionMode: ExecutionMode
+  outcome: WorkflowOutcome
+  verified: boolean
+  source: string
+  headline?: string
+  summary?: string
+  inference?: string
+  possibleExplanation?: string
+  tacticalSignificance?: string
+  confidenceQualification?: string
+  limitations: string[]
+  spokenSummary?: string
+  visualDescription?: string
+  simplifiedExplanation?: string
+  replayAudioDescription?: string
+  evidenceIds: string[]
+  modelDeployment?: string
+  notice: string
 }
+
+export interface WorkflowExecution {
+  workflowExecutionId: string
+  insightId: string
+  matchId: string
+  executionMode: ExecutionMode
+  provider: string
+  modelDeployment?: string
+  orchestrator: string
+  status: 'RUNNING' | 'COMPLETED' | 'CANCELLED' | 'FAILED'
+  startedAt: string
+  completedAt?: string
+  durationMs?: number
+  steps: TraceStep[]
+  handoffs: { from: string; to: string[]; message: string; at: string }[]
+  concurrency?: { branchA: string; branchB: string; sameSuperstep: boolean; overlapped: boolean; overlapMs: number }
+  frameworkSupersteps: number
+  frameworkExecutorInvocations: number
+  modelCalls: number
+  modelCallLimit: number
+  inputTokens: number
+  outputTokens: number
+  outcome?: WorkflowOutcome
+  verificationDecision?: string
+  verified: boolean
+  authoritativeFingerprintBefore?: string
+  authoritativeFingerprintAfter?: string
+  authoritativeFactsUnchanged: boolean
+  recoveryActions: string[]
+  published?: PublishedInsight
+  error?: string
+  /** RECORDED_DEMO only: when and how the trace was originally produced. */
+  recordedFrom?: string
+}
+
+export interface AgentRuntimeStatus {
+  runtime: {
+    executionMode: ExecutionMode
+    provider: string
+    modelDeployment?: string
+    projectEndpointHost?: string
+    credential?: string
+    orchestrator: string
+    packages: Record<string, string>
+    configurationNote?: string
+  }
+  warmUp: string
+  budget?: { runsLastHour: number; maxRunsPerHour: number; sessionAutoRunBudget: number; maxModelCallsPerWorkflow: number }
+  autoRun?: { enabled: boolean; meaningfulImportance: number }
+  agents: { role: string; name: string; responsibility: string }[]
+}
+
+export { AgentRefusal } from './agentRefusal'
 
 export const sessionId = new URLSearchParams(location.search).get('session') ?? (() => {
   try {
@@ -291,6 +395,7 @@ export const profileQuery = (p: Profile) => {
   const q = new URLSearchParams({ lang: p.language, mode: p.mode, session: sessionId })
   if (p.focusTeamId) q.set('team', p.focusTeamId)
   if (p.focusPlayerId) q.set('player', p.focusPlayerId)
+  if (p.accessible) q.set('a11y', 'true')
   return q.toString()
 }
 
@@ -310,7 +415,13 @@ const serverApi = {
     fetch(`/api/demo/recap/${period}?style=${style}&${profileQuery(p)}`).then(async (r) =>
       r.status === 409 ? null : json<RecapResponse>(r),
     ),
-  agentTrace: (id: string, p: Profile) => fetch(`/api/demo/insights/${id}/agents?${profileQuery(p)}`).then(json<AgentTrace>),
+  agentTrace: async (id: string, p: Profile, run = true): Promise<WorkflowExecution | null> => {
+    const res = await fetch(`/api/demo/insights/${id}/agents?${profileQuery(p)}${run ? '' : '&run=false'}`)
+    if (res.status === 204) return null
+    if (res.status === 429) throw new AgentRefusal(((await res.json()) as { message: string }).message)
+    return json<WorkflowExecution>(res)
+  },
+  agentStatus: () => fetch('/api/agents/status').then(json<AgentRuntimeStatus>),
   streamUrl: (p: Profile) => `/api/demo/stream?${profileQuery(p)}`,
 }
 

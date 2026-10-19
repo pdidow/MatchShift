@@ -126,11 +126,8 @@ foreach (var labelled in catalog.All)
                 narrative = RecapNarrator.Narrate(RecapBuilder.Build(a, period), style, rc, a.Insights) };
         }
         Write($"{match.Id}/recaps-{language}.json", recaps);
-        // This panel is explicitly a recorded Analyst-mode trace, not a live AI execution.
-        var traces = new Dictionary<string, AgentTrace>();
-        foreach (var insight in insights)
-            traces[insight.Id] = await pipeline.RunAsync(insight, match, c with { Profile = new ViewerProfile(ViewerMode.Analyst, language) });
-        Write($"{match.Id}/traces-{language}.json", traces);
+        // The Agents tab of the static demo replays agent-recordings.json (recorded by `MatchShift.Cli agent-workflow --recording`),
+        // always labelled RECORDED_DEMO. The old deterministic narration traces are no longer exported.
     }
     Console.WriteLine($"  {frames.Count} frames, {insights.Length} verified insights, {highlights.Count} highlight versions");
 }

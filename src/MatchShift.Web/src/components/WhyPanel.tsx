@@ -4,6 +4,7 @@ import type { InsightCard } from '../api'
 import type { Strings } from '../i18n'
 import { useDialog } from '../a11y/A11yContext'
 import { Confidence } from './InsightCard'
+import { AgentInsight } from './AgentWorkflow'
 
 interface Props {
   card: InsightCard
@@ -86,6 +87,10 @@ export function WhyPanel({ card, s, onClose, onShow, onReplay, extraActions }: P
 
         <p className="card-sub" style={{ marginTop: 14 }}><b>{s.inference}</b>{n.inference}</p>
         {n.explanation && <p className="card-sub"><b>{s.possibleExplanation}</b>{n.explanation}</p>}
+        <AgentInsight agent={card.agent} s={s} />
+        {card.agent?.verified && card.agent.evidenceIds.length > 0 && (
+          <p className="note">{s.evidence}: {card.agent.evidenceIds.map((id) => id.replace(/^.*-(E\d+)$/, '$1')).join(', ')}</p>
+        )}
         <p className="note">
           {primary?.comparison ? `${primary.comparison} · ` : ''}{s.derived}
           {n.verificationNote ? ` · ${n.verificationNote}` : ''} · {n.source}

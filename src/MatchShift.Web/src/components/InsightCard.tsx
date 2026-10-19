@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { InsightCard as Card, ViewerMode } from '../api'
 import type { Strings } from '../i18n'
+import { AgentInsight } from './AgentWorkflow'
 
 interface Props {
   card: Card
@@ -48,7 +49,7 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
         <span className="card-minute">{card.minute}'</span>
       </div>
 
-      <small className="narrative-source" title={n.verificationNote}>{n.source === 'mock' ? 'Mock — no model call' : n.source === 'microsoft-foundry' ? 'Microsoft Foundry — verified selection' : 'Offline template'}</small>
+      <small className="narrative-source" title={n.verificationNote}>{n.source === 'mock' ? 'Mock — no model call' : n.source === 'microsoft-foundry' ? 'Microsoft Foundry — verified selection' : 'Deterministic MatchShift wording'}</small>
       <h3 className="card-headline" id={headingId}>{n.headline}</h3>
 
       {simple ? <p className="card-simple">{simplified!.text}</p> : <>
@@ -76,6 +77,7 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
         </>
       )}
 
+      <AgentInsight agent={card.agent} s={s} compact={compact || studio} />
       {n.teaching && <div className="card-teach"><strong>{s.football101}: </strong>{n.teaching}</div>}
       {n.perspective && <p className="card-perspective">{n.perspective}</p>}
       {n.playerLine && <p className="card-sub">{n.playerLine}</p>}

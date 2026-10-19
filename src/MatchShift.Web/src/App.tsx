@@ -5,7 +5,8 @@ import { t } from './i18n'
 import { MomentumChart, PressureChart } from './components/Charts'
 import { InsightCardView } from './components/InsightCard'
 import { MetricsStrip } from './components/MetricsStrip'
-import { AgentPanel, HighlightsPanel, Logo, RecapPanel, Splash } from './components/Panels'
+import { HighlightsPanel, Logo, RecapPanel, Splash } from './components/Panels'
+import { AgentWorkflowPanel } from './components/AgentWorkflow'
 import { AWAY_COLOR, HOME_COLOR, Pitch } from './components/Pitch'
 import { PlayerPanel } from './components/PlayerPanel'
 import { Transport } from './components/Transport'
@@ -63,6 +64,9 @@ export default function App() {
   // Optional accessibility layer (everything off by default).
   const a11y = useA11y()
   const { prefs } = a11y
+  // Ask the agent workflow for accessible (spoken / nonvisual) output only when this viewer uses those features.
+  const wantsAccessible = speechEnabled(prefs) || prefs.describeVisuals || prefs.simplified
+  const streamProfile = useMemo<Profile>(() => ({ ...profile, accessible: wantsAccessible }), [profile, wantsAccessible])
   const as = a11yStrings(profile.language)
   const voiceLang = speechLang(profile.language)
   const [centerOpen, setCenterOpen] = useState(false)
@@ -90,7 +94,7 @@ export default function App() {
     // GitHub Pages / static demo mode
     if (subscribeDemo) {
       return subscribeDemo(
-        profile,
+        streamProfile,
         (next) => {
           setSnap(next)
           setConnected(true)
@@ -105,7 +109,7 @@ export default function App() {
 
       const tick = async () => {
         try {
-          const res = await fetch(`/api/demo/state?${profileQuery(profile)}`)
+          const res = await fetch(`/api/demo/state?${profileQuery(streamProfile)}`)
           if (res.ok) {
             const next = (await res.json()) as Snapshot
             if (!stop) {
@@ -128,7 +132,7 @@ export default function App() {
 
     // Normal backend SSE mode
     let errors = 0
-    const source = new EventSource(api.streamUrl(profile))
+    const source = new EventSource(api.streamUrl(streamProfile))
 
     source.addEventListener('snapshot', (e) => {
       errors = 0
@@ -146,7 +150,7 @@ export default function App() {
     }
 
     return () => source.close()
-  }, [profile, polling])
+  }, [streamProfile, polling])
   useEffect(() => {
     if (snap?.matchId && detail?.summary.id !== snap.matchId) api.match(snap.matchId).then(setDetail).catch(() => undefined)
   }, [snap?.matchId, detail?.summary.id])
@@ -457,7 +461,7 @@ rel = "noreferrer"
               )))}
             {tab === 'highlights' && <HighlightsPanel snap={snap} s={s} onShow={(h) => void showHighlight(h)} onReplay={openReplay} />}
             {tab === 'recap' && <RecapPanel snap={snap} s={s} profile={profile} styles={meta?.recapStyles ?? ['Casual', 'Analyst', 'Broadcast', 'Social']} />}
-            {tab === 'agents' && <AgentPanel key={`${snap.matchId}:${snap.epoch}:${profile.language}:${profile.mode}`} insightId={selected} profile={profile} s={s} />}
+            {tab === 'agents' && <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} profile={streamProfile} defaultAccessible />}
           </div>
         </aside>
       </main>

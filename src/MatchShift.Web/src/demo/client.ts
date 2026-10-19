@@ -1,4 +1,6 @@
-import type { AgentTrace, InsightEvents, Lang, Profile, RecapResponse, RecapStyle, Snapshot } from '../api'
+import type { InsightEvents, Lang, Profile, RecapResponse, RecapStyle, Snapshot, WorkflowExecution } from '../api'
+import { AgentRefusal } from '../agentRefusal'
+import { asRecorded, recordedStatus, type AgentRecordings } from './recorded'
 import type { ReplaySequence } from '../replay/types'
 import { snapshotAt, type DemoCore, type DemoIndex, type DemoLanguage, type Playback } from './data'
 
@@ -29,6 +31,7 @@ export function createDemoClient(sessionId: string) {
     return result as Promise<T>
   }
   const index = () => read<DemoIndex>('index.json')
+  const agentRecordings = () => read<AgentRecordings>('agent-recordings.json').catch(() => null)
   async function ready() {
     const manifest = await index()
     if (manifest.schemaVersion !== 1) throw new Error('Please reload to update the demo.')
@@ -115,12 +118,13 @@ export function createDemoClient(sessionId: string) {
       const recaps = await read<Record<string, RecapResponse>>(`${encodeURIComponent(state.matchId)}/recaps-${p.language}.json`)
       return recaps[`${period}|${style}|${p.focusTeamId ?? ''}`] ?? recaps[`${period}|${style}|`] ?? null
     },
-    agentTrace: async (id: string, p: Profile) => {
-      await ready()
-      const traces = await read<Record<string, AgentTrace>>(`${encodeURIComponent(state.matchId)}/traces-${p.language}.json`)
-      if (!traces[id]) throw new Error('No recorded trace for this insight.')
-      return traces[id]
+    agentTrace: async (id: string, _p: Profile, _run = true): Promise<WorkflowExecution | null> => {
+      const recordings = await agentRecordings()
+      const x = recordings?.executions[id]
+      if (!x) throw new AgentRefusal('This static demo has no recorded agent workflow for this insight. Run the backend to execute the workflow live.')
+      return asRecorded(x, recordings.recordedAt)
     },
+    agentStatus: async () => recordedStatus(await agentRecordings()),
     streamUrl: (_p: Profile) => '',
     subscribe: (profile: Profile, onSnapshot: (s: Snapshot) => void, onConnection: (ok: boolean) => void) => {
       const listener: Listener = { profile, snapshot: onSnapshot, connection: onConnection, request: 0 }

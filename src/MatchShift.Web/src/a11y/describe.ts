@@ -58,11 +58,17 @@ export function insightSpeech(card: InsightCard, detail: SpeechDetail, simplifie
   const n = card.narrative
   const team = teamName(card.teamId)
   const intro = `${card.minute}'. ${n.typeLabel}${team ? `, ${team}` : ''}.`
-  if (simplified) return join(intro, simplifiedText(card, s, teamName, opponentOf))
+  const agent = verifiedAgent(card)
+  if (simplified) return join(intro, agent?.simplifiedExplanation ?? simplifiedText(card, s, teamName, opponentOf))
   if (detail === 'major') return join(intro, n.headline)
   if (detail === 'important') return join(intro, n.headline, n.fact)
+  // The Accessibility Narrator's spoken summary replaces the visual card text only once the workflow verified it.
+  if (agent?.spokenSummary) return join(intro, agent.spokenSummary)
   return join(intro, n.headline, n.fact, n.inference, n.explanation)
 }
+
+/** Agent output that may be read aloud: only when the workflow verified it. */
+export const verifiedAgent = (card: Pick<InsightCard, 'agent'>) => (card.agent?.verified ? card.agent : undefined)
 
 /** READ EXPLANATION (WHY?): fact, inference, explanation, confidence, supporting evidence. */
 export function whyNarration(card: InsightCard, s: A11yStrings): string {
@@ -78,6 +84,8 @@ export function whyNarration(card: InsightCard, s: A11yStrings): string {
     n.explanation ? `${s.why.explanation}: ${n.explanation}` : '',
     `${s.why.confidence}: ${n.confidenceLabel}`,
     evidence.length ? `${s.why.evidence}: ${evidence.join('; ')}` : '',
+    verifiedAgent(card)?.spokenSummary ?? '',
+    verifiedAgent(card)?.visualDescription ?? '',
   )
 }
 

@@ -31,6 +31,27 @@ public sealed class DemoSession
     public DateTime LastAccess { get; private set; } = DateTime.UtcNow;
     public void Touch() => LastAccess = DateTime.UtcNow;
 
+    private int _agentAutoRuns;
+
+    /// <summary>Cancelled when playback seeks, resets, changes match or the session closes: stale agent work is discarded.</summary>
+    public (CancellationToken Token, long Epoch) EpochScope() { lock (_gate) return (_epochCancellation.Token, Epoch); }
+
+    /// <summary>Counts automatic agent workflow runs against this session's budget.</summary>
+    public bool TryUseAgentAutoRun(int budget)
+    {
+        lock (_gate)
+        {
+            if (_agentAutoRuns >= budget) return false;
+            _agentAutoRuns++;
+            return true;
+        }
+    }
+
+    public int AgentAutoRunsUsed { get { lock (_gate) return _agentAutoRuns; } }
+
+    /// <summary>Pushes a fresh snapshot to SSE clients when an agent workflow for the current epoch finishes.</summary>
+    public void NotifyAgentResult(long epoch) { lock (_gate) { if (Epoch == epoch) Version++; } }
+
     public DemoSession(MatchCatalog catalog, NarrationQueue? narration = null)
     {
         _narration = narration;
