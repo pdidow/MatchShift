@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 
 // The API runs on :5002 in development (dotnet run --project src/MatchShift.Api).
 export default defineConfig(({ mode }) => ({
-  base: mode === 'pages' ? '/MatchShift-Demo/' : '/',
+  base: mode === 'pages' ? '/MatchShift/' : '/',
   plugins: [react()],
   server: {
     port: 5173,
