@@ -13,7 +13,7 @@ namespace MatchShift.Agents.Tests;
 /// </summary>
 public sealed class ScriptedChatClient : IChatClient
 {
-    public sealed record Call(AgentRole Role, string Prompt, DateTimeOffset Start, DateTimeOffset End);
+    public sealed record Call(AgentRole Role, string Prompt, DateTimeOffset Start, DateTimeOffset End, string Instructions = "");
 
     public delegate Task<string> Responder(AgentRole role, JsonNode prompt, int attempt, CancellationToken ct);
 
@@ -38,7 +38,7 @@ public sealed class ScriptedChatClient : IChatClient
         }
         finally
         {
-            Calls.Enqueue(new Call(role, prompt, start, DateTimeOffset.UtcNow));
+            Calls.Enqueue(new Call(role, prompt, start, DateTimeOffset.UtcNow, instructions));
         }
     }
 

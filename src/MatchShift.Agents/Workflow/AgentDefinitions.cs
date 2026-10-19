@@ -21,7 +21,20 @@ public static class MatchShiftAgents
         "any number, team, player, score, minute, event or metric. Use values exactly as written in its display fields. " +
         "Never mention anything after insightContext.matchTime. Cite evidence only with IDs listed in insightContext.sourceEvents. " +
         "No claims of intent (what a coach or player decided or wanted) and no certainty words (definitely, proves). " +
+        GroundingRules + " " +
         "Write all viewer-facing text in the language code insightContext.language. Return only the requested JSON object.";
+
+    /// <summary>
+    /// Shared by all four agents (and therefore by audience, spoken, accessible and replay text). The deterministic validator
+    /// enforces the same rules; stating them here prevents the claims instead of removing them afterwards.
+    /// </summary>
+    public const string GroundingRules =
+        "PLAYER COUNTS: never state or imply how many players were involved (no '8 key players', 'three attackers', 'several " +
+        "players', 'most of the midfield'); insightContext has no player-count fact, so do not count players, IDs or listed events " +
+        "to make one. Name only players listed in insightContext, and describe patterns without a count (e.g. 'right-sided activity " +
+        "increased'). MATCH TIMES: use only times that appear in insightContext (matchTime, metric window minutes, sourceEvents " +
+        "clock values); never estimate, round or approximate a minute ('around the 67th minute'). If timing matters otherwise, " +
+        "say 'during this phase' or 'in the recent sequence'. Never invent numbers, counts, players, times or event IDs.";
 
     public static AgentDefinition TacticalAnalyst { get; } = new(AgentRole.TacticalAnalyst, "MatchShift Tactical Analyst",
         "Interprets the deterministic evidence tactically: facts used, inference, possible explanation, significance, limits.",
@@ -46,7 +59,8 @@ public static class MatchShiftAgents
         "card: produce output for people who cannot see the pitch or prefer simple language. spokenSummary: natural for text-to-speech, " +
         "short sentences, no symbols or arrows, say 'per cent' instead of '%'. visualDescription: where on the pitch the supporting events " +
         "happened, using only sourceEvents zone fields, or null. simplifiedExplanation: at most two short plain sentences. " +
-        "replayAudioDescription: what the evidence replay shows in event order using only listed events, or null.",
+        "replayAudioDescription: what the evidence replay shows in event order using only listed events, or null. " +
+        "Spoken and replay text follow the same PLAYER COUNTS and MATCH TIMES rules: spell no count or time that is not in insightContext.",
         MaxOutputTokens: 450);
 
     public static AgentDefinition Verifier { get; } = new(AgentRole.Verification, "MatchShift Verification Agent",
@@ -56,7 +70,9 @@ public static class MatchShiftAgents
         "minute, metric values, baseline versus current direction, threshold and sample-size wording, facts versus inference, causal or " +
         "speculative language, unsupported tactical assertions, and consistency between the variants including spoken versus visual text. " +
         "decision: APPROVED if every claim is supported; APPROVED_WITH_CHANGES if small corrections make it supported (then correctedNarrative " +
-        "is required and may only remove or soften claims, never add facts); REJECTED otherwise. List evidenceIdsChecked.",
+        "is required and may only remove or soften claims, never add facts); REJECTED otherwise. List evidenceIdsChecked. " +
+        "Treat as unsupported, however plausible: any player count (exact, approximate or inferred, in words or digits) and any " +
+        "match time or minute not present in insightContext, including rounded or approximate times; correct them by removal.",
         MaxOutputTokens: 600);
 
     public static IReadOnlyList<AgentDefinition> All { get; } = [TacticalAnalyst, AudienceNarrative, AccessibilityNarrator, Verifier];
