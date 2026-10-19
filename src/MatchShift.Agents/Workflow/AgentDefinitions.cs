@@ -72,8 +72,11 @@ public static class MatchShiftAgents
         "decision: APPROVED if every claim is supported; APPROVED_WITH_CHANGES if small corrections make it supported (then correctedNarrative " +
         "is required and may only remove or soften claims, never add facts); REJECTED otherwise. List evidenceIdsChecked. " +
         "Treat as unsupported, however plausible: any player count (exact, approximate or inferred, in words or digits) and any " +
-        "match time or minute not present in insightContext, including rounded or approximate times; correct them by removal.",
-        MaxOutputTokens: 600);
+        "match time or minute not present in insightContext, including rounded or approximate times; correct them by removal. " +
+        "Be concise so the JSON is complete: at most 3 reasons and 3 corrections (each under 20 words), every unsupported claim " +
+        "quoted in under 15 words (at most 6), at most 2 limitations, and a corrected narrative within the stated lengths.",
+        // Sized from a measured maximal verdict under the limits above (see VerifierOutputTests); 600 truncated real verdicts.
+        MaxOutputTokens: 1000);
 
     public static IReadOnlyList<AgentDefinition> All { get; } = [TacticalAnalyst, AudienceNarrative, AccessibilityNarrator, Verifier];
 

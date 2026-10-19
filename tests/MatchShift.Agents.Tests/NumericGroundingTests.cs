@@ -193,6 +193,50 @@ public class NumericGroundingTests
     }
 
     [Fact]
+    public void Z_scores_are_checked_as_statistics_even_next_to_the_word_confidence()
+    {
+        var c = Shift;
+        var z = c.DeterministicMetrics.First(m => m.Unit == "Statistic");
+        var zText = z.Current.ToString("0.##", CultureInfo.InvariantCulture);
+        // The real hosted phrasing that was a false positive: the z-value is a statistic, not a confidence score.
+        Assert.DoesNotContain(Check(c, $"The shift is significant with high confidence (z={zText})."), Numeric);
+        Assert.DoesNotContain(Check(c, $"It has a z-score of {zText} against a threshold of {z.Threshold!.Value.ToString("0.##", CultureInfo.InvariantCulture)}."), Numeric);
+        // An unsupported z-score is still rejected, including next to "confidence".
+        Assert.Contains(Check(c, "The shift is significant with high confidence (z=5.12)."), i => i.Code == IssueCodes.UnsupportedNumber && i.Message.Contains("statistic"));
+        Assert.Contains(Check(c, "It has a z-score of 4.4."), i => i.Code == IssueCodes.UnsupportedNumber);
+    }
+
+    [Fact]
+    public void Confidence_values_are_still_checked_as_confidence()
+    {
+        var c = Shift;
+        var score = c.ConfidenceInputs.Score;
+        Assert.DoesNotContain(Check(c, $"Deterministic confidence: {score.ToString("0.00", CultureInfo.InvariantCulture)}."), Numeric);
+        Assert.DoesNotContain(Check(c, $"MatchShift is {Math.Round(score * 100).ToString(CultureInfo.InvariantCulture)}% confident in this reading."), Numeric);
+        Assert.Contains(Check(c, "Confidence is 0.42."), i => i.Code == IssueCodes.UnsupportedNumber && i.Message.Contains("confidence"));
+        Assert.Contains(Check(c, "We have 42% confidence here."), i => i.Code == IssueCodes.UnsupportedNumber);
+        // A z-value is not a confidence score: writing the statistic as "confidence" is rejected.
+        var z = c.DeterministicMetrics.First(m => m.Unit == "Statistic").Current.ToString("0.##", CultureInfo.InvariantCulture);
+        Assert.Contains(Check(c, $"Confidence is {z}."), i => i.Code == IssueCodes.UnsupportedNumber && i.Message.Contains("confidence"));
+    }
+
+    [Fact]
+    public void Labelled_values_after_a_colon_are_claims_not_identifiers()
+    {
+        var c = Shift;
+        Assert.Contains(Check(c, "Possession: 75%."), i => i.Code == IssueCodes.UnsupportedNumber && i.Message.Contains("75%"));
+        Assert.Contains(Check(c, "Shots: 23."), i => i.Code == IssueCodes.UnsupportedNumber);
+        Assert.DoesNotContain(Check(c, "Reference id:17 in the log."), Numeric);
+    }
+
+    [Theory]
+    [InlineData("The ratio settled at 0.37.")]
+    [InlineData("A value of 1.83 was recorded.")]
+    [InlineData("Expected goals of 2.41 followed.")]
+    public void Unrelated_decimals_are_rejected(string text) =>
+        Assert.Contains(Check(Shift, text), i => i.Code == IssueCodes.UnsupportedNumber);
+
+    [Fact]
     public void Plain_numbers_must_be_metric_values_not_samples_windows_or_event_times()
     {
         var c = Progressive;

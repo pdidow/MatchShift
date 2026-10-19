@@ -106,20 +106,35 @@ public sealed record AccessibilityNarrativeResult(
 
 [Description("A corrected version of the viewer-facing text. Only supported claims.")]
 public sealed record CorrectedNarrative(
-    string Headline,
-    string Summary,
-    string? Inference,
-    string? SpokenSummary);
+    [property: Description("At most 90 characters.")] string Headline,
+    [property: Description("At most 280 characters.")] string Summary,
+    [property: Description("At most 250 characters, or null if unchanged.")] string? Inference,
+    [property: Description("At most 300 characters, or null if unchanged.")] string? SpokenSummary);
 
-[Description("Independent semantic verification of every generated claim.")]
+/// <summary>
+/// The verifier's verdict. Lists are short by contract (see <see cref="VerifierLimits"/>): the verdict and every unsupported
+/// claim are what the workflow acts on; long prose only risks hitting the output-token limit and truncating the JSON.
+/// </summary>
+[Description("Independent semantic verification of every generated claim. Be concise.")]
 public sealed record VerificationAgentResult(
     [property: Description("APPROVED, APPROVED_WITH_CHANGES or REJECTED.")] string Decision,
-    IReadOnlyList<string> Reasons,
-    [property: Description("Each claim not supported by insightContext.")] IReadOnlyList<string> UnsupportedClaims,
-    IReadOnlyList<string> Corrections,
-    [property: Description("Evidence IDs you checked against insightContext.")] IReadOnlyList<string> EvidenceIdsChecked,
+    [property: Description("At most 3 reasons, each under 20 words.")] IReadOnlyList<string> Reasons,
+    [property: Description("Every claim not supported by insightContext, each quoted in under 15 words (at most 6).")] IReadOnlyList<string> UnsupportedClaims,
+    [property: Description("At most 3 corrections, each under 20 words.")] IReadOnlyList<string> Corrections,
+    [property: Description("Evidence IDs you checked against insightContext (at most 12).")] IReadOnlyList<string> EvidenceIdsChecked,
     [property: Description("Required for APPROVED_WITH_CHANGES; otherwise null.")] CorrectedNarrative? CorrectedNarrative,
-    IReadOnlyList<string> Limitations);
+    [property: Description("At most 2 limitations, each under 15 words, or empty.")] IReadOnlyList<string> Limitations);
+
+/// <summary>The size contract the verifier is asked to keep, used by tests to prove a maximal verdict fits its token limit.</summary>
+public static class VerifierLimits
+{
+    public const int Reasons = 3, ReasonWords = 20;
+    public const int UnsupportedClaims = 6, ClaimWords = 15;
+    public const int Corrections = 3, CorrectionWords = 20;
+    public const int EvidenceIds = 12;
+    public const int Limitations = 2, LimitationWords = 15;
+    public const int HeadlineChars = 90, SummaryChars = 280, InferenceChars = 250, SpokenChars = 300;
+}
 
 // ---------- Published result: what MatchShift shows viewers once the workflow finishes. ----------
 

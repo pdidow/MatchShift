@@ -66,9 +66,10 @@ public static partial class NumericGrounding
         work = Take(work, PercentPattern(), m => Require(v.Percentages, Num(m.Groups[1].Value), $"{m.Groups[1].Value}%", "percentage", problems));
         work = Take(work, PointsPattern(), m => Require(v.Points, Num(m.Groups[1].Value), m.Value.Trim(), "change in points", problems));
 
-        // 8. Confidence and z-scores.
-        work = Take(work, ConfidencePattern(), m => Require(v.Confidence, Num(m.Groups["n"].Value), m.Value.Trim(), "confidence value", problems));
+        // 8. Z-scores first: an explicit statistic ("z=3.29", "z-score of 3.29") is checked as a test statistic even when it
+        //    sits next to the word "confidence"; only then are remaining numbers near "confidence" checked as confidence values.
         work = Take(work, ZScorePattern(), m => Require(v.Statistics, Num(m.Groups[1].Value), m.Value.Trim(), "test statistic", problems));
+        work = Take(work, ConfidencePattern(), m => Require(v.Confidence, Num(m.Groups["n"].Value), m.Value.Trim(), "confidence value", problems));
 
         // 9. Durations.
         work = Take(work, SecondsPattern(), m => Require(v.Seconds, Num(m.Groups[1].Value), m.Value.Trim(), "duration in seconds", problems));
@@ -310,7 +311,9 @@ public static partial class NumericGrounding
     [GeneratedRegex(@"\b[A-Z]{2,4}-\d{1,3}\b")]
     private static partial Regex PlayerIdPattern();
 
-    [GeneratedRegex(@"\b\p{L}[\p{L}\d]*(?:[-_#]|:\s?)\d+\b")]
+    // "event-203", "player_11", "HOME#8", "id:17". A colon only forms an identifier after "id" with no space: "Possession: 75%"
+    // or "confidence: 0.95" are labelled claims and must still be checked.
+    [GeneratedRegex(@"\b\p{L}[\p{L}\d]*[-_#]\d+\b|\bid:\d+\b", RegexOptions.IgnoreCase)]
     private static partial Regex OtherIdentifierPattern();
 
     [GeneratedRegex(@"(?<![\d:])(\d{1,2}):([0-5]\d)(?![\d:])")]
