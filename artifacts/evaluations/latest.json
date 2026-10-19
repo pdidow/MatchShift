@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T19:59:24.3760235+00:00",
+  "generatedAt": "2026-10-19T20:21:46.3314343+00:00",
   "modelDeployment": "gpt-4.1-mini",
   "projectEndpointHost": "matchshift-foundry-pd.services.ai.azure.com",
   "datasetSource": "Real LIVE_FOUNDRY Microsoft Agent Framework workflow outputs; adversarial rows are those outputs with one injected defect each.",
@@ -7,10 +7,10 @@
   "generationModelCalls": 77,
   "costEstimate": "39 rows; 117 Foundry judge calls; about 202 model calls in total (gpt-4.1-mini)",
   "foundry": {
-    "evalId": "eval_619a039d062c45ad8b2be61c0c0dd184",
-    "runId": "evalrun_bcca1df81e6c4976b527c5e6846aa88c",
+    "evalId": "eval_70ac43398d444304bc1706704752147f",
+    "runId": "evalrun_72ca538217034d0bb108a4bc5d2958a9",
     "status": "completed",
-    "reportUrl": "https://ai.azure.com/nextgen/r/\u003Csubscription\u003E,rg-matchshift-hackathon,,matchshift-foundry-pd,matchshift/build/evaluations/eval_619a039d062c45ad8b2be61c0c0dd184/run/evalrun_bcca1df81e6c4976b527c5e6846aa88c",
+    "reportUrl": "https://ai.azure.com/nextgen/r/\u003Csubscription\u003E,rg-matchshift-hackathon,,matchshift-foundry-pd,matchshift/build/evaluations/eval_70ac43398d444304bc1706704752147f/run/evalrun_72ca538217034d0bb108a4bc5d2958a9",
     "judgeDeployment": "gpt-4.1-mini",
     "evaluators": [
       "groundedness",
@@ -18,7 +18,7 @@
       "coherence"
     ],
     "rowsSubmitted": 39,
-    "resultCounts": "total 39, passed 35, failed 4, errored 0, skipped 0"
+    "resultCounts": "total 39, passed 34, failed 5, errored 0, skipped 0"
   },
   "summary": {
     "cases": 39,
@@ -47,25 +47,25 @@
     ],
     "foundryGood": {
       "groundedness": {
-        "mean": 4.86,
+        "mean": 4.89,
         "passed": 28,
         "scored": 28
       },
       "relevance": {
-        "mean": 4.96,
+        "mean": 4.93,
         "passed": 28,
         "scored": 28
       },
       "coherence": {
-        "mean": 4.29,
+        "mean": 4.11,
         "passed": 28,
         "scored": 28
       }
     },
     "foundryAdversarial": {
       "groundedness": {
-        "mean": 3.55,
-        "passed": 7,
+        "mean": 3.36,
+        "passed": 6,
         "scored": 11
       },
       "relevance": {
@@ -79,7 +79,7 @@
         "scored": 11
       }
     },
-    "rawAgentClean": 22,
+    "rawAgentClean": 27,
     "rawAgentTotal": 28,
     "goodAudienceClean": 14,
     "goodAudienceTotal": 14,
@@ -92,7 +92,7 @@
     "adversarialCaughtDeterministic": 11,
     "adversarialCaughtVerifier": 11,
     "adversarialVerifierRun": 11,
-    "adversarialCaughtFoundryGroundedness": 4,
+    "adversarialCaughtFoundryGroundedness": 5,
     "adversarialFoundryScored": 11,
     "adversarialCaughtByAnyLayer": 11,
     "goodControlsVerifierApproved": 4,
@@ -178,8 +178,8 @@
         "deterministicCaught": true,
         "verifierCaught": true,
         "verifierDecision": "APPROVED_WITH_CHANGES",
-        "foundryGroundednessFailed": false,
-        "foundryGroundedness": 4
+        "foundryGroundednessFailed": true,
+        "foundryGroundedness": 2
       },
       {
         "mutation": "LANGUAGE_VALUE_CHANGE",
@@ -205,7 +205,7 @@
     ],
     "judgeCalls": 117,
     "judgePromptTokens": 205599,
-    "judgeCompletionTokens": 15050
+    "judgeCompletionTokens": 14947
   },
   "cases": [
     {
@@ -508,8 +508,6 @@
         "response": "Westhaven shift their attack strongly down the right after substitution. From 50\u0027 to 62\u0027, Westhaven directed 90% of attacks down the right, up from 31% earlier. This shift, with 9 right-side attacks and key player involvement count of 8, shows a statistically strong change after introducing Tavian Brooks.",
         "rawAgentResponse": "Westhaven\u0027s attacks shift strongly right after substitution, z=3.3. From 50\u0027 to 62\u0027, Westhaven directed 90% of attacks down the right, up from 31% earlier. This shift, with 9 right-side attacks and 8 key players involved, shows a statistically strong change (z=3.3 \u003E 2.7) after introducing Tavian Brooks.",
         "rawAgentFindings": [
-          "UNSUPPORTED_NUMBER: \u0027z=3.3\u0027 is not an authoritative test statistic.",
-          "UNSUPPORTED_NUMBER: \u0027z=3.3\u0027 is not an authoritative test statistic.",
           "UNSUPPORTED_NUMBER: \u00278 key players\u0027 is not a grounded count of players."
         ],
         "query": "Explain the attack channel shift detected at 62:00 for a Analyst viewer, in language \u0027en\u0027, using only the match evidence.",
@@ -529,33 +527,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It correctly states that Westhaven shifted their attacks strongly down the right flank after the substitution, quantifying the change from 31% to 90% of attacks down the right between the 50\u0027 to 62\u0027 period. It also mentions the number of right-side attacks (9) and key player involvement (8), which are supported by the context. The response notes the statistical strength of the change and the involvement of Tavian Brooks, which aligns with the context\u0027s mention of a substitute player (WHA-17) and the confidence level. The response is accurate, relevant, and complete based on the context, without introducing unrelated or incorrect information.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It correctly states that Westhaven shifted their attacks strongly down the right flank after the substitution, quantifying the change from 31% to 90% of attacks down the right between the 50\u0027 to 62\u0027 period. It also mentions the number of right-side attacks (9) and key player involvement (8), which are supported by the context. The response notes the statistical strength of the change and the involvement of Tavian Brooks, who is identified in the context as the substitute player (WHA-17). The response is accurate, relevant, and complete based on the context, without introducing unrelated or incorrect information. Therefore, it meets the criteria for a fully correct and complete response.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2164,
-          "completionTokens": 192
+          "completionTokens": 200
         },
         {
           "caseId": "G01-Audience",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack direction, percentages, and player involvement, which fully addresses the user\u0027s request in clear language.",
+          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack direction, percentages, and player involvement, which aligns well with the user\u0027s request.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1815,
-          "completionTokens": 61
+          "completionTokens": 59
         },
         {
           "caseId": "G01-Audience",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in Westhaven\u0027s attack direction after a substitution. It provides clear statistics comparing the percentage of attacks down the right side before and after the substitution, mentions the number of right-side attacks, and highlights key player involvement. The ideas are logically organized and connected, making the explanation easy to follow for an analyst viewer. The response uses appropriate transitions and presents the information in a coherent and structured manner, fully addressing the question with relevant match evidence.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in Westhaven\u0027s attack direction after a substitution. It provides relevant statistics and evidence from the match, such as the percentage of attacks down the right side before and after 62:00, the number of right-side attacks, and key player involvement. The ideas are logically organized and connected, making the explanation clear and easy to follow. Transitions between points are smooth, and the response stays focused on the match evidence as requested. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1338,
-          "completionTokens": 137
+          "completionTokens": 146
         }
       ]
     },
@@ -875,18 +873,18 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately reflects the key points from the context about the attack channel shift for Westhaven Athletic. It correctly states that the attack focus shifted to the right side after the substitution near the 50th minute, with 90% of attacks down the right channel between the 50th and 62nd minute, up from 31% earlier. It also mentions the involvement of key players and the potential tactical advantage of this shift, which aligns with the context\u0027s deterministic statement and inference. The response is relevant, accurate, and complete based on the provided context, without introducing unrelated or incorrect information.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It accurately states that Westhaven shifted their attacks to the right side after the substitution near the 50th minute, quantifying the change from 31% to 90% of attacks on the right flank between the 50th and 62nd minute, which matches the context data. The response also mentions the involvement of key players and the potential tactical advantage of this shift, which aligns with the context\u0027s mention of key player involvement and the inference about the attacking play shift. The explanation is clear, relevant, and complete based on the context without introducing unrelated or incorrect information. Therefore, the response is fully correct and complete.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2170,
-          "completionTokens": 147
+          "completionTokens": 186
         },
         {
           "caseId": "G01-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack focus, timing, and potential impact, which aligns well with the user\u0027s request for an analyst-level explanation in English.",
+          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack focus, timing, and player involvement, which aligns well with the user\u0027s request for an analyst-level explanation in English.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1821,
@@ -897,11 +895,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change to the right side after a substitution near the 50th minute. It provides relevant match evidence with percentages showing the increase in attacks on the right side, mentions the involvement of key players, and suggests the tactical impact of this shift. The ideas are logically organized and connected, making the explanation clear and easy to follow. Transitions between sentences are smooth, and the response fully answers the question in a coherent manner.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change to the right side after a substitution near the 50th minute. It provides relevant match evidence with percentages to support the claim, showing a clear increase in attacks on the right side. The ideas are logically organized, with a clear progression from the substitution to the change in attack focus and its potential impact. Transitions between sentences are smooth, making the explanation easy to follow. Overall, the response is coherent and effectively communicates the information requested.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1344,
-          "completionTokens": 133
+          "completionTokens": 138
         }
       ]
     },
@@ -1205,9 +1203,7 @@
         },
         "response": "Westhaven attaque d\u00E9sormais principalement par le c\u00F4t\u00E9 droit. Durant la p\u00E9riode 50\u0027-62\u0027, 90 % des attaques de Westhaven passent par le c\u00F4t\u00E9 droit, contre 31 % auparavant. Ce changement, avec 9 attaques et un score statistique \u00E9lev\u00E9, suit l\u0027entr\u00E9e de Tavian Brooks, sugg\u00E9rant un ajustement tactique.",
         "rawAgentResponse": "Westhaven augmente la part de ses attaques par la droite apr\u00E8s la 50e minute. Entre la 50e et la 62e minute, la majorit\u00E9 des attaques de Westhaven passent par le c\u00F4t\u00E9 droit, contre une part moindre auparavant. Ce changement, avec 9 attaques et un score statistique \u00E9lev\u00E9, suit l\u0027entr\u00E9e de Tavian Brooks, sugg\u00E9rant un ajustement tactique.",
-        "rawAgentFindings": [
-          "UNSUPPORTED_NUMBER: \u002750\u0027 is not an authoritative metric value."
-        ],
+        "rawAgentFindings": [],
         "query": "Explain the attack channel shift detected at 62:00 for a Analyst viewer, in language \u0027fr\u0027, using only the match evidence.",
         "workflowOutcome": "ApprovedWithChanges",
         "verifierDecision": "APPROVED_WITH_CHANGES",
@@ -1224,33 +1220,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It states that Westhaven now attacks mainly on the right side, quantifies the shift with the 90% attacks on the right during 50\u0027-62\u0027 compared to 31% earlier, mentions the number of attacks (9), and the high statistical score, all of which are supported by the context. It also notes the entry of Tavian Brooks as a possible tactical adjustment, which is consistent with the context listing him among players involved. The response is accurate, relevant, and complete based on the context, without introducing unrelated or incorrect information. Therefore, it fully and correctly answers the question with all relevant details from the context.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It states that Westhaven now attacks mainly on the right side, quantifies the shift with the 90% attacks on the right during 50\u0027-62\u0027 compared to 31% earlier, mentions the number of attacks (9), and the high statistical score, all of which are supported by the context. It also notes the entry of Tavian Brooks as a possible tactical adjustment, which is consistent with the context listing him among players involved. The response is accurate, relevant, and complete based on the context, without introducing unrelated or incorrect information. Therefore, it fully and correctly answers the question using the provided data.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2179,
-          "completionTokens": 187
+          "completionTokens": 184
         },
         {
           "caseId": "G02-Audience",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, in French, as requested. It provides specific statistics and context about the tactical change, fully addressing the user\u0027s query.",
+          "reason": "The response directly explains the attack channel shift at 62:00 in French, using match evidence as requested, including statistics and tactical context, fully addressing the user\u0027s query.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1815,
-          "completionTokens": 61
+          "completionTokens": 55
         },
         {
           "caseId": "G02-Audience",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically for an Analyst viewer and in French as requested. It logically presents the evidence from the match, noting the percentage of attacks through the right side before and after the shift, the number of attacks, and the statistical significance. It also connects the shift to a tactical adjustment following the entry of a player, Tavian Brooks. The ideas are clearly organized and flow smoothly, making the explanation easy to follow. Therefore, the response is coherent and effectively structured.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for an Analyst viewer in French, using only match evidence. It clearly states that Westhaven now attacks mainly on the right side, provides specific statistics comparing the periods before and after 62:00, and links the change to the entry of a player, suggesting a tactical adjustment. The ideas are logically organized, with clear connections between sentences, making the explanation easy to follow. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1338,
-          "completionTokens": 137
+          "completionTokens": 130
         }
       ]
     },
@@ -1571,11 +1567,11 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks for an explanation of the attack channel shift detected at 62:00 for an Analyst viewer in French, using only the match evidence provided in the context. The response states that during the period 50\u0027-62\u0027, Westhaven\u0027s attacks shifted from 31% to 90% on the right side, indicating a clear offensive shift to the right. This is directly supported by the deterministic statement and metrics in the context. The response also mentions the entry of Tavian Brooks as a factor, which is consistent with the context listing him among players involved, though the context does not explicitly link his entry to the shift. However, the main explanation about the shift and the statistical evidence is accurate and grounded in the context. The response is concise, relevant, and in French as requested. Therefore, the response is fully correct and complete based on the context provided.",
+          "reason": "Let\u0027s think step by step: The query asks for an explanation of the attack channel shift detected at 62:00 for an Analyst viewer, in French, using only the match evidence provided in the context. The response states that during the period 50\u0027-62\u0027, Westhaven\u0027s attacks shifted from 31% to 90% on the right side, indicating a clear offensive shift to the right. This is directly supported by the deterministic statement and inference in the context. The response also mentions the entry of Tavian Brooks as a factor, which is consistent with the context listing Tavian Brooks among the players involved during this period. The response is accurate, relevant, and complete based on the context, addressing the query fully without adding unrelated information. Therefore, the response is fully correct and complete.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2160,
-          "completionTokens": 201
+          "completionTokens": 180
         },
         {
           "caseId": "G02-Accessibility",
@@ -1593,11 +1589,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifying the time period and the change in attack side percentage. It mentions the key event (entry of Tavian Brooks) that coincides with the shift and clearly states that the offensive play moved to the right side. The ideas are logically organized and connected, making the explanation easy to follow. The response is concise, coherent, and uses appropriate transitions to guide the reader through the explanation in French, as requested. Therefore, it meets the criteria for a coherent response.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifying the time period and the change in attack direction from 31% to 90% on the right side. It also links this shift to the entry of Tavian Brooks, providing match evidence as requested. The ideas are logically organized and clearly connected, making the explanation easy to follow. The response is in French as requested and uses appropriate terminology for an analyst viewer. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1319,
-          "completionTokens": 139
+          "completionTokens": 130
         }
       ]
     },
@@ -1900,9 +1896,7 @@
         },
         "response": "Westhaven desplaza su ataque a la banda derecha con alta fuerza estad\u00EDstica. Entre el minuto 50 y 62, el 90% de los ataques de Westhaven fueron por la banda derecha, frente al 31% previo. La fuerza estad\u00EDstica del cambio es 3,29 (umbral 2,7), con muestra suficiente y 8 participaciones clave, tras la entrada de Tavian Brooks.",
         "rawAgentResponse": "Westhaven desplaza su ataque a la banda derecha con alta fuerza estad\u00EDstica. Entre el minuto 50 y 62, el 90% de los ataques de Westhaven fueron por la banda derecha, frente al 31% previo. La fuerza estad\u00EDstica del cambio es 3,29 (umbral 2,7), con muestra de 10 ataques y 8 participaciones clave, tras la entrada de Tavian Brooks.",
-        "rawAgentFindings": [
-          "UNSUPPORTED_NUMBER: \u002710\u0027 is not an authoritative metric value."
-        ],
+        "rawAgentFindings": [],
         "query": "Explain the attack channel shift detected at 62:00 for a Analyst viewer, in language \u0027es\u0027, using only the match evidence.",
         "workflowOutcome": "ApprovedWithChanges",
         "verifierDecision": "APPROVED_WITH_CHANGES",
@@ -1919,11 +1913,11 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It accurately states that between minutes 50 and 62, 90% of Westhaven\u0027s attacks were on the right wing compared to 31% previously, which matches the context data. It also correctly mentions the statistical strength (3.29 vs threshold 2.7), the sufficient sample size, and the key player participation (8), all of which are supported by the context. The response is in Spanish as requested and does not introduce any information outside the context. Therefore, it is a fully correct and complete response based on the given context.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It mentions the key statistic that 90% of attacks between minutes 50 and 62 were on the right wing compared to 31% previously, which matches the context. It also correctly references the statistical strength (3.29 vs threshold 2.7), the sample size sufficiency, and the participation of a key player (8 participations), including the substitution of Tavian Brooks, all of which are supported by the context. The response is in Spanish as requested and is complete and accurate without adding unrelated information. Therefore, it fully and correctly answers the question based on the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2193,
-          "completionTokens": 171
+          "completionTokens": 179
         },
         {
           "caseId": "G03-Audience",
@@ -1939,13 +1933,13 @@
         {
           "caseId": "G03-Audience",
           "evaluator": "coherence",
-          "score": 5,
+          "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically for an Analyst viewer and in Spanish as requested. It provides clear, relevant evidence from the match, including statistical data about the shift to the right wing, percentages before and after the shift, the statistical strength of the change, and key player involvement. The ideas are logically organized and connected, making the explanation easy to follow. The response uses appropriate transitions and presents the information in a coherent and precise manner, fully meeting the query requirements.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for an Analyst viewer in Spanish, as requested. It provides specific match evidence, including the percentage of attacks on the right flank before and after the shift, the statistical strength of the change, the sample size, and the key player involved. The ideas are logically organized and clearly connected, making the explanation easy to follow. The response uses appropriate terminology and presents the information in a coherent and concise manner without unnecessary details. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1355,
-          "completionTokens": 134
+          "completionTokens": 138
         }
       ]
     },
@@ -2265,33 +2259,33 @@
           "evaluator": "groundedness",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks for an explanation of the attack channel shift detected at 62:00 for an Analyst viewer in Spanish, using only the match evidence provided in the context. The response states that since minute 50, Westhaven shifted their attack to the right wing, with 90% of attacks in this period on that side compared to 31% before, which aligns with the deterministic statement and metrics in the context. It also mentions the change occurred after Tavian Brooks entered the field, but the context does not mention any substitution or entry of Tavian Brooks at that time, so this part is unsupported by the context. The response also notes the statistical strength of the change, which is supported by the context\u0027s mention of a high confidence and a z-score above threshold. Overall, the response is mostly accurate and relevant to the context but includes one unsupported detail about Tavian Brooks entering the field, which is not in the context. Therefore, the response is partially correct but incomplete and contains a minor unsupported detail.",
+          "reason": "Let\u0027s think step by step: The response explains the attack channel shift detected at 62:00 by stating that from minute 50 onwards, Westhaven shifted their attacks to the right wing, with 90% of attacks coming from that side compared to 31% previously. This matches the deterministic statement and metrics in the context. The response also mentions the strength of the change, which aligns with the high confidence and statistical strength (z-score 3.3) in the context. However, the response adds that the change occurred after Tavian Brooks entered the field, which is not supported or mentioned in the provided context. The context lists players involved but does not indicate any substitution or timing related to Tavian Brooks entering the field. Therefore, the response is mostly correct and grounded in the context but includes an unsupported detail about Tavian Brooks. This makes the response partially correct but incomplete and slightly inaccurate due to the unsupported claim. Hence, the appropriate score is 4.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2178,
-          "completionTokens": 230
+          "completionTokens": 216
         },
         {
           "caseId": "G03-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response explains the attack channel shift at the specified time using match evidence, in Spanish as requested, detailing the change in attack direction and its timing, thus fully addressing the user\u0027s query.",
+          "reason": "The response explains the attack channel shift at 62:00 clearly in Spanish, using match evidence as requested, detailing the change in attack direction and its timing related to a player substitution, fully addressing the user\u0027s query.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1817,
-          "completionTokens": 58
+          "completionTokens": 64
         },
         {
           "caseId": "G03-Accessibility",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifying that Westhaven shifted their attacks to the right flank starting from the 50th minute. It provides relevant match evidence, including percentages of attacks before and after the shift and the event of Tavian Brooks entering the field. The ideas are logically organized and connected, making the explanation clear and easy to follow. The response is in Spanish as requested and sticks to the match evidence without adding unrelated information. Therefore, the response is coherent and effectively structured.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifying that Westhaven shifted their attacks to the right flank starting from the 50th minute. It provides relevant match evidence, including percentages of attacks before and after the shift and the event of Tavian Brooks entering the field. The ideas are logically organized and connected, making the explanation clear and easy to follow. The response is in Spanish as requested and uses appropriate transitions to guide the reader through the information. Therefore, the response is coherent and effectively addresses the question.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1340,
-          "completionTokens": 136
+          "completionTokens": 139
         }
       ]
     },
@@ -2611,7 +2605,7 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response explains the attack channel shift detected at 62:00 by stating that Westhaven sharply shifted attacks to the right flank after a substitution, which aligns with the context indicating a shift from 31% to 90% of attacks down the right side between 50\u0027 and 62\u0027. The response correctly references the timing and the increase in right-side attacks, which is supported by the context\u0027s deterministic statement and metrics. It also mentions Tavian Brooks entering the game, which is consistent with the context listing him among players involved and the substitution reference. The response is relevant, accurate, and complete based on the provided context, directly addressing the query for a Studio viewer in clear language without adding unrelated information.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, as described in the context. It accurately states that since the 50th minute, Westhaven\u0027s attacks have shifted to 90% down the right flank, up from 31% earlier, which matches the deterministic statement and metrics in the context. The response also correctly links this shift to the substitution of Tavian Brooks, which is supported by the context listing him among players involved and the mention of a substitution. The explanation is clear, relevant, and grounded entirely in the provided match evidence without introducing unrelated or incorrect information. Therefore, the response is fully correct and complete based on the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2158,
@@ -2631,13 +2625,13 @@
         {
           "caseId": "G04-Audience",
           "evaluator": "coherence",
-          "score": 5,
+          "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the shift to the right flank by Westhaven. It provides relevant match evidence, such as the percentage increase in attacks down the right side and the substitution of Tavian Brooks as a catalyst for this tactical change. The ideas are logically organized and connected, with clear transitions that guide the reader through the explanation. The response is easy to follow and fully coherent in presenting the information requested.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the shift to the right flank by Westhaven after a substitution. It provides relevant match evidence, including the percentage change in attacks down the right side and the timing related to Tavian Brooks entering the game. The ideas are logically organized and connected, with clear transitions that make the explanation easy to follow. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1332,
-          "completionTokens": 124
+          "completionTokens": 118
         }
       ]
     },
@@ -2955,35 +2949,35 @@
         {
           "caseId": "G04-Accessibility",
           "evaluator": "groundedness",
-          "score": 4,
+          "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks to explain the attack channel shift detected at 62:00 for a Studio viewer using only the match evidence provided in the context. The response states that since the 50th minute, Westhaven has focused most of their attacks down the right side, which aligns with the context\u0027s deterministic statement that 90% of Westhaven\u0027s attacks between 50\u0027-62\u0027 went down the right, up from 31% earlier. The response also mentions the change happened after Tavian Brooks came on as a substitute, but the context does not explicitly link the substitution of Tavian Brooks to the shift in attack channel; it only lists him among players involved. The response correctly identifies the shift and its magnitude but adds an unsupported causal link to the substitution. The response is otherwise accurate and relevant but incomplete in detail (e.g., it does not mention the exact percentage change or the confidence level). Overall, the response is mostly correct and grounded in the context but includes a slight unsupported inference and lacks some specific details from the context.",
+          "reason": "Let\u0027s think step by step: The response explains the attack channel shift detected at 62:00 by stating that since the 50th minute, Westhaven has focused most of their attacks down the right side, which is a significant change from earlier in the match. This aligns with the context that shows a shift from 31% to 90% of attacks down the right flank between 50\u0027 and 62\u0027. The response also mentions the substitute Tavian Brooks as a possible cause, which is consistent with the context listing him among players involved and the fact substitution. The response correctly highlights the strength and clarity of the shift as indicated by the high confidence and statistical strength in the context. The explanation is relevant, accurate, and complete based on the provided context, without introducing unrelated or incorrect information. Therefore, the response is fully correct and complete.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2164,
-          "completionTokens": 234
+          "completionTokens": 191
         },
         {
           "caseId": "G04-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at the specified time using match evidence, detailing the change in attack focus and the substitution impact, fully addressing the user\u0027s request in clear language.",
+          "reason": "The response directly explains the attack channel shift at the specified time using match evidence, detailing the change in attack focus and the substitution impact, fulfilling the user\u0027s request clearly and accurately.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1815,
-          "completionTokens": 57
+          "completionTokens": 56
         },
         {
           "caseId": "G04-Accessibility",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifying that Westhaven shifted their attacks to the right side starting from the 50th minute. It mentions the substitution of Tavian Brooks as a possible cause and emphasizes the strength and clarity of this shift in the data. The ideas are logically organized, with clear connections between sentences that build on each other to explain the shift. The response flows smoothly and is easy to follow, using appropriate transitions such as \u0027This is a big change\u0027 and \u0027The team is now attacking down the right side much more than before.\u0027 Overall, the response is coherent and effectively communicates the information requested using match evidence.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifying that Westhaven shifted their attacks to the right side starting from the 50th minute, which is a significant change from earlier in the match. It also links this change to the substitution of Tavian Brooks, providing a clear cause for the shift. The ideas are presented in a logical order, with clear connections between sentences, making the explanation easy to follow. The response uses appropriate transitions such as \u0027This is a big change\u0027 and \u0027The shift is strong and clear in the data,\u0027 which guide the reader through the explanation smoothly. Overall, the response is coherent and effectively addresses the question using match evidence as requested.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1338,
-          "completionTokens": 165
+          "completionTokens": 171
         }
       ]
     },
@@ -3306,11 +3300,11 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks to explain the attack channel shift detected at 62:00 for a TeachMe viewer using only the match evidence. The context provides detailed statistics and events showing that Westhaven Athletic\u0027s attacks shifted significantly to the right channel between minutes 50 and 62, increasing from 31% to 90%. The response accurately summarizes this key information by stating that Westhaven now attacks mostly down the right side, quantifying the change in attack share from 31% to 90% in the specified time frame, and explaining that this indicates a focus on the right flank. The response is directly grounded in the context, uses the exact figures provided, and fully addresses the query without adding unrelated or incorrect information. Therefore, the response is fully correct and complete based on the context.",
+          "reason": "Let\u0027s think step by step: The query asks to explain the attack channel shift detected at 62:00 for a TeachMe viewer using only the match evidence. The context provides detailed statistics and events showing that Westhaven Athletic shifted their attacks to the right channel between minutes 50 and 62, with a rise from 31% to 90% of attacks down the right flank. The response accurately summarizes this key information, stating the percentage increase and the implication that Westhaven is focusing their play on the right flank more than before. The response is relevant, accurate, and complete based on the context provided, without adding unrelated or incorrect information. Therefore, the response is fully correct and complete in addressing the query grounded in the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2153,
-          "completionTokens": 184
+          "completionTokens": 168
         },
         {
           "caseId": "G05-Audience",
@@ -3328,11 +3322,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00. It provides specific evidence from the match, noting the change in the percentage of attacks down the right side of the pitch before and after the 50 to 62-minute interval. The ideas are logically organized, with clear connections between the statistics and their interpretation. The explanation flows smoothly and is easy to follow, making the response coherent and relevant to the question.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for a TeachMe viewer. It clearly states that Westhaven now attacks mostly down the right side of the pitch and provides specific evidence comparing the percentage of attacks down the right side before and after the time frame. The ideas are logically organized, with a clear connection between the change in attack pattern and the supporting statistics. The response flows smoothly and is easy to follow, using appropriate transitions such as \u0027Between minutes 50 and 62\u0027 and \u0027This means\u0027. Overall, the response is coherent and effectively communicates the information requested using only the match evidence as specified.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1327,
-          "completionTokens": 117
+          "completionTokens": 157
         }
       ]
     },
@@ -3655,33 +3649,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response explains that Westhaven shifted their attacks to the right side between the 50th and 62nd minute, which aligns with the context stating a shift from 31% to 90% attacks down the right flank. It mentions the timing and the player substitution (Tavian Brooks) which is consistent with the context\u0027s mention of a substitute player WHA-17 (likely Tavian Brooks). The response also notes the data shows a strong shift but does not explain why, which is accurate since the context does not provide reasons for the shift. The response concludes with a relevant implication about scoring chances, which is a reasonable inference based on the shift. Overall, the response is accurate, relevant, and complete based on the provided context and directly addresses the query without adding unsupported information.",
+          "reason": "Let\u0027s think step by step: The response accurately identifies that Westhaven Athletic shifted their attacks predominantly to the right side between the 50th and 62nd minute, which aligns with the context stating a shift from 31% to 90% attacks down the right flank. It also correctly mentions the timing of the shift (50\u0027-62\u0027) and the involvement of Tavian Brooks, who is noted in the context as a substitute player (WHA-17). The response states that the data shows a strong shift but does not explain why, which is consistent with the context that provides statistical evidence but no causal explanation. The response also notes the potential tactical advantage of this shift, which is a reasonable inference based on the context\u0027s mention of attack channel shift and scoring chances. Overall, the response is relevant, accurate, and complete based on the provided context and directly addresses the query for a TeachMe viewer in clear language without adding unsupported information.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2168,
-          "completionTokens": 185
+          "completionTokens": 210
         },
         {
           "caseId": "G05-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at the specified time using match evidence, detailing the change in attack focus and its timing, which aligns well with the user\u0027s request for an explanation in English based on match data.",
+          "reason": "The response directly explains the attack channel shift at the specified time using match evidence, detailing the change in attack focus and its timing, while noting the data\u0027s limitations and potential impact, fully addressing the user\u0027s request.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1819,
-          "completionTokens": 64
+          "completionTokens": 63
         },
         {
           "caseId": "G05-Accessibility",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifying the change in attack focus to the right side and the timing relative to a player substitution. The ideas are presented in a logical order, starting with the description of the shift, followed by the context of the substitution, and concluding with the implication of this shift. The sentences connect well, and the explanation is clear and easy to follow. Although the response does not delve into why the shift occurred, it explicitly states that the data does not explain the reason, which is relevant and coherent. Overall, the response is coherent and effectively organized, making it easy for the reader to understand the shift based on the match evidence.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifying the change in Westhaven\u0027s attack focus to the right side and the timing relative to Tavian Brooks entering the game. The ideas are presented in a logical order, starting with the description of the shift, followed by the context of the player substitution, and concluding with the implication of this shift. The sentences connect well, and the explanation is clear and easy to follow. Although the response notes that the data does not explain why the shift occurred, it remains coherent and relevant to the question, using appropriate transitions and maintaining a smooth flow. Therefore, the response is coherent and effectively organized.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1342,
-          "completionTokens": 170
+          "completionTokens": 164
         }
       ]
     },
@@ -3865,33 +3859,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately describes the goal detected at 34:33 using only the match evidence provided in the context. It mentions the fast break nature of the goal, the 2-pass and 6-second build-up from the left side, the scorer Owen Blackwood, and the assist by Samir Haddadi, all of which are supported by the context. The response also includes the Pressure Index before the goal, which is consistent with the context (67 rounded to 66.6). The response is relevant, accurate, and complete based on the context, without introducing unrelated or incorrect information.",
+          "reason": "Let\u0027s think step by step: The response accurately describes the goal detected at 34:33 using the match evidence provided in the context. It mentions the fast break nature of the goal, the 2-pass and 6-second build-up from the left side, the scorer Owen Blackwood, and the assist by Samir Haddadi, all of which are supported by the context. The response also includes the Pressure Index before the goal, which is close to the context value of 67. The response is relevant, accurate, and complete based on the context, without introducing unrelated or incorrect information.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1857,
-          "completionTokens": 145
+          "completionTokens": 140
         },
         {
           "caseId": "G06-Audience",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the goal at 34:33 using match evidence, detailing the scorer, assist, build-up, and pressure index, which aligns well with the user\u0027s request for an Analyst viewer in English.",
+          "reason": "The response directly explains the goal at 34:33 with specific match evidence including scorer, assist, build-up details, and pressure index, fulfilling the user\u0027s request for an Analyst viewer in English using only match evidence.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1822,
-          "completionTokens": 63
+          "completionTokens": 64
         },
         {
           "caseId": "G06-Audience",
           "evaluator": "coherence",
-          "score": 4,
+          "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33 with specific details relevant to an Analyst viewer. It describes the scoring team, the player who scored, the assist, the nature of the play (fast break, 2-pass, 6-second build-up from the left side), and includes a relevant metric (Pressure Index before the goal). The information is presented in a logical and orderly manner, with clear connections between sentences that build on each other to provide a comprehensive explanation. The response uses appropriate terminology and transitions that make it easy to follow and understand. Therefore, the response is coherent and effectively organized.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33 with specific details relevant to an Analyst viewer. It describes the scoring team, the player who scored, the assist, the nature of the play (fast break, 2-pass, 6-second build-up from the left side), and includes match evidence such as the Pressure Index before the goal. The ideas are logically organized and clearly connected, making the explanation easy to follow. The response uses appropriate terminology and provides a coherent, detailed account of the goal event as requested.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1346,
-          "completionTokens": 154
+          "completionTokens": 137
         }
       ]
     },
@@ -4074,33 +4068,33 @@
           "evaluator": "groundedness",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately describes the goal at 34:33 using the match evidence provided in the context. It correctly identifies Owen Blackwood as the scorer, the assist by Samir Haddadi, and the initial pass by Theo Castellane. It mentions the fast break and the quick build-up with two passes in six seconds, which aligns with the metrics in the context. The response also states the score impact (Northbridge 1-0 Westhaven) correctly. However, the response says \u0027Pressure on Northbridge was moderate before the goal,\u0027 while the context shows a Pressure Index of 67, which is relatively high pressure, not moderate. This is a minor inaccuracy. Overall, the response is mostly correct and complete but has a slight inaccuracy regarding the pressure level. Therefore, the response is partially correct but not fully complete or perfectly accurate.",
+          "reason": "Let\u0027s think step by step: The response accurately describes the goal at 34:33 using the match evidence provided in the context. It correctly identifies Owen Blackwood as the scorer, the assist by Samir Haddadi, and the initial pass by Theo Castellane. It mentions the fast break and the quick build-up with two passes in six seconds, which aligns with the metrics in the context. The response also correctly states the score impact (Northbridge 1-0 Westhaven). However, the statement about pressure being \u0027moderate\u0027 is not fully supported by the context, which shows a Pressure Index of 67, a relatively high value, not moderate. Despite this minor inaccuracy, the response is largely grounded in the context and provides a complete explanation suitable for an analyst viewer. Therefore, the response is mostly correct and complete with a slight detail that could be more precise.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1865,
-          "completionTokens": 197
+          "completionTokens": 198
         },
         {
           "caseId": "G06-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response clearly explains the goal at 34:33 using match evidence, detailing the players involved, the sequence of passes, and the impact on the score, fully addressing the user\u0027s request for an Analyst viewer in English.",
+          "reason": "The response clearly explains the goal at 34:33 using match evidence, detailing the players involved, the sequence of passes, and the impact on the score, which directly addresses the user\u0027s request for an Analyst viewer in English.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1831,
-          "completionTokens": 65
+          "completionTokens": 66
         },
         {
           "caseId": "G06-Accessibility",
           "evaluator": "coherence",
-          "score": 5,
+          "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33, specifying the scorer, the sequence of passes leading to the goal, and the match context. The information is presented in a logical order, starting with the goal scorer and time, followed by the build-up play, and concluding with the match situation. Transitions between sentences are clear, and the response flows smoothly, making it easy to follow. The response uses only match evidence as requested and is coherent throughout.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33, specifying the scorer, the sequence of passes leading to the goal, and the match context. The ideas are presented in a logical order, starting with the scorer and time, then describing the build-up play, and concluding with the match situation. Transitions between sentences are clear, and the explanation flows smoothly, making it easy to follow for an analyst viewer. The response uses appropriate terminology and provides relevant match evidence without extraneous information. Therefore, the response is coherent and effectively organized.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1354,
-          "completionTokens": 125
+          "completionTokens": 140
         }
       ]
     },
@@ -4266,9 +4260,7 @@
         },
         "response": "BUT ! Owen Blackwood ouvre le score \u00E0 la 34:33. Northbridge ouvre le score \u00E0 la 34:33 gr\u00E2ce \u00E0 Owen Blackwood, servi par Samir Haddadi. L\u0027action, issue d\u0027une contre-attaque rapide, a dur\u00E9 6 secondes avec 2 passes. L\u0027indice de pression avant le but \u00E9tait mod\u00E9r\u00E9.",
         "rawAgentResponse": "But \u00E0 la 35e : contre-attaque rapide de Northbridge avec 2 passes en 6 secondes. Northbridge ouvre le score \u00E0 la 35e minute gr\u00E2ce \u00E0 Owen Blackwood, servi par Samir Haddadi. L\u0027action, issue d\u0027une contre-attaque rapide, a dur\u00E9 6 secondes avec 2 passes. L\u0027indice de pression avant le but \u00E9tait mod\u00E9r\u00E9.",
-        "rawAgentFindings": [
-          "UNSUPPORTED_NUMBER: \u002735\u0027 is not an authoritative metric value."
-        ],
+        "rawAgentFindings": [],
         "query": "Explain the goal detected at 34:33 for a Analyst viewer, in language \u0027fr\u0027, using only the match evidence.",
         "workflowOutcome": "ApprovedWithChanges",
         "verifierDecision": "APPROVED_WITH_CHANGES",
@@ -4285,33 +4277,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response explains the goal detected at 34:33 by stating that Owen Blackwood scored the opening goal for Northbridge, assisted by Samir Haddadi, which is directly supported by the context. It also mentions that the goal came from a fast break lasting 6 seconds with 2 passes, which aligns with the context\u0027s details about the fast break, duration, and number of passes. The response describes the pressure index as \u0027mod\u00E9r\u00E9\u0027 (moderate), which is a reasonable interpretation of the pressure index value 67 given in the context. The response is in French as requested and uses only the match evidence provided without adding unrelated information. Therefore, the response is fully correct and complete based on the context.",
+          "reason": "Let\u0027s think step by step: The response accurately identifies the scorer (Owen Blackwood) and the assister (Samir Haddadi) as stated in the context. It correctly mentions the goal timing (34:33) and that Northbridge opened the score, which aligns with the context. The response also notes the fast break nature of the goal and the duration of the action (6 seconds) with 2 passes, both supported by the context. The pressure index is described as \u0027mod\u00E9r\u00E9\u0027 (moderate), which is a reasonable interpretation of the value 67 given in the context. The response is in French as requested and uses only the match evidence provided without adding unrelated information. Therefore, the response is fully correct and complete based on the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1861,
-          "completionTokens": 171
+          "completionTokens": 173
         },
         {
           "caseId": "G07-Audience",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response clearly explains the goal at 34:33 in French, tailored for an analyst viewer, using detailed match evidence such as the scorer, assist, action duration, passes, and pressure index, fully addressing the user\u0027s request.",
+          "reason": "The response clearly explains the goal at 34:33 in French, tailored for an analyst viewer, using only match evidence as requested, including scorer, assist, timing, action details, and pressure index.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1818,
-          "completionTokens": 67
+          "completionTokens": 62
         },
         {
           "caseId": "G07-Audience",
           "evaluator": "coherence",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33, specifying the scorer, the assisting player, the nature of the play, its duration, and the pressure index before the goal. The information is presented in a logical and orderly manner, with clear connections between sentences that build upon each other to provide a comprehensive explanation. The use of transitions like \u0027gr\u00E2ce \u00E0\u0027 and the sequence of details from scorer to play description enhances the flow. The response is in French as requested and uses only match evidence, fulfilling the query requirements. Therefore, the response is coherent and effectively organized.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33, specifying the scorer, the assisting player, the nature of the play, its duration, and the pressure index before the goal. The information is presented in a logical and orderly manner, with clear connections between sentences that build upon each other to provide a comprehensive explanation. The use of transitions like \u0027gr\u00E2ce \u00E0\u0027 and the sequence of details from scorer to play description enhances the flow. The response is coherent, easy to follow, and fully relevant to the question, meeting the criteria for a highly coherent response.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1341,
-          "completionTokens": 148
+          "completionTokens": 145
         }
       ]
     },
@@ -4494,33 +4486,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately identifies the scorer (Owen Blackwood) and the time of the goal (34:33), which matches the context. It correctly states that the goal resulted from a fast break (contre-attaque rapide), which is supported by the \u0027fastBreak: true\u0027 fact. The response mentions the assist by Samir Haddadi, consistent with the context indicating a pass from Haddadi to Blackwood. It also includes the duration of the action (six seconds) and the number of passes (two), both of which are present in the context. Finally, it correctly states the current score as 1-0 in favor of Northbridge. The response is fully grounded in the provided context, uses only the match evidence, and is complete and accurate for an analyst viewer in French. Therefore, the response deserves the highest score.",
+          "reason": "Let\u0027s think step by step: The response accurately identifies the scorer (Owen Blackwood) and the time of the goal (34:33), which matches the context. It correctly states that the goal resulted from a fast break (contre-attaque rapide), consistent with the \u0027fastBreak: true\u0027 fact. The response mentions Samir Haddadi as the assister, which aligns with the context indicating a pass from Haddadi to Blackwood. It also includes the duration of the action (six seconds) and the number of passes (two), both supported by the context metrics. The final score mentioned (Northbridge 1-0 Westhaven) is also correct. The response is fully grounded in the provided context, uses only the match evidence, and is in French as requested. Therefore, it is a fully correct and complete response.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1848,
-          "completionTokens": 195
+          "completionTokens": 188
         },
         {
           "caseId": "G07-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the goal at 34:33 in French, tailored for an analyst viewer, using match evidence such as the scorer, assist, action duration, and current score, fully addressing the user\u0027s request.",
+          "reason": "The response clearly explains the goal at 34:33 in French, using match evidence such as the scorer, assist, action duration, and current score, fully addressing the user\u0027s request for an Analyst viewer.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1805,
-          "completionTokens": 64
+          "completionTokens": 62
         },
         {
           "caseId": "G07-Accessibility",
           "evaluator": "coherence",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33 for an Analyst viewer in French, using only match evidence. It clearly states who scored (Owen Blackwood), the team (Northbridge), the time (34:33), and describes the nature of the goal (a quick counter-attack), including the assist by Samir Haddadi and the duration and number of passes involved. The information is logically organized and flows smoothly, making it easy to follow. The response uses appropriate transitions and presents the facts in a coherent sequence that fully answers the question.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33 for an Analyst viewer in French, using only match evidence. It clearly states who scored, the timing, the nature of the goal (a quick counter-attack), the assist provider, the duration of the action, and the current score. The ideas are logically organized and connected, making the explanation easy to follow. Transitions between sentences are smooth, and the response is coherent and complete in relation to the question.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1328,
-          "completionTokens": 144
+          "completionTokens": 126
         }
       ]
     },
@@ -4688,9 +4680,7 @@
         },
         "response": "Gol de Owen Blackwood en contraataque r\u00E1pido a los 34:33. Northbridge anot\u00F3 primero con un gol de Owen Blackwood tras un contraataque de 6 segundos y 2 pases, superando un \u00EDndice de presi\u00F3n de 67. La jugada avanz\u00F3 por el canal izquierdo y finaliz\u00F3 en el centro del \u00E1rea.",
         "rawAgentResponse": "Gol de Owen Blackwood en contraataque r\u00E1pido a los 35 minutos. Northbridge anot\u00F3 primero con un gol de Owen Blackwood tras un contraataque de 6 segundos y 2 pases, superando un \u00EDndice de presi\u00F3n de 67. La jugada avanz\u00F3 por el canal izquierdo y finaliz\u00F3 en el centro del \u00E1rea.",
-        "rawAgentFindings": [
-          "UNSUPPORTED_NUMBER: \u002735\u0027 is not an authoritative metric value."
-        ],
+        "rawAgentFindings": [],
         "query": "Explain the goal detected at 34:33 for a Analyst viewer, in language \u0027es\u0027, using only the match evidence.",
         "workflowOutcome": "ApprovedWithChanges",
         "verifierDecision": "APPROVED_WITH_CHANGES",
@@ -4707,33 +4697,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately describes the goal detected at 34:33, mentioning the scorer Owen Blackwood and the quick counterattack lasting 6 seconds with 2 passes, which aligns with the context metrics. It also correctly notes the pressure index of 67 and the play progression through the left channel finishing in the center of the penalty area. The response is fully grounded in the provided context, uses the specified language (Spanish), and includes all relevant details without adding unrelated information.",
+          "reason": "Let\u0027s think step by step: The response explains the goal detected at 34:33 by Owen Blackwood for Northbridge FC, which matches the context information. It mentions the quick counterattack lasting 6 seconds with 2 passes, consistent with the metrics provided. The response also notes the pressure index of 67 before the goal, which is supported by the context. The description of the play advancing through the left channel and finishing in the center of the penalty area aligns with the event details. The response is fully grounded in the context, accurate, and complete for an analyst viewer in Spanish, without adding unrelated or incorrect information.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1859,
-          "completionTokens": 121
+          "completionTokens": 147
         },
         {
           "caseId": "G08-Audience",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the goal at 34:33 in Spanish, tailored for an analyst viewer, and uses detailed match evidence such as timing, player, play type, pressure index, and ball progression, fully addressing the user\u0027s request.",
+          "reason": "The response directly explains the goal at 34:33 in Spanish, using match evidence such as the quick counterattack, number of passes, pressure index, and play progression, fully addressing the user\u0027s request.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1816,
-          "completionTokens": 68
+          "completionTokens": 62
         },
         {
           "caseId": "G08-Audience",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33, specifying the scorer, the nature of the play (a quick counterattack), and providing match evidence such as the duration of the counterattack, number of passes, pressure index, and the play\u0027s progression on the field. The ideas are logically organized and connected, making the explanation clear and easy to follow. The response is coherent, with smooth transitions and relevant details that support the explanation. Therefore, it meets the criteria for a coherent response.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33, specifying the scorer, the nature of the play (a quick counterattack), and providing match evidence such as the duration of the counterattack, number of passes, pressure index, and the play\u0027s progression on the field. The ideas are logically organized and connected, making the explanation clear and easy to follow. The response is coherent, with appropriate transitions and a smooth flow that effectively conveys the information requested in Spanish. Therefore, it meets the criteria for a coherent response.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1339,
-          "completionTokens": 132
+          "completionTokens": 137
         }
       ]
     },
@@ -4918,33 +4908,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately identifies the scorer (Owen Blackwood) and the assister (Samir Haddadi), which matches the deterministic statement in the context. It correctly states that the goal was a fast break (contraataque r\u00E1pido) lasting six seconds with two passes, consistent with the metrics and events described. The location of the goal (central channel inside the penalty area) is also correctly mentioned. The response concludes with the current score, which aligns with the context. All information is directly supported by the context without adding unrelated or incorrect details. Therefore, the response is fully correct and complete based on the provided match evidence.",
+          "reason": "Let\u0027s think step by step: The response accurately states that Owen Blackwood scored a goal for Northbridge with an assist from Samir Haddadi, which is directly supported by the deterministic statement in the context. It mentions the goal was a fast break lasting six seconds with two passes, matching the metrics and event details provided. The location of the goal in the center channel inside the penalty area is also consistent with the event data. The response concludes with the current score, which aligns with the facts given. The response is complete, relevant, and fully grounded in the provided context without adding unrelated information.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1847,
-          "completionTokens": 151
+          "completionTokens": 140
         },
         {
           "caseId": "G08-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the goal at 34:33 in Spanish, tailored for an analyst viewer, using specific match evidence such as player names, play type, duration, passes, and location, fully addressing the user\u0027s request.",
+          "reason": "The response directly explains the goal at 34:33 in Spanish, using match evidence such as the scorer, assister, play description, and current score, fully addressing the user\u0027s request for an Analyst viewer.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1804,
-          "completionTokens": 66
+          "completionTokens": 62
         },
         {
           "caseId": "G08-Accessibility",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33 for an Analyst viewer in Spanish, using only match evidence. It clearly states who scored the goal, who assisted, the nature of the play (a quick counterattack lasting six seconds with two passes), the location of the goal (central channel inside the area), and the current score. The ideas are logically organized and connected, making the explanation easy to follow. Therefore, the response is coherent and effectively structured.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the goal detected at 34:33 for an Analyst viewer in Spanish, using only match evidence. It clearly states who scored the goal, who assisted, the nature of the play (a quick counterattack lasting six seconds with two passes), the location of the goal (central channel inside the area), and the current score. The ideas are logically organized and connected, making the explanation easy to follow. The response uses appropriate transitions and presents the information in a coherent and orderly manner.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1327,
-          "completionTokens": 125
+          "completionTokens": 131
         }
       ]
     },
@@ -5128,33 +5118,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the dangerous turnover detected at 12:38 using only the match evidence provided in the context. It correctly identifies Marcus Oyelaran as the player who lost possession in the defensive third, specifies the location (LossLocationX 18.4), and notes that Westhaven took a shot 11 seconds later inside the penalty area. The response also mentions the passes by Jesse Arkwright and Henrik Solberg leading up to the shot, which aligns with the event timeline in the context. The response is accurate, relevant, and complete based on the context without introducing unrelated or incorrect information. Therefore, it fully and correctly answers the question using the provided data.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the dangerous turnover detected at 12:38 using only the match evidence provided in the context. It correctly identifies Marcus Oyelaran as the player who lost possession in the defensive third, specifies the location (LossLocationX 18.4), and notes that Westhaven took a shot 11 seconds later inside the penalty area. The response also mentions the passes by Jesse Arkwright and Henrik Solberg leading up to the shot, which aligns with the event details in the context. The explanation is accurate, relevant, and complete based on the context without introducing unrelated or incorrect information. Therefore, the response is fully correct and complete.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1889,
-          "completionTokens": 166
+          "completionTokens": 162
         },
         {
           "caseId": "G09-Audience",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the dangerous turnover event at 12:38 with specific match evidence, including player names, locations, and subsequent actions, fulfilling the user\u0027s request accurately and clearly.",
+          "reason": "The response directly explains the dangerous turnover at 12:38 with specific match evidence, detailing the player involved, location, subsequent actions, and event type, fulfilling the user\u0027s request accurately and clearly.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1818,
-          "completionTokens": 57
+          "completionTokens": 60
         },
         {
           "caseId": "G09-Audience",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the dangerous turnover event detected at 12:38, specifying the player involved, the location, and the immediate consequences of the turnover. The information is presented in a logical sequence, starting with the turnover, followed by the resulting shot and the players involved in the buildup. The sentences connect well, and the explanation is clear and easy to follow. The response uses appropriate terminology and provides relevant match evidence as requested. Therefore, the response is coherent and effectively organized.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the dangerous turnover event detected at 12:38, specifying the player involved, the location, and the immediate consequences of the turnover. The information is presented in a logical sequence, starting with the turnover, followed by the resulting shot and the players involved in the buildup. The sentences are connected clearly, and the explanation flows smoothly without abrupt jumps or missing links. The response uses appropriate terminology and provides relevant match evidence as requested. Therefore, the response is coherent and effectively organized.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1341,
-          "completionTokens": 127
+          "completionTokens": 130
         }
       ]
     },
@@ -5337,33 +5327,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately describes the dangerous turnover event at 12:38 as detailed in the context. It correctly identifies the time, the team (Northbridge FC), the player who lost possession (Marcus Oyelaran), and the location (defensive third). It also mentions the subsequent passes by Jesse Arkwright and Henrik Solberg, leading to a shot by Kwame Addo-Sterling within eleven seconds, which was off target. The explanation that losing the ball near one\u0027s own goal can quickly lead to a dangerous attack aligns with the deterministic inference in the context. The response uses only the match evidence provided without adding unrelated information. Therefore, the response is fully correct, complete, and grounded in the context.",
+          "reason": "Let\u0027s think step by step: The response accurately describes the dangerous turnover event at 12:38 as detailed in the context. It correctly identifies the time, the team (Northbridge), the player who lost possession (Marcus Oyelaran), and the location (defensive third). It also mentions the subsequent passes by Jesse Arkwright and Henrik Solberg, and the shot by Kwame Addo-Sterling within eleven seconds, which was off target. The explanation that losing the ball near one\u0027s own goal can quickly lead to a dangerous attack aligns with the deterministic inference in the context. The response is complete, relevant, and fully grounded in the provided match evidence without adding unrelated information. Therefore, it meets the criteria for a fully correct and complete response.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1905,
-          "completionTokens": 170
+          "completionTokens": 173
         },
         {
           "caseId": "G09-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response clearly explains the dangerous turnover at 12:38 using specific match events and players, directly addressing the user\u0027s request for an Analyst viewer in English with match evidence only.",
+          "reason": "The response clearly explains the dangerous turnover at 12:38 using specific match events and players, directly addressing the user\u0027s request for an Analyst viewer in English with match evidence.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1834,
-          "completionTokens": 56
+          "completionTokens": 55
         },
         {
           "caseId": "G09-Accessibility",
           "evaluator": "coherence",
-          "score": 5,
+          "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by describing the dangerous turnover event at 12:38 with specific match evidence. It logically presents the sequence of events starting from the ball loss, the players involved, the progression of the attack, and the resulting shot. The ideas are clearly connected and flow in a coherent manner, making it easy to follow the explanation. The response uses appropriate transitions such as \u0027then\u0027 and \u0027within eleven seconds\u0027 to guide the reader through the timeline of the turnover and its danger. Overall, the response is well-organized, clear, and fully addresses the question with relevant details.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the dangerous turnover detected at 12:38 using match evidence. It clearly describes the sequence of events starting with the loss of the ball, the players involved, the progression of the attack, and the outcome. The ideas are presented in a logical order with clear connections between sentences, making it easy to follow the explanation. The response uses appropriate transitions such as \u0027then\u0027 and \u0027within eleven seconds\u0027 to guide the reader through the timeline of events. Overall, the response is coherent and effectively communicates the situation to an Analyst viewer in English, fulfilling the requirements of the query.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1357,
-          "completionTokens": 147
+          "completionTokens": 150
         }
       ]
     },
@@ -5751,11 +5741,11 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks to explain the pressure increase detected at 28:00 for a WhatMatters viewer using only the match evidence provided in the context. The response states that Northbridge sharply increased pressure and pushed play forward at 28 minutes, which aligns with the context\u0027s note that Northbridge\u0027s MatchShift Pressure Index rose from 19 to 54 over the last 8 minutes. The response correctly mentions more pressure higher up the pitch and more ball recoveries in advanced areas, which is supported by the context showing an increase in high ball recoveries (\u002B4) and average position of play (\u002B24). It also notes fewer shots and final-third entries, consistent with the context\u0027s data showing a decrease in shots (-1) and final-third entries (-3). The response summarizes these points to indicate a strong push to seize momentum in a 0-0 game, which is accurate given the score and the pressure increase. The response is fully grounded in the context, accurate, relevant, and complete for the query. Therefore, the response deserves the highest groundedness score.",
+          "reason": "Let\u0027s think step by step: The query asks to explain the pressure increase detected at 28:00 for a WhatMatters viewer using only the match evidence provided in the context. The response states that Northbridge sharply increased pressure and pushed play forward at 28 minutes, which aligns with the context\u0027s note that Northbridge\u0027s MatchShift Pressure Index rose from 19 to 54 over the last 8 minutes. The response correctly mentions more pressure higher up the pitch and more ball recoveries in advanced areas, which is supported by the context showing an increase in high ball recoveries (\u002B4) and average position of play (\u002B24). It also notes fewer shots and final-third entries, consistent with the context\u0027s data showing a decrease in shots (-1) and final-third entries (-3). The response concludes that this signals a strong push to seize momentum in a 0-0 game, which is a reasonable interpretation grounded in the context\u0027s scoreline and pressure increase. The response is accurate, relevant, and complete based on the context without introducing unrelated or incorrect information.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2252,
-          "completionTokens": 241
+          "completionTokens": 235
         },
         {
           "caseId": "G10-Audience",
@@ -5771,13 +5761,13 @@
         {
           "caseId": "G10-Audience",
           "evaluator": "coherence",
-          "score": 5,
+          "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the pressure increase detected at 28:00, specifically referencing the \u0027Northbridge\u0027 team and their Pressure Index change from 19 to 54. It logically connects the increase in pressure to more ball recoveries and a strategic push forward, which aligns with the match evidence. The explanation is clear, well-organized, and uses appropriate transitions to guide the reader through the reasoning. The response flows smoothly and is easy to follow, fully addressing the question in a coherent manner.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the pressure increase detected at 28:00, specifically referencing the \u0027Northbridge\u0027 team and their Pressure Index change from 19 to 54. It logically connects the increase in pressure to more ball recoveries and a strategic push forward, which aligns with the match evidence. The explanation is clear, well-organized, and flows smoothly, making it easy to follow. Transitions between ideas are implicit but effective, and the response thoroughly covers the question without extraneous information. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1339,
-          "completionTokens": 130
+          "completionTokens": 140
         }
       ]
     },
@@ -6165,11 +6155,11 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately reflects the key points from the context about the pressure increase detected at 28:00. It mentions the significant rise in pressure over the last eight minutes, the fact that Northbridge is winning the ball higher up the pitch, and playing further forward, which aligns with the MatchShift Pressure Index rising from 19 to 54 and the average position of play increasing from 45 to 69. The response also correctly notes that despite fewer shots and final-third entries, control in advanced areas is stronger, consistent with the metrics showing a decrease in shots and final-third entries but an increase in high ball recoveries. The score being 0-0 at 28 minutes is also correctly stated. The explanation is clear, relevant, and grounded fully in the provided match evidence without adding unrelated information. Therefore, the response is fully correct and complete based on the context.",
+          "reason": "Let\u0027s think step by step: The response accurately reflects the key points from the context about the pressure increase detected at 28:00. It mentions the significant rise in pressure over the last eight minutes, the fact that Northbridge is winning the ball higher up the pitch, and playing further forward, which aligns with the increase in the MatchShift Pressure Index and the average position of play. It also correctly notes the decrease in shots and final-third entries, consistent with the context data. The response includes the current score and the potential impact of the pressure increase on the game, which is a reasonable inference based on the context. The response is fully grounded in the provided context, relevant, accurate, and complete for the query. Therefore, it deserves the highest score.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2256,
-          "completionTokens": 202
+          "completionTokens": 173
         },
         {
           "caseId": "G10-Accessibility",
@@ -6187,11 +6177,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the pressure increase detected at 28:00, specifically mentioning Northbridge\u0027s increased pressure and their tactical positioning. The ideas are logically organized, starting with the pressure increase, followed by supporting details about their gameplay, and concluding with the potential impact of this pressure rise. Transitions between sentences are clear, and the explanation flows smoothly, making it easy to follow. The response uses relevant match evidence as requested and maintains coherence throughout.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the pressure increase detected at 28:00, specifically mentioning Northbridge\u0027s increased pressure and their tactical positioning. The ideas are logically organized, starting with the pressure increase, followed by details about their play style and its potential impact on the game. The sentences connect well, and the explanation flows smoothly, making it easy to follow. The response uses appropriate transitions and clearly relates the pressure increase to the match situation, fulfilling the requirement to use only match evidence. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1343,
-          "completionTokens": 120
+          "completionTokens": 136
         }
       ]
     },
@@ -6631,7 +6621,7 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately reflects the key details from the context regarding the control shift at 26:00. It correctly states that Northbridge\u0027s control index increased from 31 to 74, mentions the possession increase to 67%, the pitch tilt (inclinaison du terrain) at 80%, and the high percentage of entries into the penalty area (83%). It also notes the score remains 0-0, which aligns with the context. The response is in French as requested and uses only the match evidence provided without adding unrelated information. Therefore, the response is fully correct, complete, and grounded in the context.",
+          "reason": "Let\u0027s think step by step: The response accurately reflects the key details from the context regarding the control shift at 26:00. It correctly states that Northbridge\u0027s control index increased from 31 to 74, mentions the possession increase to 67%, the pitch tilt (inclinaison du terrain) at 80%, and the share of entries into the penalty area at 83%. It also notes the score remains 0-0, which aligns with the context. The response is in French as requested and uses only the match evidence provided without adding unrelated information. Therefore, the response is fully correct, complete, and grounded in the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2387,
@@ -6653,11 +6643,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the control shift detected at 26:00 for an Analyst viewer in French, using only match evidence. It logically presents the increase in Northbridge\u0027s control index, possession percentage, field tilt, and entries into the penalty area, all relevant metrics that support the explanation. The sentences are well connected, and the information flows smoothly, making it easy to follow the progression of ideas. The response is coherent and effectively organized, with clear connections between the data points and the overall conclusion about the control shift.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the control shift detected at 26:00 for an Analyst viewer in French, using only match evidence. It presents relevant statistics such as the increase in control index from 31 to 74, possession percentage, field tilt, and entries into the penalty area. The ideas are logically organized and connected, providing a clear and coherent explanation of the control shift. The response flows smoothly and is easy to follow, with appropriate transitions between the data points and the conclusion about the control shift favoring Northbridge. Therefore, the response meets the criteria for a coherent and effective answer.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1357,
-          "completionTokens": 135
+          "completionTokens": 149
         }
       ]
     },
@@ -7097,33 +7087,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks for an explanation of the control shift detected at 26:00 for an Analyst viewer in French, using only the match evidence provided in the context. The response states that Northbridge took control of the match during this phase, with possession increasing from 46% to 67%, dominance in the field especially in the final third and penalty area, and a significant increase in the quality of chances created. It also mentions the score remains 0-0 at this time. All these points are directly supported by the context metrics: possession increased from 46% to 67%, the inclination of the field increased from 24% to 80%, entries into the final third and penalty area increased significantly, and the quality of chances rose from 10% to 62%. The response is accurate, relevant, and complete with respect to the context and query, and it is in French as requested. Therefore, the response is fully correct and complete.",
+          "reason": "Let\u0027s think step by step: The query asks for an explanation of the control shift detected at 26:00 for an analyst viewer in French, using only the match evidence provided in the context. The response states that Northbridge took control during this phase, with possession increasing from 46% to 67%, dominance in the field especially in the final third and penalty area, and a significant increase in the quality of chances created. It also mentions the score remains 0-0 at this time. All these points are directly supported by the context metrics: possession increased from 46% to 67%, the inclination of the field increased from 24% to 80%, entries into the final third and penalty area increased significantly, and the quality of chances rose from 10% to 62%. The response is accurate, relevant, and complete with respect to the context and query, and it is in French as requested. Therefore, the response is fully correct and complete.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2365,
-          "completionTokens": 219
+          "completionTokens": 216
         },
         {
           "caseId": "G11-Accessibility",
           "evaluator": "relevance",
-          "score": 5,
+          "score": 4,
           "passed": true,
-          "reason": "The response explains the control shift at 26:00 using match evidence, in French, as requested. It details possession changes, field dominance, and scoring status, fully addressing the user\u0027s query with relevant specifics.",
+          "reason": "The response explains the control shift at 26:00 using match evidence, such as possession increase and field dominance, in French as requested, making it fully relevant and sufficiently detailed for an analyst viewer.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1812,
-          "completionTokens": 63
+          "completionTokens": 61
         },
         {
           "caseId": "G11-Accessibility",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the control shift detected at 26:00, specifically for an Analyst viewer and in French as requested. It logically presents evidence from the match, such as possession percentages increasing from 46% to 67%, dominance in key field areas, and an increase in quality chances, all supporting the claim of Northbridge taking control. The response is well-organized, with clear connections between sentences that build a coherent narrative about the control shift. The final sentence about the score remaining tied adds relevant context. Overall, the response flows smoothly and is easy to follow, fulfilling the criteria for a coherent and effective answer.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the control shift detected at 26:00, specifically for an Analyst viewer, and it is provided in French as requested. The explanation is logically organized, starting with the team that took control, followed by possession statistics, territorial dominance, quality of chances, and the score status. Each sentence connects clearly to the previous one, providing a coherent and comprehensive description based solely on match evidence. The flow is smooth and easy to follow, with appropriate transitions between ideas. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1335,
-          "completionTokens": 156
+          "completionTokens": 137
         }
       ]
     },
@@ -7398,33 +7388,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks for an explanation of the territorial shift detected at 35:00 using only the match evidence and in Spanish. The response states that Northbridge dominates the rival field with more passes in the final third, specifying the increase from 52% to 94% of passes in the last third, and explains that this means better ball control near the opponent\u0027s area. This is directly supported by the context, which provides the exact percentages and the inference that the game is increasingly developing in Westhaven\u0027s field. The response is accurate, relevant, and complete with respect to the information given in the context, and it is presented in Spanish as requested. Therefore, the response is fully correct and complete based on the context.",
+          "reason": "Let\u0027s think step by step: The query asks for an explanation of the territorial shift detected at 35:00 using only the match evidence and in Spanish. The response states that Northbridge dominates the rival field with more passes in the final third, specifying the increase from 52% to 94% of passes in the last third, which aligns with the deterministic statement and metrics in the context. It also explains that this means Northbridge controls the ball better near the opponent\u0027s area, which is a reasonable interpretation of the data provided. The response is accurate, relevant, and complete based on the context, addressing the query fully without adding unrelated information. Therefore, the response is fully correct and complete.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2041,
-          "completionTokens": 172
+          "completionTokens": 161
         },
         {
           "caseId": "G12-Audience",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response explains the territorial shift at 35:00 using match evidence, describing Northbridge\u0027s increased dominance and passing in the opponent\u0027s final third, directly addressing the user\u0027s request in Spanish.",
+          "reason": "The response explains the territorial shift at 35:00 using match evidence, describing Northbridge\u0027s increased dominance and passing in the opponent\u0027s final third, all in Spanish as requested.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1813,
-          "completionTokens": 59
+          "completionTokens": 57
         },
         {
           "caseId": "G12-Audience",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the territorial shift at 35:00 using match evidence, specifically focusing on Northbridge\u0027s dominance in the opponent\u0027s field and the increase in passes in the final third. The ideas are logically organized, with clear connections between sentences that build on each other to explain the shift. The response is coherent, flows smoothly, and uses appropriate transitions to guide the reader through the explanation. Therefore, it effectively meets the criteria for a coherent response.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the territorial shift at 35:00 using match evidence, as requested. It clearly states that Northbridge dominates the opponent\u0027s field with more passes in the final third, quantifies the increase in passes from 52% to 94%, and interprets this as better ball control near the rival area. The ideas are logically organized and connected, making the explanation easy to follow. The response is coherent, uses appropriate transitions, and fully answers the question in Spanish as requested.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1336,
-          "completionTokens": 122
+          "completionTokens": 130
         }
       ]
     },
@@ -7699,18 +7689,18 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response explains the territorial shift detected at 35:00 by stating that Northbridge FC increased their passes in the final third from 52% to 94%, which is directly supported by the context. It also correctly infers that the game is developing more in Westhaven\u0027s field, matching the deterministic inference in the context. The response adds a plausible interpretation that Westhaven might be defending deeper and that Northbridge dominates territorially, which aligns with the context\u0027s indication of a territorial shift and increased control. The explanation is in Spanish as requested and uses only the match evidence provided without introducing unrelated or incorrect information. Therefore, the response is fully correct, complete, and grounded in the context.",
+          "reason": "Let\u0027s think step by step: The response accurately reflects the key data from the context about the territorial shift at 35:00, specifically the increase in passes in the final third from 52% to 94%, and the inference that the game is developing more in Westhaven\u0027s field. The response is in Spanish as requested and uses only the match evidence provided without adding unrelated information. It also correctly interprets the implication that Westhaven might be defending deeper and that Northbridge is dominating territorially. The response is complete and directly addresses the query with relevant details from the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2054,
-          "completionTokens": 166
+          "completionTokens": 137
         },
         {
           "caseId": "G12-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the territorial shift at 35:00 using match evidence, in Spanish as requested, detailing the increase in passes in the final third and its implications on territorial control.",
+          "reason": "The response directly explains the territorial shift at 35:00 using match evidence, in Spanish as requested, detailing the increase in passes in the attacking third and its implications on game control.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1826,
@@ -7719,13 +7709,13 @@
         {
           "caseId": "G12-Accessibility",
           "evaluator": "coherence",
-          "score": 5,
+          "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the territorial shift detected at 35:00 using match evidence, as requested. It logically presents the increase in Northbridge\u0027s passes in the final third of the field, quantifies the change with percentages, and interprets what this implies about the game\u0027s territorial control and defensive positioning. The ideas are clearly connected and flow smoothly, making the explanation easy to follow for a TeachMe viewer. The response is coherent, well-organized, and uses appropriate transitions to guide the reader through the analysis.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the territorial shift detected at 35:00 using match evidence, as requested. It clearly states that Northbridge has increased its passes in the final third of the field from 52% to 94%, indicating that the game is now more focused on Westhaven\u0027s side of the field. The explanation logically connects the increase in passes to territorial dominance and suggests a defensive posture by Westhaven. The ideas are presented in a clear, logical sequence with appropriate transitions, making the explanation easy to follow for a TeachMe viewer. Therefore, the response is coherent and effectively organized.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1349,
-          "completionTokens": 133
+          "completionTokens": 149
         }
       ]
     },
@@ -8031,11 +8021,11 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately summarizes the key points from the context regarding the turnover spike for Northbridge FC at 89:00. It correctly states the turnover count of 13 in the last 5 minutes compared to 10 in the previous 10 minutes, mentions the turnover rate ratio of 2.36 exceeding the threshold of 2.2, and includes the details about 1 dangerous turnover and 2 opponent high recoveries. The response also correctly interprets this as a significant drop in ball retention late in the match, which aligns with the deterministic inference in the context. The response is relevant, accurate, and complete based solely on the provided context and directly addresses the query for an analyst viewer. Therefore, it meets the criteria for a fully correct and complete response.",
+          "reason": "Let\u0027s think step by step: The response accurately summarizes the key points from the context regarding the turnover spike for Northbridge FC at 89:00. It correctly states the turnover count of 13 in the last 5 minutes compared to 10 in the previous 10 minutes, mentions the turnover rate ratio of 2.36 exceeding the threshold of 2.2, and includes the details about 1 dangerous turnover and 2 opponent high recoveries. The response also correctly interprets this as a significant drop in ball retention late in the match. All these details are directly supported by the context and fully address the query for an analyst viewer using only match evidence. Therefore, the response is fully correct and complete based on the provided context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2143,
-          "completionTokens": 181
+          "completionTokens": 170
         },
         {
           "caseId": "G13-Audience",
@@ -8053,11 +8043,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the turnover spike at 89:00 for an Analyst viewer using match evidence. It provides specific data points such as the turnover rate doubling to 13 in the last 5 minutes, comparisons to previous periods, and mentions of dangerous turnovers and opponent recoveries. The ideas are logically organized and connected, with clear transitions between statistics and their implications. The explanation flows smoothly and is easy to follow, making the response coherent and relevant to the question.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the turnover spike detected at 89:00 for an Analyst viewer using match evidence. It provides specific data about the turnover rate, compares it to previous periods, and highlights key details such as dangerous turnovers and opponent recoveries. The ideas are logically organized, with clear connections between the statistics and their implications, making the explanation easy to follow. Appropriate transitions like \u0027between 84\u0027 and 89\u0027\u0027 and comparative phrases help guide the reader through the information smoothly. Overall, the response is coherent and effectively communicates the relevant information in a structured manner.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1357,
-          "completionTokens": 124
+          "completionTokens": 144
         }
       ]
     },
@@ -8363,33 +8353,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately summarizes the key points from the context regarding the turnover spike at 89:00. It correctly states that Northbridge lost possession 13 times in the last five minutes compared to 10 in the previous ten minutes, reflecting the deterioration in ball retention. It also mentions the one dangerous turnover and two opponent high recoveries, which are supported by the context. The response adds a plausible explanation about tiredness or lapse in focus, which is not explicitly stated in the context but is a reasonable inference and does not contradict the data. The mention of the match score being tied at 2-2 is also consistent with the context. Overall, the response is relevant, accurate, and complete based on the provided context and directly addresses the query for an analyst viewer using match evidence. Therefore, it meets the criteria for a fully correct and complete response.",
+          "reason": "Let\u0027s think step by step: The response accurately summarizes the key points from the context regarding the turnover spike at 89:00. It correctly states that Northbridge lost possession 13 times in the last five minutes compared to 10 in the previous ten minutes, reflecting the deterioration in ball retention. It also mentions the one dangerous turnover and two opponent high recoveries, which are supported by the context. The response includes the current score (2-2), which is relevant and present in the context. The explanation is clear and uses only the match evidence without adding unsupported speculation, except for a mild suggestion about tiredness or lapse in focus, which is a reasonable inference but not explicitly stated in the context. Overall, the response is complete, accurate, and grounded in the provided context, addressing the query fully and appropriately for an analyst viewer.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2145,
-          "completionTokens": 198
+          "completionTokens": 189
         },
         {
           "caseId": "G13-Accessibility",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response explains the turnover spike at 89:00 using match evidence such as increased ball losses and risky turnovers, directly addressing the user\u0027s request with relevant details about possession and game context.",
+          "reason": "The response explains the turnover spike at 89:00 with specific match evidence about ball losses, possession issues, and potential causes, directly addressing the user\u0027s query in clear language.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1836,
-          "completionTokens": 58
+          "completionTokens": 56
         },
         {
           "caseId": "G13-Accessibility",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the turnover spike at 89:00 for an Analyst viewer using match evidence. It logically presents relevant statistics about ball losses and compares recent performance to earlier periods, suggesting possible reasons such as tiredness or lapses in focus. The explanation includes the impact of risky turnovers and opponent recoveries, linking these to potential consequences for the match. The ideas are organized clearly and flow smoothly, making the explanation easy to follow. Therefore, the response is coherent and effectively structured.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the turnover spike at 89:00 for an Analyst viewer using match evidence. It logically presents relevant statistics about ball losses and possession, compares recent performance to earlier periods, and suggests possible reasons for the turnover spike. The ideas are organized clearly, with smooth transitions between points, making the explanation easy to follow. The response also contextualizes the impact of turnovers on the game state. Overall, the response is coherent and effectively structured to answer the question.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1359,
-          "completionTokens": 128
+          "completionTokens": 125
         }
       ]
     },
@@ -8692,10 +8682,7 @@
         },
         "response": "Westhaven\u0027s long-ball share jumps from 9% to 77% between 20\u0027-28\u0027 and 28\u0027-36\u0027. Westhaven increased their long-ball share by 68 percentage points, from 9% in the 20\u0027-28\u0027 window to 77% in the 28\u0027-36\u0027 window, indicating a significant tactical shift in passing style.",
         "rawAgentResponse": "Westhaven\u0027s long-ball share jumps from 9% to 77% between 20\u0027-28\u0027 and 28\u0027-36\u0027. Westhaven increased their long-ball share by 68 percentage points, from 9% in the 20\u0027-28\u0027 window to 77% in the 28\u0027-36\u0027 window, with sample sizes of 45 and 30 passes respectively, indicating a significant tactical shift in passing style.",
-        "rawAgentFindings": [
-          "UNSUPPORTED_NUMBER: \u002730 passes\u0027 is not a grounded count of passes.",
-          "UNSUPPORTED_NUMBER: \u002745\u0027 is not an authoritative metric value."
-        ],
+        "rawAgentFindings": [],
         "query": "Explain the passing style shift detected at 36:00 for a Analyst viewer, in language \u0027en\u0027, using only the match evidence.",
         "workflowOutcome": "ApprovedWithChanges",
         "verifierDecision": "APPROVED_WITH_CHANGES",
@@ -8713,11 +8700,11 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks to explain the passing style shift detected at 36:00 for an Analyst viewer using only the match evidence provided in the context. The response accurately states that Westhaven\u0027s long-ball share increased from 9% to 77% between the 20\u0027-28\u0027 and 28\u0027-36\u0027 time windows, quantifying the increase as 68 percentage points. This directly reflects the deterministic statement and metric data in the context. The response highlights the significant tactical shift in passing style, which aligns with the insight PASSING_STYLE_SHIFT detected at 36:00. The response is fully grounded in the context, does not introduce any unsupported information, and addresses the query completely and precisely. Therefore, the response is fully correct and complete based on the context.",
+          "reason": "Let\u0027s think step by step: The query asks to explain the passing style shift detected at 36:00 for an Analyst viewer using only the match evidence provided in the context. The response accurately states that Westhaven\u0027s long-ball share increased from 9% to 77% between the 20\u0027-28\u0027 and 28\u0027-36\u0027 time windows, quantifying the increase as 68 percentage points. This information is directly supported by the deterministic statement and metric data in the context. The response clearly identifies the significant tactical shift in passing style, which is the core of the query. It does not introduce any unrelated or incorrect information and fully addresses the question based on the context. Therefore, the response is fully correct and complete according to the provided context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2070,
-          "completionTokens": 180
+          "completionTokens": 172
         },
         {
           "caseId": "G14-Audience",
@@ -8735,11 +8722,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks to explain the passing style shift detected at 36:00 for an Analyst viewer using only match evidence. The response provides specific data about Westhaven\u0027s long-ball share increasing from 9% to 77% between the 20\u0027-28\u0027 and 28\u0027-36\u0027 time windows, highlighting a 68 percentage point increase and describing this as a significant tactical shift. The response is logically organized, directly addresses the question with relevant statistics, and clearly connects the data to the conclusion about the passing style shift. The ideas flow smoothly and are easy to follow, making the explanation coherent and well-structured.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the passing style shift detected at 36:00 using match evidence. It provides specific data about Westhaven\u0027s long-ball share increasing significantly between the given time windows, which clearly indicates a tactical shift. The ideas are logically organized, with a clear connection between the percentage changes and the conclusion about the passing style shift. The response flows smoothly and is easy to follow, making it coherent and relevant to the question.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1344,
-          "completionTokens": 151
+          "completionTokens": 117
         }
       ]
     },
@@ -9059,33 +9046,33 @@
           "evaluator": "groundedness",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The query asks for an explanation of the passing style shift detected at 36:00 using only the match evidence provided in the context. The context states that Westhaven Athletic\u0027s long-ball share changed significantly from 9% to 77% between 20\u0027-28\u0027 and 28\u0027-36\u0027, indicating a shift to more long passes. The response correctly identifies that Westhaven changed their passing style to use many more long passes in that time frame and notes the score was 0-0 at 36 minutes, which aligns with the context. However, the response adds that this change \u0022may affect how they attack and how Ashvale defends,\u0022 which is an inference not explicitly supported by the context, as the context states the events do not establish why the mix changed. Despite this, the response is mostly accurate and grounded in the context, though it lacks some detail such as the exact percentage change and the baseline figures. Overall, the response is correct and relevant but somewhat incomplete and includes a minor speculative statement. Therefore, it fits best with a partially correct response that is mostly grounded but not fully complete or detailed.",
+          "reason": "Let\u0027s think step by step: The query asks for an explanation of the passing style shift detected at 36:00 using only the match evidence provided in the context. The context states that Westhaven Athletic\u0027s long-ball share changed significantly from 9% to 77% between 20\u0027-28\u0027 and 28\u0027-36\u0027, indicating a shift to more long passes. The response correctly identifies that Westhaven changed their passing style to use many more long passes in that time frame and notes the score was 0-0 at 36 minutes, which aligns with the context. However, the response adds that this change \u0022may affect how they attack and how Ashvale defends,\u0022 which is an inference not explicitly supported by the provided context or match evidence. The context explicitly states that the events do not establish why the mix of passes changed, so suggesting potential tactical effects goes beyond the grounded information. Therefore, the response is mostly correct and relevant but includes a speculative statement not grounded in the context. This makes the response partially correct but incomplete and slightly speculative.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2047,
-          "completionTokens": 251
+          "completionTokens": 232
         },
         {
           "caseId": "G14-Accessibility",
           "evaluator": "relevance",
           "score": 4,
           "passed": true,
-          "reason": "The response explains the passing style shift around the 36th minute using match evidence, mentioning increased long passes and the score context, which aligns with the user\u0027s request for an analyst-level explanation in English.",
+          "reason": "The response explains the passing style shift around the 36th minute by describing the increase in long passes and its potential impact, directly addressing the user\u0027s request with relevant match evidence.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1798,
-          "completionTokens": 61
+          "completionTokens": 56
         },
         {
           "caseId": "G14-Accessibility",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the passing style shift detected at 36:00, mentioning the use of more long passes between the 28th and 36th minutes. It also notes the score context and potential tactical implications. The ideas are logically organized and connected, making the explanation easy to follow. However, the response could be improved with smoother transitions and a slightly more detailed explanation of the impact on the game. Overall, it effectively communicates the key points in a coherent manner.",
+          "reason": "Let\u0027s think step by step: The response addresses the query by explaining a passing style shift around the 36:00 mark, mentioning that Westhaven increased long passes between the 28th and 36th minutes. It also notes the score status and speculates on potential effects on attack and defense. The ideas are logically connected and presented in a clear sequence, making it easy to follow. However, the explanation is somewhat brief and could be more detailed or explicit in linking the evidence to the shift at exactly 36:00. Despite this, the response is coherent and effectively organized with clear connections between sentences.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1321,
-          "completionTokens": 126
+          "completionTokens": 143
         }
       ]
     },
@@ -9397,11 +9384,11 @@
           "evaluator": "groundedness",
           "score": 2,
           "passed": false,
-          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven Athletic shifted their attacks strongly down the right channel after the substitution, which aligns with the context stating 90% of attacks went down the right from 50\u0027 to 62\u0027, up from 31% earlier. It also mentions the number of right-side attacks (9) and key player involvement (8), which are supported by the context. However, the response incorrectly states the score as 3-1, while the context shows the score as 1-1. This is a factual inaccuracy not supported by the context. Therefore, the response attempts to answer the query and is mostly accurate but contains an incorrect detail about the score, making it partially incorrect.",
+          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven Athletic shifted their attacks strongly down the right channel after the substitution, which aligns with the context stating 90% of attacks went down the right from 50\u0027 to 62\u0027, up from 31% earlier. It also mentions the number of right-side attacks (9) and key player involvement (8), which are supported by the context. However, the response incorrectly states the score as 3-1, while the context shows the score as 1-1. This is a factual error not supported by the context. Therefore, the response attempts to answer the query using the match evidence but contains incorrect information regarding the score. Hence, the groundedness score should reflect an attempt with incorrect information.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2173,
-          "completionTokens": 168
+          "completionTokens": 175
         },
         {
           "caseId": "A-WRONG_SCORE",
@@ -9419,11 +9406,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in Westhaven\u0027s attack direction after a substitution. It provides relevant statistics (90% of attacks down the right from 50\u0027 to 62\u0027, up from 31% earlier), mentions key player involvement, and relates this to the introduction of Tavian Brooks. The ideas are logically organized and connected, making the explanation clear and easy to follow. The response uses appropriate transitions and presents the information in a coherent manner that aligns well with the question\u0027s requirements.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in Westhaven\u0027s attack direction after a substitution. It provides relevant statistics (90% of attacks down the right from 50\u0027 to 62\u0027, up from 31% earlier) and mentions key player involvement, which supports the explanation. The response is logically organized, with clear connections between the substitution, the shift in attack direction, and the statistical evidence. The final sentence about the score adds context to the match situation. Overall, the response is coherent, flows smoothly, and effectively uses evidence to explain the shift, making it easy to follow for an analyst viewer.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1347,
-          "completionTokens": 142
+          "completionTokens": 164
         }
       ]
     },
@@ -9734,18 +9721,18 @@
           "evaluator": "groundedness",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response explains the attack channel shift detected at 62:00 by stating that Westhaven shifted their attacks strongly down the right side after a substitution, which aligns with the context\u0027s data showing an increase from 31% to 90% of attacks down the right between 50\u0027 and 62\u0027. It mentions the number of right-side attacks (9) and key player involvement (8), both supported by the context. The response also attributes the shift to the introduction of Tavian Brooks, which is consistent with the context listing him among players involved. However, the response adds that possession rose by 17% in this spell, which is not mentioned or supported by the context. Therefore, while most of the response is accurate and grounded in the context, the mention of possession increase is unsupported and introduces information not found in the context. This makes the response partially correct but incomplete and slightly inaccurate due to the unsupported possession claim.",
+          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven Athletic shifted their attacks strongly down the right channel after the substitution, which aligns with the context stating a shift from 31% to 90% of attacks down the right between 50\u0027 and 62\u0027. It mentions the number of right-side attacks (9) and key player involvement (8), both supported by the context. The response also notes the introduction of Tavian Brooks, who is listed among the players involved, which is consistent with the context. However, the response adds that possession rose by 17% in this spell, which is not mentioned or supported anywhere in the provided context. This introduces an unsupported detail, making the response partially correct but not fully grounded. Therefore, the response is accurate and relevant but incomplete and includes an unsupported fact.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2175,
-          "completionTokens": 213
+          "completionTokens": 186
         },
         {
           "caseId": "A-UNSUPPORTED_PERCENTAGE",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack direction, player involvement, and possession statistics, which fully addresses the user\u0027s request.",
+          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack direction, player involvement, and possession statistics relevant to an Analyst viewer in English.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1826,
@@ -9756,11 +9743,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically focusing on the team Westhaven and their tactical change. It provides clear, relevant statistics about the percentage of attacks down the right side before and after the substitution, the number of right-side attacks, key player involvement, and possession increase. The ideas are logically organized and connected, making it easy to follow the explanation. The response uses appropriate transitions and presents the information in a coherent manner that aligns well with the query\u0027s requirements. Therefore, the response is coherent and effectively structured.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically focusing on the right-side attack increase by Westhaven after a substitution. It provides relevant match evidence such as percentages of attacks down the right side before and after the substitution, the number of right-side attacks, key player involvement, and possession increase. The ideas are logically organized and connected, making the explanation clear and easy to follow for an analyst viewer. The response uses appropriate transitions and presents the information in a coherent sequence that supports understanding of the shift. Therefore, the response is coherent and effectively addresses the question.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1349,
-          "completionTokens": 142
+          "completionTokens": 149
         }
       ]
     },
@@ -10071,22 +10058,22 @@
           "evaluator": "groundedness",
           "score": 2,
           "passed": false,
-          "reason": "Let\u0027s think step by step: The response explains the attack channel shift detected at 62:00 by stating that Westhaven shifted their attacks strongly down the right flank after a substitution, citing the increase from 31% to 90% of attacks down the right between 50\u0027 and 62\u0027. It mentions the number of right-side attacks (9) and key player involvement (8), which aligns with the context metrics. The response also attributes the change to the introduction of Tavian Brooks, which is consistent with the context listing him among players involved. However, the response incorrectly names Aaron Holloway as driving the change, but the context does not mention Aaron Holloway at all; instead, the substitute player ID is WHA-17, and the players involved include Tavian Brooks but not Aaron Holloway. This introduces incorrect information not supported by the context. Therefore, the response attempts to answer the query and is mostly accurate but contains an unsupported and incorrect detail about Aaron Holloway. This fits the definition of a score 2 response.",
+          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven Athletic shifted their attacks strongly down the right channel after the substitution, which aligns with the context stating 90% of attacks were down the right from 50\u0027 to 62\u0027, up from 31% earlier. It also mentions the number of attacks (9) and key player involvement (8), which matches the context metrics. However, the response introduces the name Aaron Holloway as driving the change, which is not mentioned anywhere in the context. The context only mentions the substitute player Tavian Brooks (WHA-17) but does not attribute the change to Aaron Holloway. This introduces unsupported information, making the response partially incorrect. Therefore, the response attempts to answer the query with mostly correct information but includes an incorrect detail not grounded in the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2171,
-          "completionTokens": 230
+          "completionTokens": 186
         },
         {
           "caseId": "A-INVENTED_PLAYER",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack direction, percentages, key players, and timing, fully addressing the user\u0027s request in clear language.",
+          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack direction, percentages, key player involvement, and substitution impact, fully addressing the user\u0027s request.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1822,
-          "completionTokens": 62
+          "completionTokens": 61
         },
         {
           "caseId": "A-INVENTED_PLAYER",
@@ -10408,22 +10395,22 @@
           "evaluator": "groundedness",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven Athletic shifted their attacks strongly down the right channel after the substitution, which aligns with the context stating a shift from 31% to 90% of attacks down the right between 50\u0027 and 62\u0027. It also mentions the number of attacks (9) and key player involvement (8), which matches the context metrics. However, the response references an event ID MS-FLAGSHIP-001-E99999 that does not appear in the context, which could be considered incorrect or unsupported information. Despite this, the main explanation is accurate and grounded in the context. Therefore, the response is mostly correct and complete but includes one unsupported detail.",
+          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven Athletic shifted their attacks strongly down the right channel after the substitution, which aligns with the context stating a shift from 31% to 90% attacks down the right between 50\u0027 and 62\u0027. It mentions the number of attacks (9) and key player involvement (8), both supported by the context. The response also notes the introduction of Tavian Brooks, which is consistent with the players involved listed in the context. However, the response references an event ID MS-FLAGSHIP-001-E99999 that does not appear in the context, which is inaccurate and unsupported. Despite this minor inaccuracy, the response is otherwise accurate, relevant, and complete in explaining the attack channel shift using the match evidence provided. Therefore, the response is mostly correct and complete but includes one incorrect detail.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2177,
-          "completionTokens": 163
+          "completionTokens": 195
         },
         {
           "caseId": "A-INVENTED_EVENT_ID",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, including statistics and player involvement, which aligns well with the user\u0027s request for an Analyst viewer in English.",
+          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, including statistics and player involvement, which aligns well with the user\u0027s request for an analyst-level explanation in English.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1828,
-          "completionTokens": 58
+          "completionTokens": 59
         },
         {
           "caseId": "A-INVENTED_EVENT_ID",
@@ -10747,11 +10734,11 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It accurately states that from 50\u0027 to 62\u0027, Westhaven directed 90% of their attacks down the right, up from 31% earlier, which matches the deterministic statement and metrics in the context. It also mentions the number of right-side attacks (9) and key player involvement (8), which are supported by the context. The response notes the substitution of Tavian Brooks, which is consistent with the fact substitutePlayerId: WHA-17 and the players involved list. The mention of event MS-FLAGSHIP-001-E00904, although not detailed in the context, does not contradict the information given and suggests continuation of the trend. The response is relevant, accurate, and complete based on the context, without introducing unrelated or incorrect information. Therefore, it fully and correctly answers the question using the provided match evidence.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for Westhaven Athletic, using only the match evidence provided in the context. It correctly states that Westhaven shifted their attacks strongly down the right flank after the substitution, quantifying the change from 31% to 90% of attacks down the right between 50\u0027 and 62\u0027. It also mentions the number of right-side attacks (9) and key player involvement (8), which are supported by the context. The response references the introduction of Tavian Brooks, who is listed among the players involved, aligning with the context\u0027s mention of a substitution. The mention of event MS-FLAGSHIP-001-E00904, although not detailed in the context, does not contradict the information given and suggests continuation of the trend. Overall, the response is accurate, relevant, and complete based on the context, without introducing unrelated or incorrect information.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2179,
-          "completionTokens": 230
+          "completionTokens": 215
         },
         {
           "caseId": "A-FUTURE_EVENT",
@@ -10769,11 +10756,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in Westhaven\u0027s attack direction after a substitution. It provides relevant statistics (90% attacks down the right from 31% earlier), mentions key player involvement, and references a specific event code, all of which are logically connected and clearly presented. The ideas flow in a coherent manner, making it easy to follow the explanation. Therefore, the response is coherent and effectively organized.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in Westhaven\u0027s attack direction after a substitution. It provides relevant statistics (90% of attacks down the right from 50\u0027 to 62\u0027, up from 31% earlier) and mentions key player involvement, which supports the explanation. The ideas are presented in a logical order, starting with the shift, then quantifying it, and finally linking it to a player substitution and an event code. The response is clear, concise, and easy to follow, with appropriate connections between sentences. Therefore, it meets the criteria for a coherent response.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1353,
-          "completionTokens": 125
+          "completionTokens": 159
         }
       ]
     },
@@ -11084,33 +11071,33 @@
           "evaluator": "groundedness",
           "score": 5,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response accurately reflects the key points from the context about Westhaven Athletic\u0027s attack channel shift. It correctly states that from 50\u0027 to 62\u0027, 90% of attacks were down the right, up from 31% earlier, which matches the deterministic statement and metrics. It mentions the number of right-side attacks (9) and key player involvement (8), both supported by the context. The response also notes the substitution of Tavian Brooks, which is consistent with the player list and the timing of the shift. The phrase \u0027The change began at 3 minutes\u0027 is somewhat ambiguous but can be interpreted as the shift occurring around the 3-minute mark into the 50\u0027-62\u0027 period, which aligns with the context\u0027s timing. Overall, the response is relevant, accurate, and complete based on the provided context and directly addresses the query for an analyst viewer using match evidence without adding unrelated information.",
+          "reason": "Let\u0027s think step by step: The response accurately reflects the context details about Westhaven Athletic\u0027s attack channel shift detected at 62:00. It correctly states that from 50\u0027 to 62\u0027, 90% of attacks were down the right channel, up from 31% earlier, matching the context\u0027s statistics. It mentions the number of right-side attacks (9) and key player involvement (8), which are both supported by the context. The response also notes the substitution of Tavian Brooks, which is consistent with the player list in the context. The phrase \u0022The change began at 3 minutes\u0022 is somewhat ambiguous but can be interpreted as the shift occurring during the 50\u0027-62\u0027 period, which aligns with the context. Overall, the response is relevant, accurate, and complete based on the provided context and directly addresses the query for an analyst viewer using match evidence without adding unrelated information.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2172,
-          "completionTokens": 210
+          "completionTokens": 203
         },
         {
           "caseId": "A-INVENTED_MINUTE",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the percentage change, timing, and player involvement, which aligns well with the user\u0027s request for an Analyst viewer in English.",
+          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, quantifying the change in attack direction and linking it to a substitution, which aligns well with the user\u0027s request for an analyst-level explanation in English.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1823,
-          "completionTokens": 63
+          "completionTokens": 67
         },
         {
           "caseId": "A-INVENTED_MINUTE",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically for an Analyst viewer and using match evidence. It logically presents the information by first stating the shift direction, then quantifying the change in attack distribution, and finally linking the change to a substitution and key player involvement. The ideas are organized clearly and flow smoothly, making it easy to follow the explanation. The response uses appropriate transitions and provides relevant statistics to support the explanation, demonstrating coherence throughout.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically for an Analyst viewer and using match evidence. It logically presents the information by first stating the shift direction, then providing statistics comparing the periods before and after the substitution, and finally noting the involvement of a key player and the timing of the change. The ideas are organized clearly and flow smoothly, making it easy to follow the explanation. Transitions between points are implicit but effective, and the response maintains focus on the question throughout. Therefore, the response is coherent and effectively structured.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1346,
-          "completionTokens": 125
+          "completionTokens": 142
         }
       ]
     },
@@ -11432,22 +11419,22 @@
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack direction, percentages, and player involvement, which aligns well with the user\u0027s request for an Analyst viewer in English.",
+          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, including statistics on attack direction, timing, and player involvement, fulfilling the user\u0027s request clearly and accurately.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1821,
-          "completionTokens": 65
+          "completionTokens": 58
         },
         {
           "caseId": "A-PLAYER_COUNT",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in Westhaven\u0027s attack direction after a substitution. It provides relevant statistics (90% of attacks down the right from 50\u0027 to 62\u0027, up from 31% earlier) and mentions key player involvement, which supports the explanation. The ideas are logically organized and connected, making the explanation clear and easy to follow. The response uses appropriate transitions and presents the information in a coherent manner that aligns well with the query\u0027s requirements.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically for an Analyst viewer and using match evidence. It logically presents the information by first stating the shift direction, then quantifying the change in attack distribution, and finally linking the shift to the substitution of Tavian Brooks and key player involvement. The ideas are clearly connected and flow in a coherent manner, making it easy to follow the explanation. Therefore, the response is coherent and effectively organized.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1344,
-          "completionTokens": 137
+          "completionTokens": 124
         }
       ]
     },
@@ -11760,11 +11747,11 @@
           "evaluator": "groundedness",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven Athletic shifted their attacks strongly down the right channel after the substitution, which aligns with the context stating 90% of attacks went down the right from 50\u0027 to 62\u0027, up from 31% earlier. It mentions the number of right-side attacks (9) and key player involvement (8), both supported by the context. However, the response adds that the shift \u0022definitely proves the coach\u0027s change caused it,\u0022 which is not explicitly supported by the context. The context mentions a substitution (player Tavian Brooks) but does not provide a deterministic causal link or proof that the coach\u0027s change caused the shift, only that the shift occurred after substitution. Therefore, the response is mostly accurate and relevant but includes an unsupported causal claim, making it incomplete and partially correct rather than fully grounded. Hence, the response is partially correct but not fully complete or fully supported by the context.",
+          "reason": "Let\u0027s think step by step: The response accurately identifies the key fact from the context that Westhaven Athletic shifted their attacks down the right channel from 31% earlier in the match to 90% in the 50\u0027-62\u0027 period. It correctly mentions the number of attacks (9) and key player involvement (8) as stated in the context. The response also references the substitution of Tavian Brooks, which aligns with the context\u0027s mention of a substitute player (WHA-17) and the timing of the shift. However, the response adds the phrase \u0022This definitely proves the coach\u0027s change caused it,\u0022 which is an interpretation or conclusion not explicitly supported by the provided context. The context does not explicitly state causation by the coach\u0027s change, only the statistical shift and substitution. Despite this slight overreach, the response is largely grounded in the context, relevant, and mostly complete in explaining the attack channel shift for an analyst viewer. Therefore, the response is mostly correct and complete but includes a minor unsupported inference.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2174,
-          "completionTokens": 212
+          "completionTokens": 227
         },
         {
           "caseId": "A-CAUSAL_CERTAINTY",
@@ -11782,11 +11769,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the shift to the right side after a substitution. It provides relevant match evidence such as the percentage of attacks down the right increasing from 31% to 90%, the number of right-side attacks, and key player involvement. The ideas are presented in a logical order, starting with the observation of the shift, followed by statistical evidence, and concluding with the implication of the coach\u0027s change. Transitions between sentences are clear, making the explanation easy to follow. Overall, the response is coherent and effectively organized to answer the question.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the shift to the right side after a substitution. It provides relevant match evidence such as percentages of attacks down the right side before and after the substitution, the number of right-side attacks, and key player involvement. The ideas are presented in a logical order, starting with the observation of the shift, followed by supporting statistics, and concluding with the implication of the coach\u0027s decision. The sentences connect well and the explanation is clear and easy to follow, making the response coherent and effectively organized.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1348,
-          "completionTokens": 154
+          "completionTokens": 145
         }
       ]
     },
@@ -12095,20 +12082,20 @@
         {
           "caseId": "A-ACCESSIBILITY_CONTRADICTS",
           "evaluator": "groundedness",
-          "score": 4,
-          "passed": true,
-          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven shifted their attacks to the right side after the substitution near the 50th minute, which aligns with the context stating a shift from 31% to 90% attacks down the right channel between 50\u0027 and 62\u0027. It mentions the involvement of key players and the potential tactical advantage, which is supported by the context. However, the response incorrectly states \u0027Attacks down the right (share): 67%\u0027, which contradicts the context\u0027s precise figure of 90%. This incorrect detail reduces the accuracy of the response. Overall, the response is mostly correct and relevant but contains this notable inaccuracy, making it partially correct but not fully complete or accurate.",
+          "score": 2,
+          "passed": false,
+          "reason": "Let\u0027s think step by step: The response correctly identifies that Westhaven Athletic shifted their attacking play to the right side after the substitution near the 50th minute, which aligns with the context stating a shift to 90% attacks down the right between 50\u0027-62\u0027, up from 31% earlier. It mentions the involvement of key players and the potential tactical advantage, which is supported by the context. However, the response incorrectly states \u0027Attacks down the right (share): 67%\u0027, which contradicts the context\u0027s figure of 90%. This introduces an inaccuracy. Therefore, while the response is mostly correct and relevant, the incorrect percentage lowers its groundedness score to 2.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2182,
-          "completionTokens": 167
+          "completionTokens": 160
         },
         {
           "caseId": "A-ACCESSIBILITY_CONTRADICTS",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response explains the attack channel shift at 62:00 using match evidence, detailing the change in attack focus to the right side, the timing, percentage changes, and potential tactical impact, which directly addresses the user\u0027s request.",
+          "reason": "The response explains the attack channel shift at 62:00 using match evidence, detailing the change in attack focus, percentages before and after, and potential tactical impact, which directly addresses the user\u0027s request for an analyst-level explanation.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1832,
@@ -12119,11 +12106,11 @@
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in focus to the right side after a substitution near the 50th minute. It provides relevant statistics comparing the percentage of attacks on the right side before and after the substitution, highlighting the significance of the shift. The ideas are logically organized, with clear connections between the timing, the change in attack focus, and the potential impact on creating chances. The response uses appropriate transitions and presents the information in a way that an analyst viewer can understand, maintaining coherence throughout. Therefore, the response is coherent and effectively structured.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00, specifically noting the change in focus to the right side after a substitution near the 50th minute. It provides relevant match evidence with percentages showing the increase in attacks on the right side, and it logically connects these facts to the potential impact on creating chances. The ideas are presented in a clear, logical order with appropriate transitions, making the explanation easy to follow. Therefore, the response is coherent and effectively organized.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1356,
-          "completionTokens": 152
+          "completionTokens": 128
         }
       ]
     },
@@ -12436,22 +12423,22 @@
           "evaluator": "groundedness",
           "score": 2,
           "passed": false,
-          "reason": "Let\u0027s think step by step: The query asks for an explanation of the attack channel shift detected at 62:00 for an analyst viewer in French, using only the match evidence provided in the context. The context states that 90% of Westhaven\u0027s attacks between 50\u0027-62\u0027 were on the right side, compared to 31% earlier in the match, with 9 attacks in that period and a high statistical score (3.3). The response says 67% of attacks were on the right side during 50\u0027-62\u0027, which contradicts the 90% stated in the context. The response also mentions the entry of Tavian Brooks as a possible tactical adjustment, but the context does not explicitly link Brooks\u0027 entry to the shift, only listing him among players involved. Therefore, the response contains incorrect numerical information and adds an unsupported inference about Brooks. It is an attempt to respond but includes inaccuracies and unsupported details, making it unreliable based on the context. Hence, the groundedness score is 2.",
+          "reason": "Let\u0027s think step by step: The query asks for an explanation of the attack channel shift detected at 62:00 for an analyst viewer in French, using only the match evidence provided in the context. The context states that 90% of Westhaven\u0027s attacks between 50\u0027-62\u0027 were on the right side, compared to 31% earlier in the match, with 9 attacks in that period and a high statistical score (3.3). The response says 67% of attacks were on the right side during 50\u0027-62\u0027, which contradicts the 90% stated in the context. It also mentions 9 attacks and a high statistical score, which aligns with the context. The response adds that the change follows the entry of Tavian Brooks, but the context does not explicitly link the shift to Brooks\u0027 entry, only listing him among players involved. Therefore, the response contains an incorrect percentage and an unsupported inference about Brooks, making it partially correct but with inaccuracies. Hence, the response attempts to answer but contains incorrect information not supported by the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2179,
-          "completionTokens": 227
+          "completionTokens": 236
         },
         {
           "caseId": "A-LANGUAGE_VALUE_CHANGE",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 in French, using match evidence as requested, including statistics and tactical context, fully addressing the user\u0027s query.",
+          "reason": "The response explains the attack channel shift at 62:00 clearly in French, using match evidence such as attack percentages and player substitution, directly addressing the user\u0027s request for an Analyst viewer.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1815,
-          "completionTokens": 55
+          "completionTokens": 58
         },
         {
           "caseId": "A-LANGUAGE_VALUE_CHANGE",
@@ -12774,35 +12761,39 @@
           "evaluator": "groundedness",
           "score": 2,
           "passed": false,
-          "reason": "Let\u0027s think step by step: The context states that from the 50th to 62nd minute, Westhaven\u0027s attacks down the right channel increased to 90% from 31% earlier in the match, a change of \u002B59 percentage points. The response mentions a shift to 67% down the right side since the 50th minute, which is inconsistent with the 90% figure given in the context. The response correctly identifies the shift to the right flank and links it to the substitution of Tavian Brooks, which aligns with the context mentioning a substitution and a tactical focus on the right channel. However, the percentage figure provided in the response is inaccurate compared to the context. Therefore, the response attempts to answer the query but contains incorrect information regarding the percentage of attacks down the right side. This makes the response partially incorrect and less reliable based on the context provided.",
+          "reason": "Let\u0027s think step by step: The context states that from the 50th to 62nd minute, Westhaven\u0027s attacks down the right channel increased to 90% from 31% earlier in the match, a change of \u002B59 percentage points. The response claims a shift to 67% from 31%, which is inconsistent with the context\u0027s 90%. The response also attributes the shift to the substitution of Tavian Brooks, which is supported by the context mentioning a substitute player (WHA-17) and Tavian Brooks among players involved. However, the percentage figure given in the response is inaccurate and understates the extent of the shift. Therefore, the response attempts to answer the query and is mostly relevant but contains incorrect quantitative information, making it partially incorrect and incomplete based on the context.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 2158,
-          "completionTokens": 198
+          "completionTokens": 183
         },
         {
           "caseId": "A-AUDIENCE_FACT_CHANGE",
           "evaluator": "relevance",
           "score": 5,
           "passed": true,
-          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the change in attack direction and linking it to a substitution, which fully addresses the user\u0027s query.",
+          "reason": "The response directly explains the attack channel shift at 62:00 using match evidence, detailing the percentage change and linking it to a substitution, which fully addresses the user\u0027s query in clear language.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1809,
-          "completionTokens": 58
+          "completionTokens": 59
         },
         {
           "caseId": "A-AUDIENCE_FACT_CHANGE",
           "evaluator": "coherence",
           "score": 4,
           "passed": true,
-          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for a Studio viewer using match evidence. It logically presents the information by first stating the shift to the right flank after a substitution, then quantifying the change in attack distribution, and finally linking the shift to the substitution of Tavian Brooks. The ideas are clearly connected and flow smoothly, making the explanation easy to follow and understand. Therefore, the response is coherent and effectively organized.",
+          "reason": "Let\u0027s think step by step: The response directly addresses the query by explaining the attack channel shift detected at 62:00 for a Studio viewer, using match evidence. It logically presents the information by first stating the shift to the right flank after a substitution, then quantifying the change in attack distribution, and finally linking the shift to the substitution of Tavian Brooks. The ideas are clearly connected and flow smoothly, making the explanation easy to follow and understand. Therefore, the response is coherent and effectively organized.",
           "threshold": 3,
           "judgeModel": "gpt-4.1-mini-2025-04-14",
           "promptTokens": 1332,
-          "completionTokens": 121
+          "completionTokens": 122
         }
       ]
     }
+  ],
+  "notes": [
+    "The first evaluation run exposed locale-specific numeric-parsing false positives in the deterministic validator (compact z-scores, French and Spanish match minutes, Spanish sample sizes, compound pass counts). They were corrected and the dataset re-validated; the initial report is kept as 2026-10-19-initial.md.",
+    "Deterministic findings were recomputed offline with the corrected validator (no model calls): raw agent texts with findings fell from 6/28 to 1/28, and all 11 adversarial defects remain caught. Foundry run evalrun_72ca538217034d0bb108a4bc5d2958a9 then re-scored the same 39 texts; the initial run was evalrun_bcca1df81e6c4976b527c5e6846aa88c."
   ]
 }

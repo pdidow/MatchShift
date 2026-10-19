@@ -21,23 +21,25 @@ The full report is [evaluations/latest.md](evaluations/latest.md); machine-reada
 | | |
 |---|---|
 | Date | 2026-10-19 |
-| Foundry eval / run | `eval_619a039d062c45ad8b2be61c0c0dd184` / `evalrun_bcca1df81e6c4976b527c5e6846aa88c`, status **completed** |
+| Foundry eval / run | `eval_70ac43398d444304bc1706704752147f` / `evalrun_72ca538217034d0bb108a4bc5d2958a9`, status **completed** (after the validator fix below; initial run `evalrun_bcca1df81e6c4976b527c5e6846aa88c`) |
 | Where to see it | Foundry portal, project `matchshift`, **Evaluations** (the run is stored in the project) |
 | Judge | `gpt-4.1-mini` deployment; Foundry reported model `gpt-4.1-mini-2025-04-14` for all 117 judge calls |
 | Dataset | 39 rows: 28 published outputs (audience + accessible variants) from 14 live LIVE_FOUNDRY workflow runs, 11 adversarial |
 | Coverage | English, French, Spanish; Analyst, Studio, TeachMe, WhatMatters; 8 insight types; 2 synthetic matches |
-| Model calls | 77 to generate the dataset (workflow agents + independent verifier) + 117 judge calls |
-| Judge tokens | 205,599 input, 15,050 output (reported by Foundry) |
+| Model calls | 77 to generate the dataset (workflow agents + independent verifier), then 117 judge calls per Foundry run (two runs on the same texts) |
+| Judge tokens (latest run) | 205,599 input, 14,947 output (reported by Foundry) |
 
 ### Layer 3: Foundry judges (scale 1 to 5, pass at 3 or more)
 
 | Evaluator | Published outputs: mean | passing | Adversarial: mean | passing |
 |---|---|---|---|---|
-| Groundedness | 4.86 | 28/28 | 3.55 | 7/11 |
-| Relevance | 4.96 | 28/28 | 5.00 | 11/11 |
-| Coherence | 4.29 | 28/28 | 4.09 | 11/11 |
+| Groundedness | 4.89 | 28/28 | 3.36 | 6/11 |
+| Relevance | 4.93 | 28/28 | 5.00 | 11/11 |
+| Coherence | 4.11 | 28/28 | 4.09 | 11/11 |
 
-Relevance and coherence are not meant to catch factual defects, so adversarial rows pass them as expected.
+Relevance and coherence are not meant to catch factual defects, so adversarial rows pass them as expected. The judge
+is not deterministic: on identical texts the initial run gave groundedness 4.86 / coherence 4.29 on published outputs
+and caught 4 of 11 defects (the accessible-text value change scored 4 there and 2 here).
 
 ### Adversarial set: which layer caught each defect
 
@@ -55,10 +57,10 @@ also quoted the injected sentence as unsupported.
 | Ungrounded match minute | caught | caught (with changes) | missed (5) |
 | Player count never computed | caught | caught (with changes) | missed (5) |
 | Causal certainty | caught | caught (with changes) | missed (4) |
-| Accessible text changes the key value | caught | caught (with changes) | missed (4) |
+| Accessible text changes the key value | caught | caught (with changes) | caught (2) |
 | French text changes the key value | caught | caught (REJECTED) | caught (2) |
 | Other audience mode changes the key value | caught | caught (with changes) | caught (2) |
-| **Total** | **11/11** | **11/11** | **4/11** |
+| **Total** | **11/11** | **11/11** | **5/11** (4/11 in the initial run) |
 
 The Verification Agent did not reject any of the 4 unmodified control texts (4/4 APPROVED).
 
@@ -70,13 +72,14 @@ overclaimed causes. That is the reason MatchShift does not replace exact validat
 
 | | Result |
 |---|---|
-| Raw agent texts (before verification) with no findings | 22/28 |
+| Raw agent texts (before verification) with no findings | 27/28 (22/28 before the validator fix) |
 | Published texts with no findings | 28/28 |
 | Multilingual groups (same insight in EN/FR/ES) consistent | 2/2 |
 | Audience-mode group (same insight, several modes) consistent | 1/1 |
 | Workflow runs published as verified | 14/14 |
 
-Manual review of the 9 findings on the 6 raw texts (all were reworded by the workflow before publishing):
+**Validator fix.** The initial run exposed locale-specific numeric-parsing false positives. Manual review of the 9
+findings on 6 raw texts (all reworded by the workflow before publishing) showed:
 
 - **1 true positive.** "8 key players" turns a key-player-involvement score into a player count, which MatchShift
   rejects by policy.
@@ -87,9 +90,15 @@ Manual review of the 9 findings on the 6 raw texts (all were reworded by the wor
   - a sample in "muestra de 10 ataques";
   - a baseline and current sample written as "45 and 30 passes".
 
-  No incorrect text was published because of them. The cost is wording: the repair step rephrased correct numbers, for
-  example "muestra de 10 ataques" became "muestra suficiente". The French and Spanish patterns, and samples in
-  "X and Y" form, are the next validator improvements.
+  No incorrect text was published because of them. The cost was wording: the repair step rephrased correct numbers,
+  for example "muestra de 10 ataques" became "muestra suficiente".
+
+These were corrected in `NumericGrounding.cs` with narrow, category-typed rules: z-score rounding, French and Spanish
+match-minute patterns, a Spanish sample-size pattern, same-noun compound counts, and "long-ball share" samples counted
+as passes. Each rule has a paired negative test (`LocaleNumericGroundingTests`). Re-validating the same dataset offline
+(`--phase revalidate`, no model calls) leaves only the true positive. All 11 adversarial defects are still caught by
+the finding each one introduces. The initial report is kept as
+[evaluations/2026-10-19-initial.md](evaluations/2026-10-19-initial.md).
 
 ## Run it
 
@@ -104,7 +113,8 @@ dotnet run --project tools/MatchShift.Cli -- foundry-eval
 dotnet run --project tools/MatchShift.Cli -- foundry-eval --confirm true
 
 # Phases: generate (dataset only), evaluate (Foundry only, reuses dataset.jsonl),
-# fetch --eval ID --run ID (re-read a completed run, GET only), render (rebuild reports from latest.json, no calls).
+# fetch --eval ID --run ID (re-read a completed run, GET only), render (rebuild reports from latest.json, no calls),
+# revalidate (recompute deterministic findings on dataset.jsonl with the current validator, no calls).
 dotnet run --project tools/MatchShift.Cli -- foundry-eval --confirm true --phase evaluate
 ```
 

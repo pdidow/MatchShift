@@ -44,6 +44,14 @@ public sealed class DatasetGenerator(Uri projectEndpoint, string deployment, Tok
 
     public const int EstimatedCallsPerWorkflow = 5;
 
+    /// <summary>The good case each mutation is applied to: G02 (French) and G04 (Studio) for the cross-variant defects, else G01.</summary>
+    public static CaseSpec AdversarialSpec(string mutationId) => mutationId switch
+    {
+        "LANGUAGE_VALUE_CHANGE" => GoodSpecs[1],
+        "AUDIENCE_FACT_CHANGE" => GoodSpecs[3],
+        _ => GoodSpecs[0],
+    };
+
     public static (int Workflows, int VerifierCalls, int FoundryRows, int FoundryJudgeCalls, int Total) Estimate(int adversarial = 11)
     {
         var rows = GoodSpecs.Count * 2 + adversarial;
@@ -108,7 +116,7 @@ public sealed class DatasetGenerator(Uri projectEndpoint, string deployment, Tok
         var accessibleText = published["G01"].Accessible ?? baseCtx.DeterministicNarrative.Fact;
         foreach (var m in Adversarial.For(baseCtx, audienceText, accessibleText, published["G02"].Audience, published["G04"].Audience))
         {
-            var spec = m.Id switch { "LANGUAGE_VALUE_CHANGE" => GoodSpecs[1], "AUDIENCE_FACT_CHANGE" => GoodSpecs[3], _ => GoodSpecs[0] };
+            var spec = AdversarialSpec(m.Id);
             var variant = m.Id == "ACCESSIBILITY_CONTRADICTS" ? Variant.Accessibility : Variant.Audience;
             var context = contexts[spec.Id];
             var baseText = m.Id switch

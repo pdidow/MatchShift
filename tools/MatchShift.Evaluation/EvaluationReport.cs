@@ -27,6 +27,9 @@ public sealed record EvaluationReport
     public required EvaluationSummary Summary { get; init; }
     public required IReadOnlyList<CaseResult> Cases { get; init; }
 
+    /// <summary>Factual history notes (e.g. validator changes since an earlier run), shown at the top of the report.</summary>
+    public IReadOnlyList<string> Notes { get; init; } = [];
+
     public static EvaluationReport Build(IReadOnlyList<EvalCase> cases, IReadOnlyList<FoundryScore> scores, FoundryRunInfo? foundry,
         string deployment, string endpointHost, int generationCalls, string estimate, DateTimeOffset now) => new()
     {
@@ -63,6 +66,13 @@ public static class ReportWriter
         sb.AppendLine();
         sb.AppendLine($"Model calls to generate the dataset (workflow agents plus the independent verifier): {r.GenerationModelCalls}. Estimate printed before running: {r.CostEstimate}");
         sb.AppendLine();
+        if (r.Notes.Count > 0)
+        {
+            sb.AppendLine("## History");
+            sb.AppendLine();
+            foreach (var n in r.Notes) sb.AppendLine($"- {n}");
+            sb.AppendLine();
+        }
         sb.AppendLine("MatchShift reports three separate quality layers. They are not blended into one score.");
         sb.AppendLine();
         sb.AppendLine("1. **Deterministic validation**: exact code checks against the authoritative match data.");

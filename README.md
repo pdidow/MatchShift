@@ -206,8 +206,8 @@ AI output quality is checked in three layers:
 - Microsoft Foundry Evaluations (groundedness, relevance, coherence).
 
 The latest real Foundry evaluation run covered 39 rows in English, French and Spanish, including 11 adversarial
-defects. Published outputs averaged 4.86/5 groundedness. The deterministic layer caught 11 of 11 defects, the
-Verification Agent 11 of 11, and Foundry groundedness 4 of 11. See [EVALUATION.md](docs/EVALUATION.md) and the
+defects. Published outputs averaged 4.89/5 groundedness. The deterministic layer caught 11 of 11 defects, the
+Verification Agent 11 of 11, and Foundry groundedness 5 of 11. See [EVALUATION.md](docs/EVALUATION.md) and the
 [latest report](docs/evaluations/latest.md).
 
 ## Optional: Microsoft Foundry and Azure

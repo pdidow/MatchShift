@@ -166,6 +166,19 @@ public class FoundryEvaluationTests
     }
 
     [Fact]
+    public void Revalidation_recomputes_findings_offline_and_keeps_adversarial_catches()
+    {
+        var stale = new[] { "UNSUPPORTED_NUMBER: stale finding from an older validator" };
+        var good = GoodCase("G01") with { DeterministicFindings = stale, RawAgentFindings = stale };
+        var bad = BadCase(Mutations().First(m => m.Id == "WRONG_SCORE")) with { IntroducedFindings = [] };
+        var result = Revalidation.Apply([good, bad]);
+        Assert.Empty(result[0].DeterministicFindings);
+        Assert.Empty(result[0].RawAgentFindings);
+        Assert.Equal(good.Response, result[0].Response);                     // texts are never changed
+        Assert.Contains(result[1].IntroducedFindings, f => f.StartsWith(IssueCodes.WrongScore, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Introduced_findings_ignore_defects_already_in_the_base_text()
     {
         Assert.Empty(DeterministicEvaluators.Introduced(["A", "B"], ["B", "A"]));

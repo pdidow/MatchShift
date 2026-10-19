@@ -53,7 +53,12 @@ Code checks what code can check exactly (`GroundingValidator.cs`), before and af
   "8 key players" is rejected even though a minimum sample of 8 exists); minimum samples only next to
   "minimum/at least/required"; any other number only against metric values (`UNSUPPORTED_NUMBER`);
 - scores are checked as scores; match minutes, minute ranges and clocks must not be in the future and must be a
-  window boundary, supporting-event time or the insight time (`WRONG_SCORE`, `FUTURE_TIME`, `UNSUPPORTED_TIME`);
+  window boundary, supporting-event time or the insight time (`WRONG_SCORE`, `FUTURE_TIME`, `UNSUPPORTED_TIME`).
+  This includes the French "la 50e minute", "entre la 50e et la 62e minute" and "à la 35e" (only "la Ne" closed by
+  "minute" or punctuation, so "la 2e tentative" is not a time) and the Spanish "a los 35 minutos" and "minuto 35";
+- test statistics ("z=3.3") are grounded only by a test statistic, when the authoritative value rounded to the
+  written number of decimals equals it (3.29 → "3.3"; "3.2" fails); "muestra de N" only by a metric's sample or
+  baseline sample; a compound "45 and 30 passes" needs both numbers to be grounded counts of that noun;
 - identifiers are not numbers: event IDs are validated as evidence, player IDs (`WHA-17`) must be players involved in
   the evidence, other identifiers (`event-203`, `id:17`) are ignored; sentences copied verbatim from the deterministic
   wording are grounded by construction;
@@ -127,16 +132,16 @@ They never contain prompts, agent instructions, hidden reasoning, tokens or keys
 
 The workflow's output is measured in three separate layers: deterministic validation, the Verification Agent, and
 Microsoft Foundry Evaluations (`builtin.groundedness`, `builtin.relevance`, `builtin.coherence`, judged by the same
-`gpt-4.1-mini` deployment). The latest real run, `eval_619a039d062c45ad8b2be61c0c0dd184`, covered 39 rows from 14 live
+`gpt-4.1-mini` deployment). The latest real run, `eval_70ac43398d444304bc1706704752147f`, covered 39 rows from 14 live
 workflow runs in English, French and Spanish plus 11 adversarial rows.
 
 | Adversarial defects caught (of 11) | Count |
 |---|---|
 | Deterministic validation | 11 |
 | Verification Agent alone | 11 |
-| Foundry groundedness | 4 |
+| Foundry groundedness | 5 |
 
-Published outputs scored a mean groundedness of 4.86/5, with all 28 passing. Developer-triggered with
+Published outputs scored a mean groundedness of 4.89/5, with all 28 passing. Developer-triggered with
 `foundry-eval`; see [EVALUATION.md](EVALUATION.md).
 
 ## The older deterministic narration pipeline

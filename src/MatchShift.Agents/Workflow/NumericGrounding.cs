@@ -51,12 +51,16 @@ public static partial class NumericGrounding
 
         // 5. Match minutes ("67'", "minute 67", "67th minute", "at/since/after 67 minutes"): not in the future, and a known time.
         //    Ranges ("minutes 50 to 62", "entre el minuto 50 y 62", "between the 50th and 62nd minute") are two match minutes.
-        work = Take(work, MinuteRangePattern(), m =>
-        {
-            CheckMinute(c, v, int.Parse(m.Groups["a"].Value, CultureInfo.InvariantCulture), problems);
-            CheckMinute(c, v, int.Parse(m.Groups["b"].Value, CultureInfo.InvariantCulture), problems);
-        });
-        foreach (var pattern in new[] { MinuteMarkPattern(), MinuteWordPattern(), OrdinalMinutePattern(), PrepositionMinutePattern() })
+        //    French: "entre la 50e et la 62e minute", "à la 35e" (only "la Ne" closed by "minute" or punctuation, so "la 2e
+        //    tentative" is not a time). Spanish: "a los 35 minutos" ("minuto 35" is MinuteWordPattern).
+        foreach (var range in new[] { MinuteRangePattern(), FrenchMinuteRangePattern() })
+            work = Take(work, range, m =>
+            {
+                CheckMinute(c, v, int.Parse(m.Groups["a"].Value, CultureInfo.InvariantCulture), problems);
+                CheckMinute(c, v, int.Parse(m.Groups["b"].Value, CultureInfo.InvariantCulture), problems);
+            });
+        foreach (var pattern in new[] { MinuteMarkPattern(), MinuteWordPattern(), OrdinalMinutePattern(), PrepositionMinutePattern(),
+                     FrenchMinutePattern(), SpanishMinutePattern() })
             work = Take(work, pattern, m => CheckMinute(c, v, int.Parse(m.Groups["n"].Value, CultureInfo.InvariantCulture), problems));
 
         // 6. "X of (the last) Y <noun>": both values must come from ONE metric (numerator and its sample).
@@ -68,14 +72,24 @@ public static partial class NumericGrounding
 
         // 8. Z-scores first: an explicit statistic ("z=3.29", "z-score of 3.29") is checked as a test statistic even when it
         //    sits next to the word "confidence"; only then are remaining numbers near "confidence" checked as confidence values.
-        work = Take(work, ZScorePattern(), m => Require(v.Statistics, Num(m.Groups[1].Value), m.Value.Trim(), "test statistic", problems));
+        work = Take(work, ZScorePattern(), m => RequireStatistic(v.Statistics, m.Groups[1].Value, m.Value.Trim(), problems));
         work = Take(work, ConfidencePattern(), m => Require(v.Confidence, Num(m.Groups["n"].Value), m.Value.Trim(), "confidence value", problems));
 
         // 9. Durations.
         work = Take(work, SecondsPattern(), m => Require(v.Seconds, Num(m.Groups[1].Value), m.Value.Trim(), "duration in seconds", problems));
         work = Take(work, MinutesDurationPattern(), m => Require(v.DurationMinutes, Num(m.Groups[1].Value), m.Value.Trim(), "duration in minutes", problems));
 
-        // 10. Counted nouns ("10 attacks", "8 key players", "12 supporting events").
+        // 10. Sample sizes ("muestra de 10"): only a metric's sample or baseline sample, never another value that happens to match.
+        work = Take(work, SpanishSamplePattern(), m => Require(v.Samples, Num(m.Groups["n"].Value), m.Value.Trim(), "sample size", problems));
+
+        //     Counted nouns ("10 attacks", "8 key players", "12 supporting events"). A compound "45 and 30 passes" checks BOTH
+        //     numbers against the noun; a bare "45 and 30" is not a count and falls through to the plain-value check.
+        work = Take(work, CompoundCountPattern(), m =>
+        {
+            var noun = m.Groups["noun"].Value.ToLowerInvariant();
+            CheckCount(c, v, Num(m.Groups["a"].Value), noun, $"{m.Groups["a"].Value} {noun}", work, m.Index, problems);
+            CheckCount(c, v, Num(m.Groups["b"].Value), noun, $"{m.Groups["b"].Value} {noun}", work, m.Index, problems);
+        });
         work = Take(work, CountPattern(), m => CheckCount(c, v, Num(m.Groups[1].Value), m.Groups["noun"].Value.ToLowerInvariant(),
             m.Value.Trim(), work, m.Index, problems));
 
@@ -98,6 +112,7 @@ public static partial class NumericGrounding
         public List<double> Points { get; } = [];
         public List<double> Confidence { get; } = [];
         public List<double> Statistics { get; } = [];
+        public List<double> Samples { get; } = [];
         public List<double> Seconds { get; } = [];
         public List<double> DurationMinutes { get; } = [45, 90];
         public HashSet<int> KnownMinutes { get; } = [];
@@ -131,6 +146,8 @@ public static partial class NumericGrounding
                         v.Seconds.AddRange(values);
                         break;
                 }
+                if (m.SampleSize > 0) v.Samples.Add(m.SampleSize);
+                if (m.BaselineSampleSize is > 0 and { } bs) v.Samples.Add(bs);
                 foreach (var w in new[] { m.BaselineWindow, m.CurrentWindow }.OfType<WindowFact>())
                 {
                     v.KnownMinutes.Add(w.FromMinute);
@@ -214,7 +231,8 @@ public static partial class NumericGrounding
                 var sampleNoun = stem is "attack" or "possession" or "observation" or "action";
                 foreach (var m in c.DeterministicMetrics)
                 {
-                    var related = m.Key.Contains(stem, StringComparison.OrdinalIgnoreCase) || m.Label.Contains(stem, StringComparison.OrdinalIgnoreCase);
+                    var related = m.Key.Contains(stem, StringComparison.OrdinalIgnoreCase) || m.Label.Contains(stem, StringComparison.OrdinalIgnoreCase)
+                        || SampleNoun(m.Key) == stem;
                     if (related && m.Unit == "Count") allowed.AddRange(new[] { (double?)m.Current, m.Baseline, m.Change is { } d ? Math.Abs(d) : null }.OfType<double>());
                     if (related || sampleNoun)
                     {
@@ -227,6 +245,27 @@ public static partial class NumericGrounding
         }
         if (!allowed.Any(a => VerificationAgent.Matches(n, a)))
             problems.Add(new(IssueCodes.UnsupportedNumber, $"'{text}' is not a grounded count of {noun}."));
+    }
+
+    /// <summary>What a metric's sample counts, when its name does not say so ("LongBallShare" is a share of passes).</summary>
+    private static string? SampleNoun(string metricKey) => metricKey switch
+    {
+        "LongBallShare" => "pass",
+        _ => null,
+    };
+
+    /// <summary>
+    /// Test statistics. Rounding rule: a claim written with d decimals (d &gt;= 1) is grounded when an authoritative statistic
+    /// rounded half away from zero to d decimals equals it exactly ("z=3.3" for 3.29, "z=3.29" for 3.29; "z=3.2" fails).
+    /// Otherwise the shared tolerance applies (an integer "z=3" may round 3.29). Only test statistics are candidates.
+    /// </summary>
+    private static void RequireStatistic(List<double> allowed, string written, string text, List<Problem> problems)
+    {
+        var n = Num(written);
+        var sep = written.IndexOfAny(['.', ',']);
+        var decimals = sep < 0 ? 0 : written.Length - sep - 1;
+        if (decimals >= 1 && allowed.Any(a => Math.Round(a, decimals, MidpointRounding.AwayFromZero) == Math.Round(n, decimals))) return;
+        Require(allowed, n, text, "test statistic", problems);
     }
 
     private static void Require(List<double> allowed, double n, string text, string category, List<Problem> problems)
@@ -330,6 +369,23 @@ public static partial class NumericGrounding
 
     [GeneratedRegex(@"\b(?:minutes?|minutos?|minuto)\s+(?<a>\d{1,3})\s*(?:to|and|y|et|-|–)\s*(?<b>\d{1,3})\b|\bbetween\s+(?:the\s+)?(?<a>\d{1,3})(?:st|nd|rd|th)?\s+and\s+(?:the\s+)?(?<b>\d{1,3})(?:st|nd|rd|th)?\s+minutes?\b", RegexOptions.IgnoreCase)]
     private static partial Regex MinuteRangePattern();
+
+    [GeneratedRegex(@"\b(?:entre|de)\s+la\s+(?<a>\d{1,3})e\s+(?:et|à)\s+la\s+(?<b>\d{1,3})e\s+minute\b", RegexOptions.IgnoreCase)]
+    private static partial Regex FrenchMinuteRangePattern();
+
+    // "la 35e" is a minute only when closed by "minute" or by punctuation/end: "la 2e tentative" is left alone.
+    [GeneratedRegex(@"\bla\s+(?<n>\d{1,3})e\b(?=\s*(?:minute\b|[.,;:!?)]|$))", RegexOptions.IgnoreCase)]
+    private static partial Regex FrenchMinutePattern();
+
+    // "a los 35 minutos", "desde los 50 minutos": a match minute. Durations ("durante 10 minutos") are not matched.
+    [GeneratedRegex(@"\b(?:a|desde|tras|hasta)\s+los\s+(?<n>\d{1,3})\s+minutos?\b(?!\s+y\s+\d)", RegexOptions.IgnoreCase)]
+    private static partial Regex SpanishMinutePattern();
+
+    [GeneratedRegex(@"\bmuestras?\s+(?:de\s+)?(?<n>\d+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SpanishSamplePattern();
+
+    [GeneratedRegex(@"\b(?<a>\d+)\s+(?:and|y|et)\s+(?<b>\d+)\s+(?:[\p{L}-]+\s+){0,2}?(?<noun>" + CountNouns + @")\b", RegexOptions.IgnoreCase)]
+    private static partial Regex CompoundCountPattern();
 
     [GeneratedRegex(@"(?<![\d.,])(?<n>\d{1,3})\s*['’′]")]
     private static partial Regex MinuteMarkPattern();
