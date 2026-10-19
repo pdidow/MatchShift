@@ -97,6 +97,10 @@ public interface IInsightAgentFactory
 
     /// <summary>Maps a provider exception to a failure kind and an optional server-requested retry delay. No message text is kept.</summary>
     (AgentFailureKind Kind, TimeSpan? RetryAfter) Classify(Exception exception) => AgentFailures.Classify(exception);
+
+    /// <summary>A safe diagnostic suffix such as "HTTP 403" (status code only: never a message, header or body).</summary>
+    string? FailureDetail(Exception exception) =>
+        exception is HttpRequestException { StatusCode: { } code } ? $"HTTP {(int)code}" : null;
 }
 
 public static class AgentFailures

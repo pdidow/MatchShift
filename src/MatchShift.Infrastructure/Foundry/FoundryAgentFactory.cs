@@ -96,6 +96,18 @@ public sealed class FoundryAgentFactory : IInsightAgentFactory
         return AgentFailures.Classify(exception);
     }
 
+    public string? FailureDetail(Exception exception)
+    {
+        for (var e = exception; e is not null; e = e.InnerException)
+            switch (e)
+            {
+                case ClientResultException { Status: > 0 } r: return $"HTTP {r.Status}";
+                case AuthenticationFailedException or CredentialUnavailableException: return "credential";
+                case HttpRequestException { StatusCode: { } code }: return $"HTTP {(int)code}";
+            }
+        return null;
+    }
+
     /// <summary>Acquires one Entra token at start-up (no model call) so the first workflow does not pay credential discovery time.</summary>
     public async Task WarmUpAsync(CancellationToken cancellationToken) =>
         await _credential.GetTokenAsync(new TokenRequestContext([TokenScope]), cancellationToken);

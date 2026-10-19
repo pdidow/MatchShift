@@ -125,6 +125,58 @@ public class AgentWorkflowApiTests(WebApplicationFactory<Program> factory) : ICl
         Assert.All(replayEvents, e => Assert.True(match.Events.First(m => m.Id == e).MatchSecond <= insight.DetectedAtSecond));
     }
 
+    /// <summary>A model that always refuses, as Foundry does before RBAC has propagated.</summary>
+    private sealed class ForbiddenModel : Microsoft.Extensions.AI.IChatClient
+    {
+        public int Calls;
+        public Task<Microsoft.Extensions.AI.ChatResponse> GetResponseAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            Microsoft.Extensions.AI.ChatOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref Calls);
+            throw new HttpRequestException("forbidden", null, HttpStatusCode.Forbidden);
+        }
+        public IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            Microsoft.Extensions.AI.ChatOptions? options = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+        public void Dispose() { }
+    }
+
+    private sealed class ManualTime : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
+    [Fact]
+    public async Task Fallback_stays_visible_to_pollers_and_is_only_rerun_after_the_cooldown()
+    {
+        var model = new ForbiddenModel();
+        var time = new ManualTime();
+        var runner = new InsightWorkflowRunner(new ChatClientAgentFactory(model, ExecutionMode.LiveFoundry, "microsoft-foundry", "gpt-test"));
+        var service = new AgentWorkflowService(runner, new MatchShift.Infrastructure.Foundry.AgentWorkflowOptions(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentWorkflowService>.Instance, time);
+        var session = new DemoSession(new MatchCatalog());
+        session.Seek(66 * 60);
+        var insight = session.Read((a, _) => a.Insights.First(i => i.Type == InsightType.AttackChannelShift));
+        var profile = new Agents.Narrative.ViewerProfile();
+
+        var first = await service.GetOrStart(session, insight, profile, false, WorkflowTrigger.OnDemand).Handle!.Completion;
+        Assert.Equal(WorkflowOutcome.FallbackUnverified, first.Outcome);
+        Assert.Contains("Authentication (HTTP 403)", first.Steps.First(s => s.Stage == Stages.TacticalAnalyst).AttemptFailures);
+        Assert.False(first.Published!.Verified);
+
+        // Polling right away sees the same result and makes no new model call.
+        var polled = service.GetOrStart(session, insight, profile, false, WorkflowTrigger.OnDemand).Handle!;
+        Assert.Equal(first.WorkflowExecutionId, polled.Snapshot().WorkflowExecutionId);
+        Assert.Equal(1, model.Calls);
+
+        // After the cool-down a new request runs the workflow again (e.g. once RBAC has propagated).
+        time.Now = DateTimeOffset.UtcNow + AgentWorkflowService.RetryCooldown + TimeSpan.FromSeconds(1);
+        var second = await service.GetOrStart(session, insight, profile, false, WorkflowTrigger.OnDemand).Handle!.Completion;
+        Assert.NotEqual(first.WorkflowExecutionId, second.WorkflowExecutionId);
+        Assert.Equal(2, model.Calls);
+    }
+
     [Fact]
     public void Meaningful_policy_only_admits_fresh_high_value_candidates()
     {

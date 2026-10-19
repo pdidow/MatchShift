@@ -191,7 +191,7 @@ Press **Play**. 1x = 30 match-seconds per real second (a full match in 3 minutes
 ## Tests and evaluation
 
 ```bash
-dotnet test                                               # 268 xUnit tests (core, data, analytics, agents + workflow, API)
+dotnet test                                               # 269 xUnit tests (core, data, analytics, agents + workflow, API)
 dotnet run --project tools/MatchShift.Cli -- evaluate --matches 120   # detector precision/recall vs ground truth
 dotnet run --project tools/MatchShift.Cli -- robustness   # flagship script re-simulated with 20 other seeds
 dotnet run --project tools/MatchShift.Cli -- analyze      # live insights for the flagship match
@@ -200,6 +200,11 @@ dotnet run --project tools/MatchShift.Cli -- export --matches 50   # Fabric-read
 ```
 
 ## Optional: Microsoft Foundry and Azure
+
+**Hosted:** MatchShift runs on Azure App Service (Free F1). Its system-assigned managed identity lets the
+Microsoft Agent Framework workflow call Microsoft Foundry (`gpt-4.1-mini`) with no keys. Locally, the same workflow
+authenticates with the Azure CLI. See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for setup, the required role and the
+judge walkthrough.
 
 For an offline demonstration of the provider workflow:
 

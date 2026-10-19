@@ -352,7 +352,7 @@ public class AgentWorkflowTests
         var x = await Run(runner, Context());
 
         Assert.Equal(WorkflowOutcome.Approved, x.Outcome);
-        Assert.Equal(["Throttled"], Step(x, Stages.TacticalAnalyst).AttemptFailures);
+        Assert.Equal(["Throttled (HTTP 429)"], Step(x, Stages.TacticalAnalyst).AttemptFailures);
         Assert.Equal(1, Step(x, Stages.TacticalAnalyst).RetryCount);
         Assert.Equal(["MalformedOutput"], Step(x, Stages.AudienceNarrative).AttemptFailures);
         Assert.Contains(x.RecoveryActions, r => r.Contains("recovered after retry"));
@@ -388,7 +388,7 @@ public class AgentWorkflowTests
         Assert.Equal(WorkflowOutcome.FallbackUnverified, x.Outcome);
         Assert.False(x.Published!.Verified);
         Assert.Null(x.Published.Headline);
-        Assert.Equal(["Authentication"], Step(x, Stages.Verification).AttemptFailures);
+        Assert.Equal(["Authentication (HTTP 401)"], Step(x, Stages.Verification).AttemptFailures);
         Assert.Single(model.For(AgentRole.Verification));
     }
 

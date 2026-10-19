@@ -70,7 +70,13 @@ public sealed class AgentWorkflowService(
     {
         var match = session.Match;
         var key = KeyFor(Mode, match, insight, profile, accessibility);
-        if (_handles.TryGetValue(key, out var existing)) return new(existing, null);
+        if (_handles.TryGetValue(key, out var existing))
+        {
+            // A failed or fallback result stays visible (pollers must see it, not trigger a new run), but it is not reused
+            // forever: after a cool-down, a new start request replaces it, so a cleared cause (RBAC propagation, outage) recovers.
+            if (!IsRetryable(existing)) return new(existing, null);
+            _handles.TryRemove(new KeyValuePair<string, Handle>(key, existing));
+        }
         if (!EvidenceGate.Check(insight, match).Approved) return new(null, "Evidence withheld: the insight does not match deterministic replay.");
 
         lock (_budgetGate)
@@ -146,6 +152,14 @@ public sealed class AgentWorkflowService(
             session.NotifyAgentResult(epoch);
         }
     }
+
+    /// <summary>How long a failed or fallback result is shown before a new request may run the workflow again.</summary>
+    public static readonly TimeSpan RetryCooldown = TimeSpan.FromSeconds(60);
+
+    private bool IsRetryable(Handle h) =>
+        h.Completion is { IsCompletedSuccessfully: true, Result: { } r }
+        && (r.Status == ExecutionStatus.Failed || r.Outcome == WorkflowOutcome.FallbackUnverified)
+        && _time.GetUtcNow() - (r.CompletedAt ?? h.Created) >= RetryCooldown;
 
     private void Evict()
     {

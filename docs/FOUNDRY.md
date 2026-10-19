@@ -16,7 +16,8 @@ dotnet run --project src/MatchShift.Api --launch-profile http -- --AgentWorkflow
 ```
 
 `AgentWorkflow:Credential` is `Default` (DefaultAzureCredential), `AzureCli` (fastest locally) or `ManagedIdentity`.
-The identity needs data-plane access to the Foundry project (for example the **Azure AI User** role). Without the two
+The identity needs the **Foundry User** role (formerly Azure AI User) on the Foundry project; see [DEPLOYMENT.md](DEPLOYMENT.md)
+for the hosted managed-identity setup and why Foundry Agent Consumer / Project Runtime User is not enough. Without the two
 variables, or with `AgentWorkflow:Mode=OfflineTemplate`, the same workflow runs with deterministic templates and no
 model calls. `/api/agents/status` reports which mode is active.
 

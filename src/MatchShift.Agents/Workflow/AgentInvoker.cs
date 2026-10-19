@@ -80,6 +80,7 @@ public sealed class AgentInvoker(IInsightAgentFactory factory, WorkflowLimits li
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(limits.AgentCallTimeout);
             TimeSpan? retryAfter = null;
+            string? detail = null;
             try
             {
                 var response = await agent.RunAsync<T>(prompt, session: null, serializerOptions: AgentJson.Options, cancellationToken: timeout.Token);
@@ -101,8 +102,9 @@ public sealed class AgentInvoker(IInsightAgentFactory factory, WorkflowLimits li
             catch (Exception ex)
             {
                 (last, retryAfter) = factory.Classify(ex);
+                detail = factory.FailureDetail(ex);
             }
-            failures.Add(last.Value.ToString());
+            failures.Add(detail is null ? last.Value.ToString() : $"{last.Value} ({detail})");
 
             var retryable = last is AgentFailureKind.Timeout or AgentFailureKind.Throttled or AgentFailureKind.ProviderError or AgentFailureKind.MalformedOutput;
             if (!retryable || attempt + 1 >= limits.MaxAttemptsPerAgent) break;
