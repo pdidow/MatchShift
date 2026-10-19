@@ -140,13 +140,16 @@ describe('speech queue', () => {
     expect(synth.spoken.map(u => u.text)).toEqual(['one', 'one'])
   })
 
-  it('uses a voice for the language and falls back to text when none exists', () => {
+  it('uses a voice for the language; without one it still speaks with the right lang and flags it', () => {
     const { synth, queue } = makeQueue()
     queue.say({ text: 'bonjour', kind: 'insight', lang: 'fr-FR' })
     expect(synth.spoken[0].voice?.name).toBe('Français')
     synth.end()
     queue.say({ text: 'hola', kind: 'insight', lang: 'es-ES' })
-    expect(synth.spoken).toHaveLength(1)
+    // No Spanish voice on this device: the browser chooses (never an explicit English voice), lang is still es-ES.
+    expect(synth.spoken).toHaveLength(2)
+    expect(synth.spoken[1].lang).toBe('es-ES')
+    expect(synth.spoken[1].voice).toBeNull()
     expect(queue.getState().missingVoice).toBe('es-ES')
     expect(queue.getState().transcript.at(-1)?.text).toBe('hola')
   })

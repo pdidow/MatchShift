@@ -187,7 +187,7 @@ export function describeReplayEvent(e: ReplayEvent, players: ReplayPlayer[], hom
   const ad = s.ad
   const byId = (id?: string) => players.find(p => p.id === id)
   const name = (p?: ReplayPlayer) => (p ? `${p.shortName} (${fill(ad.number, { n: p.shirtNumber })})` : '')
-  const actor = name(byId(e.playerId)) || (e.teamId === homeTeamId ? 'Home' : 'Away')
+  const actor = name(byId(e.playerId)) || (e.teamId === homeTeamId ? ad.home : ad.away)
   const target = name(byId(e.relatedPlayerId))
   const isHome = e.teamId === homeTeamId
   if (e.x === undefined || e.y === undefined) {

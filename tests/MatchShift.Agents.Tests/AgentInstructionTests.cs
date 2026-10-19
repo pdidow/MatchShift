@@ -52,6 +52,29 @@ public class AgentInstructionTests
         Assert.True(Has(i, "Spoken and replay text follow the same PLAYER COUNTS and MATCH TIMES rules"));
     }
 
+    [Theory]
+    [MemberData(nameof(Roles))]
+    public void Every_agent_writes_in_the_viewer_language_including_fallback_phrases(AgentRole role)
+    {
+        var i = MatchShiftAgents.For(role).Instructions;
+        Assert.True(Has(i, "Write all viewer-facing text in the language code insightContext.language"));
+        Assert.True(Has(i, "'in the recent sequence', written in insightContext.language"));
+    }
+
+    [Fact]
+    public void Accessibility_fallback_text_follows_the_selected_language()
+    {
+        var match = SyntheticMatchGenerator.GenerateFlagship().Match;
+        var insight = LiveMatchAnalyzer.AnalyzeFull(match).Insights.First(i => i.Type == InsightType.AttackChannelShift);
+        string Spoken(string lang) => TemplateOutputs.Accessibility(
+            InsightContextBuilder.Build(insight, match, new ViewerProfile(ViewerMode.Analyst, lang), AccessibilityRequirements.All, "wf")).SpokenSummary;
+        var (en, fr, es) = (Spoken("en"), Spoken("fr"), Spoken("es"));
+        Assert.NotEqual(en, fr);
+        Assert.NotEqual(en, es);
+        Assert.NotEqual(fr, es);
+        Assert.Equal("fr", InsightContextBuilder.Build(insight, match, new ViewerProfile(ViewerMode.Analyst, "fr"), AccessibilityRequirements.All, "wf").Language);
+    }
+
     [Fact]
     public void Verifier_treats_player_counts_and_ungrounded_times_as_unsupported()
     {

@@ -63,6 +63,23 @@ export interface SynthLike {
   pause(): void
   resume(): void
   getVoices(): VoiceLike[]
+  addEventListener?(type: 'voiceschanged', listener: () => void): void
+  removeEventListener?(type: 'voiceschanged', listener: () => void): void
+}
+
+const baseOf = (lang: string) => lang.toLowerCase().replace('_', '-').split('-')[0]
+const localeOf = (lang: string) => lang.toLowerCase().replace('_', '-')
+
+/**
+ * Picks the voice for a BCP-47 locale: an exact locale match, then any voice of the same base language (the platform
+ * default first, then a local voice), else null — the utterance still carries `lang`, so the browser chooses. A voice
+ * of a different language is never chosen explicitly. Voices are the viewer's browser/OS voices, never the server's.
+ */
+export function chooseVoice(voices: VoiceLike[], lang: string): VoiceLike | null {
+  const exact = voices.filter(v => localeOf(v.lang) === localeOf(lang))
+  const same = exact.length > 0 ? exact : voices.filter(v => baseOf(v.lang) === baseOf(lang))
+  if (same.length === 0) return null
+  return same.find(v => v.default) ?? same.find(v => (v as { localService?: boolean }).localService) ?? same[0]
 }
 
 interface Queued extends SpeechMessage { priority: Priority; createdAt: number; entry: TranscriptEntry }
@@ -92,6 +109,36 @@ export class SpeechQueue {
     this.makeUtterance = options?.makeUtterance ?? ((text) => new SpeechSynthesisUtterance(text) as unknown as UtteranceLike)
     this.now = options?.now ?? (() => Date.now())
     this.state = { supported: !!this.synth, speaking: false, paused: false, muted: false, current: null, transcript: [], missingVoice: null }
+    // Voices often load after the page (getVoices() can be empty at first). One listener refreshes the cached list and
+    // clears a "missing voice" notice that was only due to voices not having loaded yet.
+    this.synth?.addEventListener?.('voiceschanged', this.onVoicesChanged)
+  }
+
+  private voices: VoiceLike[] = []
+  private language: string | null = null
+
+  private readonly onVoicesChanged = () => {
+    this.voices = this.synth?.getVoices() ?? []
+    if (this.state.missingVoice && chooseVoice(this.voices, this.state.missingVoice)) this.update({ missingVoice: null })
+  }
+
+  /** Detach from the browser synthesiser (tests, or if the queue is ever replaced). */
+  dispose() {
+    this.synth?.removeEventListener?.('voiceschanged', this.onVoicesChanged)
+    this.stopAll()
+  }
+
+  /**
+   * The viewer's language changed: drop queued speech in any other language and stop it if it is playing,
+   * so narration in the old language never continues after a switch. Messages in the new language are kept.
+   */
+  setLanguage(lang: string) {
+    if (this.language === lang) return
+    this.language = lang
+    const base = baseOf(lang)
+    this.queue = this.queue.filter(q => baseOf(q.lang) === base)
+    if (this.currentItem && baseOf(this.currentItem.lang) !== base) this.cancelCurrent()
+    if (this.state.missingVoice && baseOf(this.state.missingVoice) !== base) this.update({ missingVoice: null })
   }
 
   subscribe(listener: (s: SpeechState) => void) {
@@ -116,13 +163,11 @@ export class SpeechQueue {
     this.pushTranscript(entry)
     if (!this.synth || this.state.muted) { this.emit(); return true }
 
+    // Voices are loaded but none speaks this language: still speak with utterance.lang set (the browser picks the best it
+    // has) and surface a notice so the viewer knows pronunciation may suffer; the text is always in the transcript.
     const voice = this.voiceFor(message.lang)
-    if (voice === undefined) {
-      // Voices are loaded but none speaks this language: show the text instead of mispronouncing it.
-      this.update({ missingVoice: message.lang })
-      return true
-    }
-    if (this.state.missingVoice === message.lang) this.update({ missingVoice: null })
+    if (voice === undefined) this.update({ missingVoice: message.lang })
+    else if (this.state.missingVoice === message.lang) this.update({ missingVoice: null })
 
     const item: Queued = { ...message, priority, createdAt: this.now(), entry }
     if (priority === 2 && this.currentItem && this.currentItem.priority < 2) {
@@ -229,12 +274,9 @@ export class SpeechQueue {
    * or undefined if voices are available but none matches (fall back to text).
    */
   private voiceFor(lang: string): VoiceLike | null | undefined {
-    const voices = this.synth?.getVoices() ?? []
-    if (voices.length === 0) return null
-    const base = lang.toLowerCase().split('-')[0]
-    const matches = voices.filter(v => v.lang.toLowerCase().replace('_', '-').split('-')[0] === base)
-    if (matches.length === 0) return undefined
-    return matches.find(v => v.default) ?? matches[0]
+    if (this.voices.length === 0) this.voices = this.synth?.getVoices() ?? []
+    if (this.voices.length === 0) return null
+    return chooseVoice(this.voices, lang) ?? undefined
   }
 
   private pushTranscript(entry: TranscriptEntry) {

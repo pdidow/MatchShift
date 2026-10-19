@@ -68,9 +68,15 @@ Speech uses the browser's Web Speech API (`speechSynthesis`) through one queue (
 - **Critical items interrupt** lower-priority speech.
 - **Controls:** Mute, Pause/Resume (only while speaking), Repeat last (only once something has been spoken),
   Match status (in Audio match mode) and Transcript.
-- **Language-aware.** It uses en-GB, fr-FR or es-ES to match the UI language. If voices are installed but none matches,
-  it shows the text instead of mispronouncing it, and displays a notice. If the browser has no speech synthesis,
-  everything is still shown as captions.
+- **Language-aware.** Speech is the viewer's browser Web Speech API (`speechSynthesis`); the server never makes audio,
+  so voices come from the viewer's browser/OS and nothing is installed on Azure. Every utterance sets `lang` to en-GB,
+  fr-FR or es-ES to match the UI language, and the voice is chosen as: exact locale, then any voice of the same language
+  (platform default first, then a local voice), else no explicit voice so the browser picks one for that `lang`.
+  A voice of another language is never chosen explicitly. Voices that load late are picked up via `voiceschanged`.
+  If the device has no voice for the language, speech still runs with the right `lang` and a notice says so.
+  Switching language drops queued narration in the old language and stops it if it is playing. Spoken text itself is
+  localised (insight narratives, Accessibility Narrator output, WHY?, status and replay audio description). If the
+  browser has no speech synthesis, everything is still shown as captions.
 - **Transcript.** Every message, whether spoken or muted, is kept with its time, type and text, up to the last 200.
   Selecting an entry speaks it again.
 
@@ -254,8 +260,10 @@ the default is restored.
 10. **Presets:** Low vision, Audio-first, Reduced motion, Default. Changing any option shows *Custom*.
 11. **Accessible audio persona** (Viewer menu). Switch back to *Tactical analyst* and check that your previous options
     return.
-12. **Language:** switch to Français or Español; speech uses that language. Without an installed voice, a notice shows
-    and the text is used instead.
+12. **Language:** switch to Français or Español; speech uses that language and voice, and narration queued in the
+    previous language stops. Without a voice for that language on the device, a notice shows and the browser picks a
+    voice for the requested `lang`. (Verified on the hosted app in Chrome on Windows: en-GB → Microsoft George,
+    fr-FR → Google français, es-ES → Google español; French and Spanish replay audio description.)
 13. **Combinations to spot-check:**
     - High contrast + Extra large + Monochrome.
     - Reduced motion + Audio description in the replay.

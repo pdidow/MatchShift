@@ -69,6 +69,8 @@ export default function App() {
   const streamProfile = useMemo<Profile>(() => ({ ...profile, accessible: wantsAccessible }), [profile, wantsAccessible])
   const as = a11yStrings(profile.language)
   const voiceLang = speechLang(profile.language)
+  // Switching language drops and stops queued narration in the old language, so it never keeps playing.
+  useEffect(() => { a11y.speech.setLanguage(voiceLang) }, [a11y.speech, voiceLang])
   const [centerOpen, setCenterOpen] = useState(false)
   const [keysOpen, setKeysOpen] = useState(false)
   const [description, setDescription] = useState<string | null>(null)

@@ -34,7 +34,8 @@ public static class MatchShiftAgents
         "to make one. Name only players listed in insightContext, and describe patterns without a count (e.g. 'right-sided activity " +
         "increased'). MATCH TIMES: use only times that appear in insightContext (matchTime, metric window minutes, sourceEvents " +
         "clock values); never estimate, round or approximate a minute ('around the 67th minute'). If timing matters otherwise, " +
-        "say 'during this phase' or 'in the recent sequence'. Never invent numbers, counts, players, times or event IDs.";
+        "say 'during this phase' or 'in the recent sequence', written in insightContext.language. Never invent numbers, counts, " +
+        "players, times or event IDs.";
 
     public static AgentDefinition TacticalAnalyst { get; } = new(AgentRole.TacticalAnalyst, "MatchShift Tactical Analyst",
         "Interprets the deterministic evidence tactically: facts used, inference, possible explanation, significance, limits.",
