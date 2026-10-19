@@ -49,9 +49,11 @@ public static class ReplayBuilder
 
     public static ReplaySequence ForInsight(Match match, Insight insight)
     {
-        var evidence = insight.SupportingEventIds.Concat(insight.Visuals.SelectMany(v => v.EventIds)).ToHashSet();
+        // Only SupportingEventIds are evidence. Context-only visual events still help choose the clip, but are flagged as
+        // context, never as evidence.
+        var evidence = new EvidenceSets(insight.SupportingEventIds.ToHashSet(), insight.ContextEventIds.ToHashSet());
         var byId = match.Events.ToDictionary(e => e.Id);
-        var evidenceEvents = evidence.Where(byId.ContainsKey).Select(id => byId[id]).OrderBy(e => e.SequenceNumber).ToList();
+        var evidenceEvents = evidence.Supporting.Concat(evidence.Context).Where(byId.ContainsKey).Select(id => byId[id]).OrderBy(e => e.SequenceNumber).ToList();
         var attacking = AttackingTeam(match, insight);
 
         var clips = new List<ReplayClip>();
@@ -83,7 +85,8 @@ public static class ReplayBuilder
             .ToList();
 
         return new ReplaySequence(match.Id, insight.Id, insight.Type.Code(), insight.TeamId, match.HomeTeam.Id, match.AwayTeam.Id,
-            insight.Span, evidenceEvents.Select(e => e.Id).ToList(), relevant.Distinct().ToList(), players, clips, Notice);
+            insight.Span, evidenceEvents.Where(e => evidence.Supporting.Contains(e.Id)).Select(e => e.Id).ToList(), relevant.Distinct().ToList(), players, clips, Notice,
+            evidenceEvents.Where(e => evidence.Context.Contains(e.Id)).Select(e => e.Id).ToList());
     }
 
     /// <summary>The team whose attack the replay follows: the punishing team for a dangerous turnover, otherwise the insight's team.</summary>
@@ -216,8 +219,11 @@ public static class ReplayBuilder
 
     // ------------------------------------------------------------------ clip construction
 
+    /// <summary>Supporting evidence and context-only event IDs of one insight.</summary>
+    public sealed record EvidenceSets(IReadOnlySet<string> Supporting, IReadOnlySet<string> Context);
+
     public static ReplayClip BuildClip(Match match, Insight insight, string key, string label, (int From, int To) window,
-        IReadOnlySet<string> evidence, string attackingTeam)
+        EvidenceSets evidence, string attackingTeam)
     {
         var (from, to) = window;
         var duration = (double)(to - from);
@@ -281,7 +287,7 @@ public static class ReplayBuilder
         return result;
     }
 
-    private static ReplayEvent ToReplayEvent(Match match, TimedEvent t, IReadOnlySet<string> evidence)
+    private static ReplayEvent ToReplayEvent(Match match, TimedEvent t, EvidenceSets evidence)
     {
         var e = t.Event;
         var home = match.IsHome(e.TeamId);
@@ -289,7 +295,7 @@ public static class ReplayBuilder
         (double X, double Y)? end = e.HasEndLocation ? Pitch.ToAbsolute(e.EndX!.Value, e.EndY!.Value, home) : null;
         return new ReplayEvent(e.Id, e.SequenceNumber, t.Time, t.EndTime, e.MatchSecond, MatchClock.Format(e.MatchSecond),
             e.Type.ToString(), e.Outcome.ToString(), LabelOf(match, e), e.TeamId, e.PlayerId, e.RelatedPlayerId,
-            R(s?.X), R(s?.Y), R(end?.X), R(end?.Y), e.Qualifier, evidence.Contains(e.Id));
+            R(s?.X), R(s?.Y), R(end?.X), R(end?.Y), e.Qualifier, evidence.Supporting.Contains(e.Id), evidence.Context.Contains(e.Id));
     }
 
     /// <summary>Broadcast label for an event, e.g. HIGH_PRESS_INTERCEPTION or PROGRESSIVE_PASS.</summary>

@@ -142,9 +142,9 @@ public static class DemoEndpoints
         {
             var insight = a.Insights.FirstOrDefault(i => i.Id == id);
             if (insight is null) return Results.NotFound();
-            var ids = insight.Visuals.SelectMany(v => v.EventIds).Concat(insight.SupportingEventIds).ToHashSet();
+            var ids = insight.SupportingEventIds.Concat(insight.ContextEventIds).ToHashSet();
             var events = s.Match.Events.Where(e => ids.Contains(e.Id)).Select(e => SnapshotBuilder.Event(e, s.Match)).ToList();
-            return Results.Ok(new InsightEventsDto(insight.Id, insight.Visuals, events));
+            return Results.Ok(new InsightEventsDto(insight.Id, insight.Visuals, events, [.. insight.SupportingEventIds.Distinct()], insight.ContextEventIds));
         }));
 
         // 3D tactical replay: a deterministic reconstruction of the sequence behind the insight.
@@ -193,7 +193,8 @@ public static class DemoEndpoints
             if (highlight is null) return Results.NotFound();
             var ids = highlight.RelevantEventIds.ToHashSet();
             var events = s.Match.Events.Where(e => ids.Contains(e.Id)).Select(e => SnapshotBuilder.Event(e, s.Match)).ToList();
-            return Results.Ok(new InsightEventsDto(highlight.Id, [new VisualLayer("highlight", VisualStyle.Routes, highlight.RelevantEventIds)], events));
+            return Results.Ok(new InsightEventsDto(highlight.Id, [new VisualLayer("highlight", VisualStyle.Routes, highlight.RelevantEventIds)], events,
+                [.. highlight.RelevantEventIds.Distinct()], []));
         }));
 
         demo.MapGet("/recap/{period}", async (string period, string? style, string? lang, string? team, DemoSession s,

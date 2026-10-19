@@ -109,6 +109,8 @@ export interface InsightCard {
   narrative: Narrative
   /** Outcome of the agent workflow for this insight, once one has finished. AI text only when agent.verified. */
   agent?: PublishedInsight
+  /** Events drawn only as context by SHOW ME; not supporting evidence. */
+  contextEventIds?: string[]
 }
 
 export interface HighlightCard {
@@ -242,7 +244,12 @@ export interface MatchDetail {
 export interface InsightEvents {
   insightId: string
   layers: VisualLayer[]
+  /** Every drawn event: supporting evidence plus any context-only events. */
   events: PitchEvent[]
+  /** The authoritative evidence (equals the card's supportingEventCount). */
+  supportingEventIds?: string[]
+  /** Drawn grey for comparison; never counted as supporting evidence. */
+  contextEventIds?: string[]
 }
 
 export interface RecapResponse {

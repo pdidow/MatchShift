@@ -18,6 +18,10 @@ import { a11yStrings, speechLang } from './a11y/strings'
 import { SHIFT_TYPES, describeFocus, goalAnnouncement, insightSpeech, matchStatus, periodicDue, priorityOf, shouldSpeak, simplifiedText, whatChanged, whyNarration } from './a11y/describe'
 import { applyPreset, DEFAULT_PREFS, loadPrefs, speechEnabled } from './a11y/prefs'
 import { cueFor } from './a11y/sounds'
+import { JudgeGuide } from './guide/JudgeGuide'
+import type { GuideStep } from './guide/guide'
+import { FLAGSHIP, GUIDE_STEPS, findFlagship, wantsGuideFromUrl } from './guide/guide'
+import { evidenceLegend, splitEvidence } from './evidence'
 
 type Tab = 'live' | 'highlights' | 'recap' | 'agents'
 const TABS: Tab[] = ['live', 'highlights', 'recap', 'agents']
@@ -76,6 +80,10 @@ export default function App() {
   const [description, setDescription] = useState<string | null>(null)
   // The intro splash is decided once at load: toggling motion options later must not replay it over the app.
   const [showSplash] = useState(() => !a11y.reducedMotion)
+
+  // Guided demo (optional): a step over the real product, started from the top bar, the empty state or ?demo=judge.
+  const [guide, setGuide] = useState<GuideStep | null>(() => (wantsGuideFromUrl(window.location.search) ? 'intro' : null))
+  const [awaitFlagship, setAwaitFlagship] = useState(false)
 
   useEffect(() => {
     try { localStorage.setItem('matchshift.profile', JSON.stringify(profile)) } catch { /* ignore */ }
@@ -172,6 +180,19 @@ export default function App() {
 
   useEffect(() => { document.documentElement.lang = profile.language }, [profile.language])
 
+  const flagship = snap ? findFlagship(snap.matchId, snap.insights) : undefined
+  const scrollToCard = (id: string) => window.setTimeout(() =>
+    document.getElementById(`card-${id}`)?.scrollIntoView({ block: 'nearest', behavior: a11y.reducedMotion ? 'auto' : 'smooth' }), 60)
+
+  // After the guide jumps to the flagship moment, select the insight once the new snapshot contains it. Declared after the
+  // effects that clear the selection on a new epoch, so it runs after them.
+  useEffect(() => {
+    if (!awaitFlagship || !flagship) return
+    setAwaitFlagship(false)
+    setSelected(flagship.id)
+    scrollToCard(flagship.id)
+  }, [awaitFlagship, flagship?.id, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const update = (patch: Partial<Profile>) => setProfile((p) => ({ ...p, ...patch }))
 
   const teamName = useCallback((id?: string) => (snap ? (id === snap.home.id ? snap.home.shortName : id === snap.away.id ? snap.away.shortName : '') : ''), [snap])
@@ -194,6 +215,46 @@ export default function App() {
     if (currentSnapshot.current?.matchId !== snap?.matchId || currentSnapshot.current?.epoch !== snap?.epoch) return
     setFocus({ events, caption: `${h.minute}' · ${h.headline}`, teamId: h.teamId })
   }
+
+  /** Moves the guided demo to a step by performing that step's REAL product action. */
+  const goGuide = (step: GuideStep) => {
+    setGuide(step)
+    if (step === 'intro') return
+    if (!flagship) {
+      // Jump to the flagship moment: the flagship match, paused just after the insight is detected.
+      setWhy(null); setFocus(null); setReplayId(null); setTab('live')
+      setAwaitFlagship(true)
+      void (async () => { await api.reset(FLAGSHIP.matchId); await api.seek(FLAGSHIP.seekMinute) })()
+      if (step !== 'insight') setGuide('insight')
+      return
+    }
+    const card = flagship
+    setSelected(card.id)
+    if (step !== 'replay') setReplayId(null)
+    if (step !== 'why') setWhy(null)
+    if (step === 'agents' || step === 'trust') {
+      setTab('agents')
+      if (step === 'trust') window.setTimeout(() => document.getElementById('eval-proof')?.scrollIntoView({ block: 'nearest', behavior: a11y.reducedMotion ? 'auto' : 'smooth' }), 80)
+      return
+    }
+    setTab('live')
+    if (step === 'insight') { setFocus(null); scrollToCard(card.id) }
+    else if (step === 'why') setWhy(card)
+    else if (step === 'show') void showInsight(card)
+    else if (step === 'replay') openReplay(card.id)
+  }
+
+  // The guide also follows the viewer's own clicks on the flagship insight (forward only), so using the real buttons
+  // (including from the keyboard inside WHY?) keeps the explanation in step.
+  useEffect(() => {
+    if (!guide || guide === 'intro' || !flagship) return
+    const id = flagship.id
+    const derived: GuideStep | null = tab === 'agents' && selected === id ? 'agents'
+      : replayId === id ? 'replay' : focus?.insightId === id ? 'show' : why?.id === id ? 'why' : null
+    if (derived && GUIDE_STEPS.indexOf(derived) > GUIDE_STEPS.indexOf(guide)) setGuide(derived)
+  }, [tab, selected, replayId, focus, why, flagship?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const guideNext = guide === 'insight' ? 'why' : guide === 'why' ? 'show' : guide === 'show' ? 'replay' : null
 
   // Deep links: ?why=<insightId> opens the evidence, ?show=<insightId> draws it on the pitch.
   const [deepLinkDone, setDeepLinkDone] = useState(false)
@@ -355,6 +416,7 @@ export default function App() {
         </div>
 
         <div className="controls-right">
+          {!guide && <button className="chip guide-entry" onClick={() => goGuide('intro')} title={s.guide.entryHint}>{s.guide.entry}</button>}
           <A11yButton lang={profile.language} onOpen={() => setCenterOpen(true)} />
     < a
 className = "chip"
@@ -418,7 +480,7 @@ rel = "noreferrer"
                       readAloud(text, 'describe', as.describe.title)
                     }}>{as.describe.button}</button>
                   )}
-                  {focus.insightId && <button className="chip replay-btn" onClick={() => openReplay(focus.insightId!)}>{s.replay.button}</button>}
+                  {focus.insightId && <button className={`chip replay-btn ${guide === 'show' && focus.insightId === flagship?.id ? 'guide-target' : ''}`} onClick={() => openReplay(focus.insightId!)}>{s.replay.button}</button>}
                   <button className="primary" onClick={() => { setFocus(null) }}>{s.backToLive}</button>
                 </span>
               </div>
@@ -426,7 +488,12 @@ rel = "noreferrer"
             <div className="pitch-legend">
               <span className="legend-key"><i style={{ background: HOME_COLOR }} />{snap.home.name}</span>
               <span className="legend-key"><i className="swatch-away" style={{ background: AWAY_COLOR }} />{snap.away.name}</span>
-              {focus && <span>{s.showingEvents} ({focus.events.events.length})</span>}
+              {focus && (() => {
+                const split = splitEvidence(focus.events)
+                const sup = split.supporting
+                return <span>{s.showingEvents}: {evidenceLegend(split, s.supportingLegend, s.contextLegend)}
+                  {sup.length > 0 && <> · <span className="mono">{sup[0].clock}–{sup[sup.length - 1].clock}</span></>}</span>
+              })()}
             </div>
             {description && focus && <p className="pitch-description"><strong>{as.describe.title}:</strong> {description}</p>}
           </div>
@@ -448,22 +515,26 @@ rel = "noreferrer"
           }}>
             {TABS.map((k) => (
               <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="tab-panel" tabIndex={tab === k ? 0 : -1}
-                className={tab === k ? 'active' : ''} onClick={() => setTab(k)}>
+                className={`${tab === k ? 'active' : ''} ${guide === 'replay' && k === 'agents' ? 'guide-target' : ''}`} onClick={() => setTab(k)}>
                 {k === 'live' ? `${s.live} (${snap.insights.length})` : s[k]}
               </button>
             ))}
           </div>
           <div className="tab-body" role="tabpanel" id="tab-panel" aria-labelledby={`tab-${tab}`}>
             {tab === 'live' && (snap.insights.length === 0
-              ? <p className="empty">{s.waiting}</p>
+              ? <div className="empty">
+                  <p>{s.waiting}</p>
+                  {!guide && <button className="chip guide-entry" onClick={() => goGuide('insight')}>{s.guide.entryHint} →</button>}
+                </div>
               : snap.insights.map((card) => (
                 <InsightCardView key={card.id} card={card} mode={profile.mode} s={s} selected={selected === card.id} teamName={teamName}
+                  guideTarget={!!guide && card.id === flagship?.id} guideNext={card.id === flagship?.id ? guideNext : null}
                   simplified={prefs.simplified ? { text: simplifiedText(card, as, teamName, opponentOf), more: as.simplified.more, less: as.simplified.less } : null}
                   onSelect={() => setSelected(card.id)} onWhy={() => { setSelected(card.id); setWhy(card) }} onShow={() => void showInsight(card)} onReplay={() => openReplay(card.id)} />
               )))}
             {tab === 'highlights' && <HighlightsPanel snap={snap} s={s} onShow={(h) => void showHighlight(h)} onReplay={openReplay} />}
             {tab === 'recap' && <RecapPanel snap={snap} s={s} profile={profile} styles={meta?.recapStyles ?? ['Casual', 'Analyst', 'Broadcast', 'Social']} />}
-            {tab === 'agents' && <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} profile={streamProfile} defaultAccessible />}
+            {tab === 'agents' && <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} profile={streamProfile} defaultAccessible s={s} />}
           </div>
         </aside>
       </main>
@@ -480,7 +551,7 @@ rel = "noreferrer"
         const card = snap.insights.find(i => i.id === why.id) ?? why
         const changed = whatChanged(card, as)
         return (
-          <WhyPanel card={card} s={s} onClose={() => setWhy(null)} onShow={() => void showInsight(why)} onReplay={() => openReplay(why.id)}
+          <WhyPanel card={card} s={s} guideNext={guide === 'why' && card.id === flagship?.id} onClose={() => setWhy(null)} onShow={() => void showInsight(why)} onReplay={() => openReplay(why.id)}
             extraActions={speechEnabled(prefs) ? (
               <>
                 <button className="chip" onClick={() => readAloud(whyNarration(card, as), 'why', card.narrative.typeLabel)}>{as.why.read}</button>
@@ -497,6 +568,7 @@ rel = "noreferrer"
         </Suspense>
       )}
 
+      {guide && <JudgeGuide step={guide} s={s} onGo={goGuide} onExit={() => setGuide(null)} />}
       <SpeechBar lang={profile.language} overReplay={!!replayId} onStatus={prefs.audioMatchMode ? speakStatus : undefined} />
       {centerOpen && <AccessibilityCenter lang={profile.language} onClose={() => setCenterOpen(false)} onKeyboardHelp={() => { setCenterOpen(false); setKeysOpen(true) }} />}
       {keysOpen && <KeyboardHelp lang={profile.language} onClose={() => setKeysOpen(false)} />}

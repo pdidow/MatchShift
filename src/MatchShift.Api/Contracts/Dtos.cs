@@ -33,7 +33,8 @@ public sealed record InsightCardDto(
     string Id, string Type, int Minute, int Second, string? TeamId, Severity Severity, ConfidenceLevel Confidence, double ConfidenceScore,
     double Importance, string? KeyPlayerId, TimeSpanRef Span, IReadOnlyList<VisualLayer> Visuals, int SupportingEventCount,
     InsightNarrative Narrative,
-    MatchShift.Agents.Workflow.PublishedInsight? Agent = null);
+    MatchShift.Agents.Workflow.PublishedInsight? Agent = null,
+    IReadOnlyList<string>? ContextEventIds = null);
 
 public sealed record HighlightCardDto(string Id, HighlightKind Kind, int Minute, int Second, string? TeamId, double Importance,
     string? InsightId, string Headline, string WhyItMatters, int RelevantEventCount);
@@ -62,7 +63,12 @@ public sealed record SnapshotDto(
 public sealed record EvidenceResponseDto(InsightCardDto Insight, string WhyTitle, IReadOnlyDictionary<string, string> Labels,
     IReadOnlyList<EvidenceItem> RawEvidence, IReadOnlyDictionary<string, string> Facts);
 
-public sealed record InsightEventsDto(string InsightId, IReadOnlyList<VisualLayer> Layers, IReadOnlyList<PitchEventDto> Events);
+/// <summary>
+/// SHOW ME data. <paramref name="Events"/> holds every drawn event; <paramref name="SupportingEventIds"/> is the authoritative
+/// evidence (the card's supporting-event count) and <paramref name="ContextEventIds"/> the de-emphasised context-only events.
+/// </summary>
+public sealed record InsightEventsDto(string InsightId, IReadOnlyList<VisualLayer> Layers, IReadOnlyList<PitchEventDto> Events,
+    IReadOnlyList<string> SupportingEventIds, IReadOnlyList<string> ContextEventIds);
 
 public sealed record SpeedRequest(int Speed);
 public sealed record SeekRequest(double Minute);

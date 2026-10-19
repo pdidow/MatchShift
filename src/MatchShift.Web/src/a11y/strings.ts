@@ -15,7 +15,7 @@ const en = {
     speechDetail: ['Speech detail', 'How much is spoken.'],
     audioMatchMode: ['Audio match mode', 'An audio companion: goals, half-time and the state of the match.'],
     periodicRecap: ['Spoken recaps', 'Regular spoken summaries of time, score and control.'],
-    replayAudioDescription: ['3D replay audio description', 'Narrate player and ball movement during 3D replays.'],
+    replayAudioDescription: ['Evidence Replay audio description', 'Narrate player and ball movement during Evidence Replays.'],
     describeVisuals: ['Describe visuals', 'Adds DESCRIBE THIS to SHOW ME and READ buttons to WHY?.'],
     speechRate: ['Speech speed', ''],
     speechVolume: ['Speech volume', ''],
@@ -46,13 +46,13 @@ const en = {
   keys: {
     title: 'Keyboard shortcuts',
     global: 'Anywhere',
-    replay: 'In the 3D replay',
+    replay: 'In the Evidence Replay',
     list: [
       ['Tab / Shift+Tab', 'Move between controls, insight cards and buttons'],
       ['Enter / Space', 'Activate a button or select an insight card'],
       ['← →', 'Switch tabs (in the tab list) or move the match timeline (on the timeline)'],
       ['?', 'Show this help'],
-      ['Esc', 'Close a dialog, the 3D replay or this help'],
+      ['Esc', 'Close a dialog, the Evidence Replay or this help'],
     ],
     replayList: [
       ['Space', 'Play / pause'],
@@ -156,7 +156,7 @@ const fr: A11yStrings = {
     speechDetail: ['Niveau de détail', 'Quantité de texte lu.'],
     audioMatchMode: ['Mode match audio', 'Un compagnon audio : buts, mi-temps et état du match.'],
     periodicRecap: ['Résumés lus', 'Résumés réguliers du temps, du score et du contrôle.'],
-    replayAudioDescription: ['Audiodescription du replay 3D', 'Décrire les mouvements des joueurs et du ballon pendant le replay.'],
+    replayAudioDescription: ['Audiodescription du replay des preuves', 'Décrire les mouvements des joueurs et du ballon pendant le replay.'],
     describeVisuals: ['Décrire les visuels', 'Ajoute DÉCRIRE à MONTRE-MOI et des boutons LIRE à POURQUOI ?.'],
     speechRate: ['Vitesse de la voix', ''],
     speechVolume: ['Volume de la voix', ''],
@@ -187,13 +187,13 @@ const fr: A11yStrings = {
   keys: {
     title: 'Raccourcis clavier',
     global: 'Partout',
-    replay: 'Dans le replay 3D',
+    replay: 'Dans le replay des preuves',
     list: [
       ['Tab / Maj+Tab', 'Parcourir les commandes, cartes et boutons'],
       ['Entrée / Espace', 'Activer un bouton ou sélectionner une carte'],
       ['← →', "Changer d'onglet ou déplacer la chronologie"],
       ['?', 'Afficher cette aide'],
-      ['Échap', 'Fermer une fenêtre, le replay 3D ou cette aide'],
+      ['Échap', 'Fermer une fenêtre, le replay des preuves ou cette aide'],
     ],
     replayList: [
       ['Espace', 'Lecture / pause'],
@@ -294,7 +294,7 @@ const es: A11yStrings = {
     speechDetail: ['Nivel de detalle', 'Cuánto se lee.'],
     audioMatchMode: ['Modo partido en audio', 'Un compañero de audio: goles, descanso y estado del partido.'],
     periodicRecap: ['Resúmenes hablados', 'Resúmenes periódicos de tiempo, marcador y control.'],
-    replayAudioDescription: ['Audiodescripción de la repetición 3D', 'Narrar el movimiento de jugadores y balón en la repetición.'],
+    replayAudioDescription: ['Audiodescripción de la repetición de la evidencia', 'Narrar el movimiento de jugadores y balón en la repetición.'],
     describeVisuals: ['Describir visuales', 'Añade DESCRIBIR a MUÉSTRAMELO y botones LEER a ¿POR QUÉ?.'],
     speechRate: ['Velocidad de voz', ''],
     speechVolume: ['Volumen de voz', ''],
@@ -325,13 +325,13 @@ const es: A11yStrings = {
   keys: {
     title: 'Atajos de teclado',
     global: 'En cualquier lugar',
-    replay: 'En la repetición 3D',
+    replay: 'En la repetición de la evidencia',
     list: [
       ['Tab / Mayús+Tab', 'Moverse entre controles, tarjetas y botones'],
       ['Intro / Espacio', 'Activar un botón o seleccionar una tarjeta'],
       ['← →', 'Cambiar de pestaña o mover la línea de tiempo'],
       ['?', 'Mostrar esta ayuda'],
-      ['Esc', 'Cerrar un diálogo, la repetición 3D o esta ayuda'],
+      ['Esc', 'Cerrar un diálogo, la repetición de la evidencia o esta ayuda'],
     ],
     replayList: [
       ['Espacio', 'Reproducir / pausar'],

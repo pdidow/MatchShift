@@ -50,6 +50,25 @@ dotnet run --project src/MatchShift.Api --launch-profile http
 Open `http://localhost:5002/?lang=en&mode=Analyst`. For a hosted demo use the supplied hosted URL.
 `/health` should return `status: ok` and `synthetic: true`. No user account is required in this build.
 
+## 60-Second Judge Demo
+
+Choose **Guided demo · 60 s** in the top bar, or open `/?demo=judge` (for example
+`https://matchshift-pd.azurewebsites.net/?demo=judge`). Each step performs one real product action and explains what
+is on screen:
+
+| Step | On screen | What it shows |
+|---|---|---|
+| 1 | Flagship insight at 63' (`MS-FLAGSHIP-001-I015`) | A change detected by deterministic analytics: facts, AI interpretation and verification are separate layers |
+| 2 | WHY? | The metric (31% → 90%), windows, threshold, sample and confidence, from match events |
+| 3 | SHOW ME | The 30 supporting source events (the card's count), plus 1 grey context event that is not counted as evidence |
+| 4 | Evidence Replay | 3D reconstruction before and after the shift, with observed / interpolated / estimated positions |
+| 5 | Agents | The Microsoft Agent Framework graph with parallel branches, deterministic and AI stages kept distinct, and live status chips |
+| 6 | Trust | The verifier verdict and the Microsoft Foundry Evaluations proof |
+
+The recommended insight is the one documented below: the flagship attack-channel shift. It has the clearest metric
+change, 30 supporting events and before/after replay clips. Live workflows on it were approved in every evaluation
+run. When the server is offline or a run falls back, the panel says OFFLINE TEMPLATE and shows no verified claim.
+
 ## Reproducible walkthrough
 
 1. Select the flagship match, **Northbridge v Westhaven**, and reset to kick-off. Press Play. All clubs,

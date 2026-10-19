@@ -34,8 +34,8 @@ public static class SnapshotBuilder
     public static InsightCardDto Card(Insight i, NarrativeContext context, Func<Insight, NarrativeContext, InsightNarrative>? narrate = null,
         Func<Insight, NarrativeContext, MatchShift.Agents.Workflow.PublishedInsight?>? agent = null) =>
         new(i.Id, i.Type.Code(), i.DisplayMinute, i.DetectedAtSecond, i.TeamId, i.Severity, i.Confidence, i.ConfidenceScore, i.Importance,
-            i.KeyPlayerId, i.Span, i.Visuals, i.SupportingEventIds.Count, narrate?.Invoke(i, context) ?? TemplateInsightProvider.Narrate(i, context),
-            agent?.Invoke(i, context));
+            i.KeyPlayerId, i.Span, i.Visuals, i.SupportingEventIds.Distinct().Count(), narrate?.Invoke(i, context) ?? TemplateInsightProvider.Narrate(i, context),
+            agent?.Invoke(i, context), i.ContextEventIds);
 
     public static SnapshotDto Build(LiveMatchAnalyzer analysis, int clock, Match match, ViewerProfile profile, bool playing, int speed,
         Func<Insight, NarrativeContext, InsightNarrative>? narrate = null, Func<Insight, NarrativeContext, MatchShift.Agents.Workflow.PublishedInsight?>? agent = null)

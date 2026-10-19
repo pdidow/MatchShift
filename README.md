@@ -32,6 +32,35 @@ MatchShift watches a stream of football-realistic synthetic events and, live, an
 |---|---|---|
 | ![SHOW ME](docs/img/show-me.png) | ![Agents](docs/img/agents.png) | ![Teach me - FR](docs/img/teach-me-fr.png) |
 
+## 60-Second Judge Demo
+
+Open MatchShift and choose **Guided demo · 60 s** in the top bar, or open `/?demo=judge`. The guide is a small panel
+over the real product: it uses the real match state, the real insight and the real agent workflow, and every step is
+an ordinary button you could press yourself. Close it at any time with ✕ to keep using MatchShift normally.
+
+1. **Jump to the flagship moment.** The flagship match pauses at 64:00. The selected insight: at 63' Westhaven
+   switch their attack down the right after a substitution (31% → 90%), detected by deterministic C# analytics.
+2. **WHY?** shows the exact metric, windows, threshold, sample and confidence, computed from match events.
+3. **SHOW ME** draws the 30 supporting source events on the pitch. One more attack, the only recent one that did not
+   use the right channel, is drawn grey for comparison and labelled as context, not counted as evidence.
+4. **EVIDENCE REPLAY** reconstructs those events in 3D, before and after the shift, labelled observed, interpolated or
+   estimated.
+5. **Agents** shows the Microsoft Agent Framework workflow:
+   - Tactical Analyst first;
+   - then Audience Narrative and Accessibility Narrator in parallel;
+   - then the Verification Agent.
+
+   Code validates before and after the AI. Status chips show the execution mode, model and credential, taken from the
+   runtime, never hard-coded.
+6. **Can we trust it?** The verdict (VERIFIED / VERIFIED WITH CHANGES / REJECTED) and the Microsoft Foundry
+   Evaluations proof. 28/28 published outputs passed groundedness, relevance and coherence. Injected defects caught:
+   - deterministic validator 11/11;
+   - Verification Agent 11/11;
+   - Foundry groundedness 5/11.
+
+Offline or recorded runs are labelled OFFLINE TEMPLATE or RECORDED DEMO and are never shown as verified.
+Insight used: `MS-FLAGSHIP-001-I015`.
+
 ## The core principle
 
 **The LLM never calculates match statistics.** Deterministic C# computes every count, window, share,
@@ -77,9 +106,9 @@ synthetic events ──► MatchState ──► window metrics ──► detecto
 - **Microsoft stack** - Microsoft Foundry (keyless via managed identity), Azure Container Apps, Application
   Insights (OpenTelemetry), Fabric-ready exports (JSONL / CSV / Parquet), GitHub Actions, `azd up`.
 
-## Interactive 3D Tactical Replay
+## Evidence Replay (3D reconstruction)
 
-Every insight card, the WHY? panel, the SHOW ME bar and the highlight timeline offer **3D REPLAY**: an
+Every insight card, the WHY? panel, the SHOW ME bar and the highlight timeline offer **EVIDENCE REPLAY**: an
 interactive, broadcast-style reconstruction of the exact sequence behind the insight, rendered with Three.js
 inside the app. It is a tactical visualisation, not a game engine - its job is to show *why* MatchShift
 raised the insight.

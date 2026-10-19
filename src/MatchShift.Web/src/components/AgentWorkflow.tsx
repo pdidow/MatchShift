@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AgentRuntimeStatus, ExecutionMode, Profile, PublishedInsight, StageStatus, TraceStep, WorkflowExecution } from '../api'
 import type { Strings } from '../i18n'
 import { AgentRefusal, api } from '../api'
+import { EVALUATION, runtimeChips, verdict } from '../guide/guide'
 
 // Node order of the Microsoft Agent Framework workflow graph (executor IDs, as in MatchShift.Agents/Workflow/Stages).
 const STAGES = {
@@ -16,16 +17,16 @@ const STAGES = {
   repair: 'constrained-repair',
 } as const
 
-const NODE_LABELS: Record<string, { title: string; agent: boolean }> = {
-  [STAGES.grounding]: { title: 'Deterministic Match Analytics', agent: false },
-  [STAGES.tactical]: { title: 'Tactical Analyst', agent: true },
-  [STAGES.audience]: { title: 'Audience Narrative', agent: true },
-  [STAGES.accessibility]: { title: 'Accessibility Narrator', agent: true },
-  [STAGES.fanIn]: { title: 'Fan-in barrier', agent: false },
-  [STAGES.validation]: { title: 'Deterministic Validation', agent: false },
-  [STAGES.verifier]: { title: 'Verification Agent', agent: true },
-  [STAGES.final]: { title: 'Final Validation', agent: false },
-  [STAGES.repair]: { title: 'Constrained repair', agent: true },
+const NODE_LABELS: Record<string, { title: string; agent: boolean; role: string }> = {
+  [STAGES.grounding]: { title: 'Deterministic Match Analytics', agent: false, role: 'C# analytics fix the facts (InsightContext)' },
+  [STAGES.tactical]: { title: 'Tactical Analyst', agent: true, role: 'What the evidence might mean' },
+  [STAGES.audience]: { title: 'Audience Narrative', agent: true, role: 'Wording for this viewer' },
+  [STAGES.accessibility]: { title: 'Accessibility Narrator', agent: true, role: 'Spoken and nonvisual version' },
+  [STAGES.fanIn]: { title: 'Fan-in barrier', agent: false, role: 'Waits for both branches' },
+  [STAGES.validation]: { title: 'Deterministic Validation', agent: false, role: 'Code checks every number, time, player and event ID' },
+  [STAGES.verifier]: { title: 'Verification Agent', agent: true, role: 'Independent review of every claim' },
+  [STAGES.final]: { title: 'Final Validation', agent: false, role: 'Code re-checks the verifier corrections' },
+  [STAGES.repair]: { title: 'Constrained repair', agent: true, role: 'One rewrite of rejected wording' },
 }
 
 export const MODE_LABEL: Record<ExecutionMode, string> = {
@@ -59,6 +60,7 @@ function Node({ x, stage }: { x: WorkflowExecution | null; stage: string }) {
         <span className="wf-node-title">{label.title}{runs.length > 1 && <small> ×{runs.length}</small>}</span>
         {status && <span className={`wf-pill wf-${statusClass(status)}`}>{status}</span>}
       </div>
+      <div className="wf-role">{label.role}</div>
       <div className="wf-kind">
         {step ? (af ? `MICROSOFT AGENT FRAMEWORK · ${step.modelDeployment ?? ''}` : 'DETERMINISTIC') : label.agent ? 'agent · waiting' : 'deterministic · waiting'}
       </div>
@@ -125,7 +127,41 @@ function StepDetail({ s }: { s: TraceStep }) {
   )
 }
 
-export function AgentWorkflowPanel({ insightId, profile, defaultAccessible }: { insightId: string | null; profile: Profile; defaultAccessible: boolean }) {
+/** The final verification outcome, prominent: VERIFIED / VERIFIED WITH CHANGES / REJECTED, never "verified" for templates. */
+export function VerdictBanner({ x, s }: { x: WorkflowExecution | null; s: Strings }) {
+  const v = verdict(x)
+  if (!v) return null
+  const [title, detail] = s.verdict[v.kind]
+  return (
+    <div id="wf-verdict" className={`wf-verdict wf-verdict-${v.tone}`} role="status">
+      <span className="wf-verdict-title">{v.kind === 'verified' || v.kind === 'verifiedWithChanges' ? '✓ ' : ''}{title}</span>
+      <span className="wf-verdict-detail">{detail}</span>
+    </div>
+  )
+}
+
+/** Compact, factual proof from the latest real Microsoft Foundry Evaluations run (see docs/EVALUATION.md). */
+export function EvalProof({ s }: { s: Strings }) {
+  const e = s.evalProof
+  const E = EVALUATION
+  return (
+    <section id="eval-proof" className="eval-proof" aria-labelledby="eval-proof-title">
+      <h3 id="eval-proof-title" className="wf-h">{e.title}</h3>
+      <p className="eval-big"><b>{E.publishedPassing}/{E.publishedTotal}</b> {e.published}</p>
+      <table className="eval-table">
+        <caption>{e.defects}</caption>
+        <tbody>
+          <tr><th scope="row">{e.deterministic}</th><td>{E.deterministicCaught}/{E.adversarialTotal}</td></tr>
+          <tr><th scope="row">{e.verifier}</th><td>{E.verifierCaught}/{E.adversarialTotal}</td></tr>
+          <tr><th scope="row">{e.foundry}</th><td>{E.foundryGroundednessCaught}/{E.adversarialTotal}</td></tr>
+        </tbody>
+      </table>
+      <p className="note">{e.note} <a href={E.docsUrl} target="_blank" rel="noreferrer">{e.link}</a> · <code>{E.runId.slice(0, 16)}…</code> · {E.date}</p>
+    </section>
+  )
+}
+
+export function AgentWorkflowPanel({ insightId, profile, defaultAccessible, s }: { insightId: string | null; profile: Profile; defaultAccessible: boolean; s: Strings }) {
   const [status, setStatus] = useState<AgentRuntimeStatus | null>(null)
   const [x, setX] = useState<WorkflowExecution | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -162,7 +198,10 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible }: { 
   const c = x?.concurrency
   return (
     <div className="wf">
-      <h2 className="panel-title">Agent workflow{mode && <span className={`wf-mode wf-mode-${mode}`}>{MODE_LABEL[mode]}</span>}</h2>
+      <h2 className="panel-title">Agent workflow</h2>
+      <div className="wf-chips" aria-label="Execution status">
+        {runtimeChips(status, x).map(c => <span key={c.key} className={`wf-chip wf-chip-${c.tone}`}>{c.label}</span>)}
+      </div>
       {status && (
         <p className="wf-runtime">
           {status.runtime.orchestrator}
@@ -184,6 +223,12 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible }: { 
 
       {insightId && !error && (
         <>
+          <VerdictBanner x={x} s={s} />
+          <div className="wf-legend" aria-hidden>
+            <span><i className="det" />Deterministic C#</span>
+            <span><i className="agent" />AI agent · Microsoft Agent Framework</span>
+            <span><i className="live" />ran live on Microsoft Foundry</span>
+          </div>
           <div className="wf-graph" role="group" aria-label="Workflow topology">
             <Node x={x} stage={STAGES.grounding} />
             <Arrow label="InsightContext → shared workflow state" />
@@ -243,6 +288,8 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible }: { 
                 </article>
               )}
 
+              <details className="wf-trace">
+              <summary>Detailed trace: timeline, handoffs and every stage</summary>
               <h3 className="wf-h">Execution timeline</h3>
               <Timeline x={x} />
 
@@ -261,11 +308,13 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible }: { 
 
               <h3 className="wf-h">Stage details</h3>
               {x.steps.map(s => <StepDetail key={s.sequence} s={s} />)}
+              </details>
               <p className="note">Traces show summaries, counts and decisions only: no prompts, hidden reasoning or credentials.</p>
             </>
           )}
         </>
       )}
+      <EvalProof s={s} />
     </div>
   )
 }

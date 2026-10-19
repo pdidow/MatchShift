@@ -15,6 +15,7 @@ public sealed record OverlayDto(string SchemaVersion, string SessionId, long Epo
             snapshot.Clock.Second, card.Second, card.Second + duration, duration, card.Importance,
             card.Narrative.StudioLine, card.Narrative.Language, card.Narrative.Source,
             card.Narrative.VerificationNote ?? "Deterministic evidence verified",
-            card.Visuals.SelectMany(v => v.EventIds).Distinct().ToArray(), true);
+            // Evidence references exclude context-only events, which are drawn but are not supporting evidence.
+            card.Visuals.SelectMany(v => v.EventIds).Except(card.ContextEventIds ?? []).Distinct().ToArray(), true);
     }
 }

@@ -229,7 +229,8 @@ export function describeReplayEvent(e: ReplayEvent, players: ReplayPlayer[], hom
 /** DESCRIBE THIS for SHOW ME: counts and the dominant side, straight from the plotted events. */
 export function describeFocus(focus: InsightEvents, teamId: string | undefined, homeTeamId: string,
   teamName: (id?: string) => string, s: A11yStrings): string {
-  const shownIds = new Set(focus.layers.filter(l => l.emphasised).flatMap(l => l.eventIds))
+  // Count the authoritative supporting evidence when the server provides it; context-only events are never counted.
+  const shownIds = new Set(focus.supportingEventIds ?? focus.layers.filter(l => l.emphasised).flatMap(l => l.eventIds))
   const shown = focus.events.filter(e => (shownIds.size === 0 || shownIds.has(e.id)) && (!teamId || e.teamId === teamId))
   const team = teamId ?? shown[0]?.teamId
   if (shown.length === 0) return fill(s.show.intro, { count: 0, team: teamName(team), range: '' })

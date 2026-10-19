@@ -10,6 +10,9 @@ export interface DemoCore {
   profiles: Record<string, string[]>
   players: Record<string, PlayerPerformance>
   insightEvents: Record<string, string[]>
+  /** Authoritative supporting evidence per insight, and context-only drawn events (exports from this version on). */
+  insightSupportingEvents?: Record<string, string[]>
+  insightContextEvents?: Record<string, string[]>
   highlightEvents: Record<string, string[]>
 }
 export interface DemoLanguage {

@@ -55,7 +55,8 @@ public sealed record ReplayEvent(
     double? EndX,
     double? EndY,
     string? Qualifier,
-    bool IsEvidence);
+    bool IsEvidence,
+    bool IsContext = false);
 
 public sealed record TrackSample(double T, double X, double Y, PositionProvenance Provenance);
 
@@ -110,7 +111,8 @@ public sealed record ReplaySequence(
     IReadOnlyList<string> RelevantPlayerIds,
     IReadOnlyList<ReplayPlayer> Players,
     IReadOnlyList<ReplayClip> Clips,
-    string Notice)
+    string Notice,
+    IReadOnlyList<string>? ContextEventIds = null)
 {
     public double TotalDuration => Clips.Sum(c => c.Duration);
 }

@@ -130,8 +130,23 @@ public sealed record Insight
     public IReadOnlyDictionary<string, string> Facts { get; init; } = new Dictionary<string, string>();
 
     public required IReadOnlyList<EvidenceItem> Evidence { get; init; }
+    /// <summary>The authoritative evidence: the events the insight's metrics were computed from. Counted as "supporting events".</summary>
     public required IReadOnlyList<string> SupportingEventIds { get; init; }
+
     public IReadOnlyList<VisualLayer> Visuals { get; init; } = [];
+
+    /// <summary>
+    /// Events drawn only as context by a visual layer and NOT part of the supporting evidence (for example the recent attack
+    /// that did not use the shifted channel). Shown de-emphasised and never counted as supporting events.
+    /// </summary>
+    public IReadOnlyList<string> ContextEventIds
+    {
+        get
+        {
+            var supporting = SupportingEventIds.ToHashSet();
+            return [.. Visuals.SelectMany(v => v.EventIds).Where(id => !supporting.Contains(id)).Distinct()];
+        }
+    }
 
     /// <summary>Code of the cautious interpretation the narrative layer may offer (never a claim of intent).</summary>
     public string? InterpretationCode { get; init; }

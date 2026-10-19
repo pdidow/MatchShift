@@ -174,7 +174,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
       for (const e of p.clip.events) {
         const at = p.offset + e.time
         if (at <= prev.time || at > tick.time) continue
-        if (e.type === 'Carry' && !e.isEvidence) continue
+        if (e.type === 'Carry' && !e.isEvidence && !e.isContext) continue
         const text = describeEvent(e)
         if (text) say({ text, kind: 'replay', priority: e.label === 'GOAL' ? 1 : 0, lang: adLang, ttlMs: 6000, clock: e.clock, label: r.title })
       }
@@ -246,14 +246,14 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
                     <li key={p.index}>
                       {seq.clips.length > 1 && <span className="replay-list-clip">{clipLabel(p.clip.key)}</span>}
                       <ol>
-                        {p.clip.events.filter(e => e.type !== 'Carry' || e.isEvidence).map(e => {
+                        {p.clip.events.filter(e => e.type !== 'Carry' || e.isEvidence || e.isContext).map(e => {
                           const isCurrent = event?.eventId === e.eventId && clip === p.clip
                           return (
                             <li key={e.eventId}>
-                              <button className={`replay-list-item ${e.isEvidence ? 'evidence' : ''}`} aria-current={isCurrent ? 'step' : undefined}
+                              <button className={`replay-list-item ${e.isEvidence ? 'evidence' : e.isContext ? 'context' : ''}`} aria-current={isCurrent ? 'step' : undefined}
                                 onClick={() => sceneRef.current?.seek(p.offset + e.time)}>
                                 <span className="replay-event-clock">{e.clock}</span>
-                                <span>{describeEvent(e) ?? describe(e)}</span>
+                                <span>{describeEvent(e) ?? describe(e)}{e.isContext && <small className="context-tag"> · {s.contextTag}</small>}</span>
                               </button>
                             </li>
                           )
@@ -351,7 +351,7 @@ function Scrubber({ seq, total, time, placed, onSeek, describe }: {
       {placed.slice(1).map(p => <div key={p.index} className="clip-boundary" style={{ left: pct(p.offset) }} />)}
       {placed.flatMap(p => p.clip.events.filter(e => e.type !== 'Carry').map(e => (
         <div key={`${p.index}:${e.eventId}`} title={`${e.clock} ${describe(e)}`}
-          className={`tick ${e.isEvidence ? 'evidence' : ''} ${e.label === 'GOAL' ? 'goal' : ''} ${seq.relevantPlayerIds.includes(e.playerId ?? '') ? 'relevant' : ''}`}
+          className={`tick ${e.isEvidence ? 'evidence' : e.isContext ? 'context' : ''} ${e.label === 'GOAL' ? 'goal' : ''} ${seq.relevantPlayerIds.includes(e.playerId ?? '') ? 'relevant' : ''}`}
           style={{ left: pct(p.offset + e.time) }} />
       )))}
       <div className="head" style={{ left: pct(time) }} />

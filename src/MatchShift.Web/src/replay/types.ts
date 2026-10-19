@@ -33,6 +33,8 @@ export interface ReplayEvent {
   endY?: number
   qualifier?: string
   isEvidence: boolean
+  /** Drawn for comparison only: not part of the insight's supporting evidence. */
+  isContext?: boolean
 }
 
 export interface TrackSample { t: number; x: number; y: number; provenance: Provenance }
@@ -79,7 +81,9 @@ export interface ReplaySequence {
   homeTeamId: string
   awayTeamId: string
   insightWindow: { fromSecond: number; toSecond: number }
+  /** Supporting evidence only. */
   evidenceEventIds: string[]
+  contextEventIds?: string[]
   relevantPlayerIds: string[]
   players: ReplayPlayer[]
   clips: ReplayClip[]

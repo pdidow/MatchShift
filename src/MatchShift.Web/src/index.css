@@ -517,3 +517,70 @@ kbd { font: 500 12px/1 var(--font-mono); background: var(--surface-sunken); bord
 .agent-verified .agent-badge { font: 600 10px/1 var(--font-mono); color: var(--accent); letter-spacing: 0.04em; }
 .agent-note { font-size: 11px; color: var(--ink-muted); margin: 6px 0 0; }
 @media (max-width: 520px) { .wf-branches { grid-template-columns: 1fr; } .wf-row { grid-template-columns: 96px 1fr 44px; } }
+
+/* ---------------------------------------------------------------- guided demo (static highlights, no animation) */
+.guide-entry { border-color: var(--accent); color: var(--accent); }
+.empty .guide-entry { margin-top: 10px; }
+.guide { position: fixed; left: 16px; top: 56px; z-index: 48; width: min(380px, calc(100% - 32px)); max-height: calc(100vh - 190px); overflow: auto;
+  background: rgba(10, 15, 24, 0.97); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+.guide-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.guide-kicker { font: 600 11px/1 var(--font-mono); color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+.guide-exit { padding: 2px 6px; }
+.guide-progress { list-style: none; display: flex; gap: 4px; padding: 0; margin: 8px 0 6px; }
+.guide-progress li { flex: 1; height: 3px; border-radius: 2px; background: var(--line-strong); }
+.guide-progress li.done { background: var(--accent); }
+.guide-title { font: 700 20px/1.1 var(--font-display); text-transform: uppercase; margin: 4px 0 4px; }
+.guide-body { margin: 0; color: var(--ink-secondary); font-size: 13px; }
+.guide-layers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 0; }
+.guide-layers > div { border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 8px; }
+.guide-layers dt { font: 600 10px/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 3px; }
+.guide-layers dd { margin: 0; font-size: 11px; color: var(--ink-secondary); line-height: 1.35; }
+.guide-layers .facts { border-color: var(--series-home); } .guide-layers .facts dt { color: var(--series-home); }
+.guide-layers .ai { border-style: dashed; } .guide-layers .ai dt { color: var(--ink); }
+.guide-layers .verify { border-color: var(--accent); } .guide-layers .verify dt { color: var(--accent); }
+.guide-actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+.guide-actions .spacer { flex: 1; }
+.guide-card { outline: 2px solid var(--accent); outline-offset: 2px; }
+.guide-target { outline: 2px solid var(--warning); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- evidence chain: WHY? > SHOW ME > EVIDENCE REPLAY */
+.evidence-chain { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.chain-sep { color: var(--ink-muted); font-size: 14px; }
+.layer-label { font: 600 10px/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--series-home); margin: 10px 0 4px; }
+.mono { font-family: var(--font-mono); }
+
+/* ---------------------------------------------------------------- agents: status chips, verdict, legend, evaluation proof */
+.wf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wf-chip { font: 600 11px/1 var(--font-mono); padding: 5px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-secondary); }
+.wf-chip-live { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.wf-chip-warn { color: #2a1e00; background: var(--warning); border-color: var(--warning); }
+.wf-chip-ok { color: var(--accent); border-color: var(--accent); }
+.wf-chip-bad { color: var(--critical); border-color: var(--critical); }
+.wf-verdict { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface-sunken); }
+.wf-verdict-title { font: 700 20px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; }
+.wf-verdict-detail { font-size: 12px; color: var(--ink-secondary); }
+.wf-verdict-ok { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); } .wf-verdict-ok .wf-verdict-title { color: var(--accent); }
+.wf-verdict-bad { border-color: var(--critical); box-shadow: inset 4px 0 0 var(--critical); } .wf-verdict-bad .wf-verdict-title { color: var(--critical); }
+.wf-verdict-warn { border-color: var(--warning); } .wf-verdict-warn .wf-verdict-title { color: var(--warning); }
+.wf-role { font-size: 11px; color: var(--ink-secondary); margin-top: 2px; }
+.wf-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--ink-muted); }
+.wf-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.wf-legend i { width: 14px; height: 10px; border-radius: 3px; border: 1px solid var(--line-strong); background: var(--surface-sunken); }
+.wf-legend i.agent { border-style: dashed; }
+.wf-legend i.live { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.wf-trace { border-top: 1px solid var(--line); padding-top: 6px; }
+.wf-trace > summary { cursor: pointer; font-size: 12px; color: var(--ink-secondary); padding: 4px 0; }
+.eval-proof { border: 1px solid var(--line-strong); border-radius: 8px; padding: 10px 12px; margin-top: 6px; }
+.eval-proof .wf-h { margin-top: 0; }
+.eval-big { margin: 4px 0 8px; font-size: 13px; color: var(--ink-secondary); }
+.eval-big b { font: 700 22px/1 var(--font-display); color: var(--accent); margin-right: 4px; }
+.eval-table { border-collapse: collapse; font-size: 12px; width: 100%; }
+.eval-table caption { text-align: left; font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.03em; padding-bottom: 4px; }
+.eval-table th { text-align: left; font-weight: 500; color: var(--ink-secondary); padding: 2px 0; }
+.eval-table td { text-align: right; font-family: var(--font-mono); padding: 2px 0; }
+/* Over the Evidence Replay the guide sits low on the left, clear of the replay header, event box and controls. */
+.guide[data-step="replay"] { top: auto; bottom: 110px; }
+/* Context-only events (drawn for comparison, not supporting evidence). */
+.replay-list-item.context { border-left: 3px dashed var(--ink-muted); }
+.replay-scrubber .tick.context { background: var(--ink-muted); }
+.context-tag { color: var(--ink-muted); }

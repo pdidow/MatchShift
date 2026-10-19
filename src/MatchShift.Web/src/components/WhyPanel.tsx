@@ -14,10 +14,12 @@ interface Props {
   onReplay: () => void
   /** Optional accessibility actions (READ EXPLANATION / READ WHAT CHANGED), shown only when speech is enabled. */
   extraActions?: ReactNode
+  /** Guided demo: point at SHOW ME as the next step. */
+  guideNext?: boolean
 }
 
 /** WHY? - the deterministic evidence behind an insight, before any wording. */
-export function WhyPanel({ card, s, onClose, onShow, onReplay, extraActions }: Props) {
+export function WhyPanel({ card, s, onClose, onShow, onReplay, extraActions, guideNext }: Props) {
   const n = card.narrative
   const primary = n.evidence.find((e) => e.isPrimary) ?? n.evidence[0]
   const ref = useRef<HTMLDivElement>(null)
@@ -34,6 +36,7 @@ export function WhyPanel({ card, s, onClose, onShow, onReplay, extraActions }: P
         <h2 id="why-title">{n.headline}</h2>
         <p className="card-fact">{n.fact}</p>
 
+        <p className="layer-label">{s.whyFacts}</p>
         {primary && (
           <div className="why-hero">
             <div>
@@ -96,8 +99,11 @@ export function WhyPanel({ card, s, onClose, onShow, onReplay, extraActions }: P
           {n.verificationNote ? ` · ${n.verificationNote}` : ''} · {n.source}
         </p>
         <div className="card-actions">
-          <button className="primary" onClick={onShow}>{s.showMe}</button>
-          <button className="chip replay-btn" onClick={onReplay}>{s.replay.button}</button>
+          <div className="evidence-chain" role="group" aria-label={s.chain}>
+            <button className={`primary ${guideNext ? 'guide-target' : ''}`} onClick={onShow}>{s.showMe}</button>
+            <span className="chain-sep" aria-hidden>›</span>
+            <button className="chip replay-btn" onClick={onReplay}>{s.replay.button}</button>
+          </div>
           {extraActions}
           <button onClick={onClose}>{s.close}</button>
         </div>

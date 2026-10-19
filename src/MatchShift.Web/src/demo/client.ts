@@ -98,7 +98,9 @@ export function createDemoClient(sessionId: string) {
     const wanted = new Set(ids)
     const words = await languageFor(core.detail.summary.id, 'en')
     return { insightId: id, layers: highlight ? [] : words.cards.find(c => c.id === id)?.visuals ?? [],
-      events: core.events.filter(e => wanted.has(e.id)) }
+      events: core.events.filter(e => wanted.has(e.id)),
+      supportingEventIds: highlight ? ids : core.insightSupportingEvents?.[id],
+      contextEventIds: highlight ? [] : core.insightContextEvents?.[id] }
   }
   return {
     meta: async () => (await index()).meta,

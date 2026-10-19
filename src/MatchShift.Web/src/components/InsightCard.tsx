@@ -15,11 +15,15 @@ interface Props {
   onSelect: () => void
   /** Simplified Insights (optional): a plain-language sentence shown instead of the full card until MORE DETAIL. */
   simplified?: { text: string; more: string; less: string } | null
+  /** Guided demo: this card is the flagship insight being explained. */
+  guideTarget?: boolean
+  /** Guided demo: the next evidence action to point at on this card. */
+  guideNext?: 'why' | 'show' | 'replay' | null
 }
 
 const SHIFT_TYPES = new Set(['ATTACK_CHANNEL_SHIFT', 'POST_SUBSTITUTION_CHANGE', 'CONTROL_SHIFT'])
 
-export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onShow, onReplay, onSelect, simplified }: Props) {
+export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onShow, onReplay, onSelect, simplified, guideTarget, guideNext }: Props) {
   const n = card.narrative
   const primary = n.evidence.find((e) => e.isPrimary)
   const compact = mode === 'WhatMatters'
@@ -30,7 +34,8 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
 
   return (
     <article
-      className={`card ${SHIFT_TYPES.has(card.type) ? 'shift' : ''} ${selected ? 'selected' : ''} ${simple ? 'simple' : ''}`}
+      id={`card-${card.id}`}
+      className={`card ${SHIFT_TYPES.has(card.type) ? 'shift' : ''} ${selected ? 'selected' : ''} ${simple ? 'simple' : ''} ${guideTarget ? 'guide-card' : ''}`}
       onClick={onSelect}
       // Keyboard: the card itself is focusable; Enter or Space selects it (buttons inside keep their own keys).
       tabIndex={0}
@@ -89,9 +94,14 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
       )}
 
       <div className="card-actions">
-        <button className="chip" onClick={(e) => { e.stopPropagation(); onWhy() }}>{s.why}</button>
-        <button className="chip" onClick={(e) => { e.stopPropagation(); onShow() }}>{s.showMe}</button>
-        <button className="chip replay-btn" onClick={(e) => { e.stopPropagation(); onReplay() }}>{s.replay.button}</button>
+        {/* The evidence chain: each step goes one level closer to the raw match events. */}
+        <div className="evidence-chain" role="group" aria-label={s.chain}>
+          <button className={`chip ${guideNext === 'why' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onWhy() }}>{s.why}</button>
+          <span className="chain-sep" aria-hidden>›</span>
+          <button className={`chip ${guideNext === 'show' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onShow() }}>{s.showMe}</button>
+          <span className="chain-sep" aria-hidden>›</span>
+          <button className={`chip replay-btn ${guideNext === 'replay' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onReplay() }}>{s.replay.button}</button>
+        </div>
         <span className="spacer" />
         <Confidence label={`${s.confidence}: ${n.confidenceLabel}`} level={card.confidence} />
       </div>

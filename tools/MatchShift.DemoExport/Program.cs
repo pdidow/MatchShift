@@ -87,7 +87,9 @@ foreach (var labelled in catalog.All)
     });
     Write($"{match.Id}/core.json", new { detail, frames, events = match.Events.Select(e => SnapshotBuilder.Event(e, match)),
         analysis.Timeline, profiles, players = performance,
-        insightEvents = insights.ToDictionary(i => i.Id, i => i.Visuals.SelectMany(v => v.EventIds).Concat(i.SupportingEventIds).Distinct().ToArray()),
+        insightEvents = insights.ToDictionary(i => i.Id, i => i.SupportingEventIds.Concat(i.ContextEventIds).Distinct().ToArray()),
+        insightSupportingEvents = insights.ToDictionary(i => i.Id, i => i.SupportingEventIds.Distinct().ToArray()),
+        insightContextEvents = insights.ToDictionary(i => i.Id, i => i.ContextEventIds),
         highlightEvents = highlights.ToDictionary(h => h.Key, h => h.Value.RelevantEventIds) });
 
     foreach (var insight in insights)
