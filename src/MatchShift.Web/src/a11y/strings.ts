@@ -144,7 +144,6 @@ const en = {
 export type A11yStrings = typeof en
 
 const fr: A11yStrings = {
-  ...en,
   open: 'Accessibilité',
   title: "Centre d'accessibilité",
   intro: "Tout ici est facultatif et désactivé par défaut. Activez seulement ce qui vous aide - le reste de MatchShift ne change pas.",
@@ -282,7 +281,6 @@ const fr: A11yStrings = {
 }
 
 const es: A11yStrings = {
-  ...en,
   open: 'Accesibilidad',
   title: 'Centro de accesibilidad',
   intro: 'Todo aquí es opcional y está desactivado por defecto. Activa solo lo que te ayude: el resto de MatchShift no cambia.',

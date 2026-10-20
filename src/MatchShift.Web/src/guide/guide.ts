@@ -98,6 +98,20 @@ export function verdict(x: WorkflowExecution | null): Verdict | null {
   return { kind: 'unverified', short: x.outcome ?? x.status, tone: 'warn' }
 }
 
+/**
+ * The note under a published agent result. The server's notice is English prose; other languages get the equivalent
+ * localized verdict text for the outcome (in English the server's more specific notice, e.g. a quota fallback, is kept).
+ */
+export function publishedNotice(s: Strings, outcome: string, serverNotice: string, english: boolean): string {
+  if (english) return serverNotice
+  const [, detail] = outcome === 'APPROVED' ? s.verdict.verified
+    : outcome === 'APPROVED_WITH_CHANGES' ? s.verdict.verifiedWithChanges
+    : outcome === 'REJECTED' ? s.verdict.rejected
+    : outcome === 'DETERMINISTIC_ONLY' ? s.verdict.deterministic
+    : s.verdict.unverified
+  return detail
+}
+
 // ---------------------------------------------------------------- Foundry Evaluations proof
 
 /**

@@ -23,7 +23,9 @@ public static class MatchShiftAgents
         "No claims of intent (what a coach or player decided or wanted) and no certainty words (definitely, proves). " +
         GroundingRules + " " +
         "Write all viewer-facing text in the language code insightContext.language (en English, fr French, es Spanish, de German, it Italian, " +
-        "pt European Portuguese), with natural football terms for that language. Return only the requested JSON object.";
+        "pt European Portuguese (pt-PT)), with natural football terms for that language. For pt write as in Portugal, never Brazilian: " +
+        "equipa (not time), golo (not gol), remate (not chute), guarda-redes (not goleiro), relvado, grande área, registado (not registrado), " +
+        "o seu / a sua, and 'está a atacar' rather than 'está atacando'. Return only the requested JSON object.";
 
     /// <summary>
     /// Shared by all four agents (and therefore by audience, spoken, accessible and replay text). The deterministic validator

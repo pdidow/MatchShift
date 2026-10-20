@@ -65,6 +65,16 @@ public static partial class NumericGrounding
                      FrenchMinutePattern(), SpanishMinutePattern(), PortugueseMinutePattern() })
             work = Take(work, pattern, m => CheckMinute(c, v, int.Parse(m.Groups["n"].Value, CultureInfo.InvariantCulture), problems));
 
+        //    German halves ("1. Halbzeit", "2. Hälfte") are periods, not quantities: only 1 or 2, and the second half cannot be
+        //    mentioned before it has started. Any other German ordinal still falls through to the strict checks below.
+        work = Take(work, GermanHalfPattern(), m =>
+        {
+            if (m.Groups["n"].Value is not ("1" or "2"))
+                problems.Add(new(IssueCodes.UnsupportedNumber, $"'{m.Value.Trim()}' is not a half of a football match."));
+            else if (m.Groups["n"].Value == "2" && c.MatchSecond < SecondHalfStartSecond)
+                problems.Add(new(IssueCodes.FutureTime, $"'{m.Value.Trim()}' is after the insight ({c.MatchTime})."));
+        });
+
         // 6. "X of (the last) Y <noun>": both values must come from ONE metric (numerator and its sample).
         work = Take(work, FractionPattern(), m => CheckFraction(c, Num(m.Groups[1].Value), Num(m.Groups[2].Value), m.Value, problems));
 
@@ -93,6 +103,9 @@ public static partial class NumericGrounding
             CheckCount(c, v, Num(m.Groups["b"].Value), noun, $"{m.Groups["b"].Value} {noun}", work, m.Index, problems);
         });
         work = Take(work, CountPattern(), m => CheckCount(c, v, Num(m.Groups[1].Value), m.Groups["noun"].Value.ToLowerInvariant(),
+            m.Value.Trim(), work, m.Index, problems));
+        //     German counted nouns ("35 Angriffe", "9 Pässe", "8 Spieler") are checked exactly like their English noun.
+        work = Take(work, GermanCountPattern(), m => CheckCount(c, v, Num(m.Groups[1].Value), GermanNoun(m.Groups["noun"].Value),
             m.Value.Trim(), work, m.Index, problems));
 
         // 11. Ordinals that are not minutes ("1st goal", "second half" is words) are not quantity claims.
@@ -249,6 +262,24 @@ public static partial class NumericGrounding
             problems.Add(new(IssueCodes.UnsupportedNumber, $"'{text}' is not a grounded count of {noun}."));
     }
 
+    /// <summary>Kick-off of the second half on the match clock.</summary>
+    private const int SecondHalfStartSecond = 45 * 60;
+
+    /// <summary>The English counted noun a German one means, so it is checked in the same category ("Angriffe" → attacks).</summary>
+    private static string GermanNoun(string noun) => noun.ToLowerInvariant() switch
+    {
+        var n when n.StartsWith("angriff", StringComparison.Ordinal) => "attacks",
+        var n when n.StartsWith("pässe", StringComparison.Ordinal) || n == "pass" => "passes",
+        var n when n.Contains("schüss", StringComparison.Ordinal) || n.EndsWith("schuss", StringComparison.Ordinal) => "shots",
+        var n when n.StartsWith("ereignis", StringComparison.Ordinal) => "events",
+        var n when n.StartsWith("tor", StringComparison.Ordinal) => "goals",
+        var n when n.StartsWith("spieler", StringComparison.Ordinal) => "players",
+        var n when n.StartsWith("ballverlust", StringComparison.Ordinal) => "turnovers",
+        var n when n.StartsWith("ballgewinn", StringComparison.Ordinal) => "recoveries",
+        var n when n.StartsWith("konter", StringComparison.Ordinal) => "transitions",
+        _ => "corners",
+    };
+
     /// <summary>What a metric's sample counts, when its name does not say so ("LongBallShare" is a share of passes).</summary>
     private static string? SampleNoun(string metricKey) => metricKey switch
     {
@@ -384,8 +415,17 @@ public static partial class NumericGrounding
     private static partial Regex SpanishMinutePattern();
 
     // German "zwischen der 50. und der 62. Minute", Italian "tra il 50° e il 62° minuto" / "dal 50° al 62° minuto".
-    [GeneratedRegex(@"\bzwischen\s+der\s+(?<a>\d{1,3})\.\s+und\s+(?:der\s+)?(?<b>\d{1,3})\.\s+Minute\b|\b(?:tra|fra|dal)\s+(?:il\s+)?(?<a>\d{1,3})[°º]\s+(?:e|al)\s+(?:il\s+)?(?<b>\d{1,3})[°º]\s+minuto\b", RegexOptions.IgnoreCase)]
+    // German also "zwischen 50. und 62. Minute" and "von der 50. bis zur 62. Minute".
+    [GeneratedRegex(@"\bzwischen\s+(?:der\s+)?(?<a>\d{1,3})\.\s+und\s+(?:der\s+)?(?<b>\d{1,3})\.\s+Minute\b|\bvon\s+der\s+(?<a>\d{1,3})\.\s+bis\s+(?:zur|zu\s+der)\s+(?<b>\d{1,3})\.\s+Minute\b|\b(?:tra|fra|dal)\s+(?:il\s+)?(?<a>\d{1,3})[°º]\s+(?:e|al)\s+(?:il\s+)?(?<b>\d{1,3})[°º]\s+minuto\b", RegexOptions.IgnoreCase)]
     private static partial Regex OrdinalMinuteRangePattern();
+
+    // German "1. Halbzeit", "2. Hälfte", "2. Spielhälfte".
+    [GeneratedRegex(@"\b(?<n>\d)\.\s+(?:Halbzeit|Hälfte|Spielhälfte)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex GermanHalfPattern();
+
+    // German counted nouns, up to two words in between ("9 Angriffe", "35 erfolglose Angriffe", "12 Ereignisse").
+    [GeneratedRegex(@"\b(\d+)\s+(?:[\p{L}-]+\s+){0,2}?(?<noun>Angriff(?:e|en)?|Pässe(?:n)?|Pass|(?:Tor)?Schüsse(?:n)?|(?:Tor)?Schuss|Ereignisse(?:n)?|Tore(?:n)?|Spieler(?:n)?|Ballverluste(?:n)?|Ballverlust|Ballgewinne(?:n)?|Ballgewinn|Konter(?:n)?|Ecken)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex GermanCountPattern();
 
     // Portuguese "aos 35 minutos", "desde os 50 minutos": a match minute ("minuto 35" is MinuteWordPattern).
     [GeneratedRegex(@"\b(?:aos|desde\s+os|até\s+aos)\s+(?<n>\d{1,3})\s+minutos?\b(?!\s+e\s+\d)", RegexOptions.IgnoreCase)]
@@ -414,7 +454,9 @@ public static partial class NumericGrounding
     [GeneratedRegex(@"\b(\d+)\s+(?:out\s+)?of\s+(?:the\s+|their\s+|its\s+)?(?:last\s+|first\s+|previous\s+)?(\d+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex FractionPattern();
 
-    [GeneratedRegex(@"(\d+(?:[.,]\d+)?)\s*(?:%|per\s?cent\b|percent\b|pour\s?cent\b|por\s?ciento\b)", RegexOptions.IgnoreCase)]
+    // Percentages: "%", English "per cent", French "pour cent", Spanish "por ciento", German "Prozent", Italian "per cento",
+    // Portuguese "por cento". Checked as percentages before any counted-noun rule can read "90 Prozent der Angriffe" as a count.
+    [GeneratedRegex(@"(\d+(?:[.,]\d+)?)\s*(?:%|per\s?cent\b|percent\b|pour\s?cent\b|por\s?ciento\b|Prozent\b|per\s?cento\b|por\s?cento\b)", RegexOptions.IgnoreCase)]
     private static partial Regex PercentPattern();
 
     [GeneratedRegex(@"(\d+(?:[.,]\d+)?)\s+(?:percentage\s+)?(?:points?|pts)\b", RegexOptions.IgnoreCase)]

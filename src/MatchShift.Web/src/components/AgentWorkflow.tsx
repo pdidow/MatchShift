@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import type { AgentRuntimeStatus, Profile, PublishedInsight, StageStatus, TraceStep, WorkflowExecution } from '../api'
 import type { Strings } from '../i18n'
 import { AgentRefusal, api } from '../api'
-import { EVALUATION, chipLabels, modeLabel, runtimeChips, verdict } from '../guide/guide'
+import { EVALUATION, chipLabels, modeLabel, publishedNotice, runtimeChips, verdict } from '../guide/guide'
+import { t } from '../i18n'
 
 // Node order of the Microsoft Agent Framework workflow graph (executor IDs, as in MatchShift.Agents/Workflow/Stages).
 const STAGES = {
@@ -58,9 +59,9 @@ function Node({ x, stage, s }: { x: WorkflowExecution | null; stage: string; s: 
         <div className="wf-meta">
           <span>{ms(step.durationMs)}</span>
           {step.superstep !== undefined && <span>superstep {step.superstep}</span>}
-          {step.modelCalls > 0 && <span>{step.modelCalls} call{step.modelCalls > 1 ? 's' : ''}</span>}
-          {step.retryCount > 0 && <span className="wf-retry">{step.retryCount} retr{step.retryCount > 1 ? 'ies' : 'y'}</span>}
-          {step.evidenceCount > 0 && <span>{step.evidenceCount} evidence</span>}
+          {step.modelCalls > 0 && <span>{step.modelCalls} {s.agentsUi.calls}</span>}
+          {step.retryCount > 0 && <span className="wf-retry">{step.retryCount} {s.agentsUi.retries}</span>}
+          {step.evidenceCount > 0 && <span>{step.evidenceCount} {s.agentsUi.evidenceShort}</span>}
           {step.verificationDecision && <span className="wf-decision-inline">{step.verificationDecision}</span>}
         </div>
       )}
@@ -196,11 +197,11 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible, s }:
       {status && (
         <p className="wf-runtime">
           {status.runtime.orchestrator}
-          {status.runtime.modelDeployment && <> · model <b>{status.runtime.modelDeployment}</b></>}
+          {status.runtime.modelDeployment && <> · {u.model} <b>{status.runtime.modelDeployment}</b></>}
           {status.runtime.projectEndpointHost && <> · {status.runtime.projectEndpointHost}</>}
           {status.runtime.credential && <> · Entra ID ({status.runtime.credential})</>}
           {Object.keys(status.runtime.packages).length > 0 && <> · {Object.entries(status.runtime.packages).filter(([k]) => k.startsWith('Microsoft.Agents')).map(([k, v]) => `${k} ${v}`).join(', ')}</>}
-          {status.runtime.configurationNote && <><br />{status.runtime.configurationNote}</>}
+          {status.runtime.configurationNote && <><br />{status.runtime.provider === 'recorded' ? u.staticNote : status.runtime.configurationNote}</>}
         </p>
       )}
       {x?.recordedFrom && <p className="wf-banner">{u.recorded.replace('{from}', x.recordedFrom)}</p>}
@@ -251,8 +252,8 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible, s }:
           {x && (
             <>
               <div className="wf-facts">
-                <span>{x.frameworkSupersteps} supersteps · {x.frameworkExecutorInvocations} executor runs</span>
-                <span>{x.modelCalls}/{x.modelCallLimit} model calls · {x.inputTokens}+{x.outputTokens} tokens</span>
+                <span>{x.frameworkSupersteps} supersteps · {x.frameworkExecutorInvocations} {u.executorRuns}</span>
+                <span>{x.modelCalls}/{x.modelCallLimit} {u.modelCalls} · {x.inputTokens}+{x.outputTokens} {u.tokens}</span>
                 <span>{ms(x.durationMs)}</span>
                 <span className={x.authoritativeFactsUnchanged ? 'ok' : ''}>
                   {x.authoritativeFingerprintAfter ? (x.authoritativeFactsUnchanged ? `✓ ${u.factsUnchanged} (${x.authoritativeFingerprintBefore})` : `✗ ${u.factsChanged}`) : u.factsPending}
@@ -274,7 +275,7 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible, s }:
                       {p.limitations.length > 0 && <p className="card-sub"><b>{u.limitations}: </b>{p.limitations.join(' ')}</p>}
                     </>
                   ) : null}
-                  <p className="note">{p.notice}</p>
+                  <p className="note">{publishedNotice(s, p.outcome, p.notice, s === t('en'))}</p>
                   {p.evidenceIds.length > 0 && <div className="wf-ids">{p.evidenceIds.map(id => <code key={id}>{id.replace(/^.*-(E\d+)$/, '$1')}</code>)}</div>}
                 </article>
               )}
@@ -319,7 +320,7 @@ export function AgentInsight({ agent, s, compact }: { agent?: PublishedInsight; 
   if (!agent.verified) {
     // OFFLINE_TEMPLATE runs are expected to publish nothing; only flag genuine rejections and fallbacks.
     if (agent.outcome === 'DETERMINISTIC_ONLY') return null
-    return <p className="agent-note">{s.agentNotPublished}: {agent.outcome}. {agent.notice}</p>
+    return <p className="agent-note">{s.agentNotPublished}: {agent.outcome}. {publishedNotice(s, agent.outcome, agent.notice, s === t('en'))}</p>
   }
   return (
     <div className="agent-verified">

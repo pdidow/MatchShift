@@ -264,8 +264,10 @@ the default is restored.
     previous language stops. Without a voice for that language on the device, a notice shows and the browser picks a
     voice for the requested `lang`. (Verified on the hosted app in Chrome on Windows: en-GB → Microsoft George,
     fr-FR → Google français, es-ES → Google español; French and Spanish replay audio description.)
-    German, Italian and Portuguese speech (de-DE, it-IT, pt-PT) use the same voice selection and fallback and are
-    covered by unit tests with simulated voices; they have not yet been checked by hand in a browser.
+    German, Italian and Portuguese were then checked in Chrome on Windows (local build): de-DE → Google Deutsch,
+    it-IT → Google italiano; this device has no pt-PT voice, so pt-PT used Google português do Brasil (same language,
+    utterance `lang` still pt-PT). With every Portuguese voice hidden, the utterance kept `lang` pt-PT with no explicit
+    voice (never an English one) and the localized no-voice notice appeared.
 13. **Combinations to spot-check:**
     - High contrast + Extra large + Monochrome.
     - Reduced motion + Audio description in the replay.

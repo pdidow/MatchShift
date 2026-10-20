@@ -7,7 +7,7 @@ import { chooseVoice, SpeechQueue } from './a11y/speech'
 import type { SynthLike, UtteranceLike, VoiceLike } from './a11y/speech'
 import { evidenceLegend, splitEvidence } from './evidence'
 import type { AgentRuntimeStatus, InsightEvents, PitchEvent, WorkflowExecution } from './api'
-import { GUIDE_STEPS, chipLabels, modeLabel, runtimeChips, verdict } from './guide/guide'
+import { GUIDE_STEPS, chipLabels, modeLabel, publishedNotice, runtimeChips, verdict } from './guide/guide'
 import { performanceLabels } from './components/PlayerPanel'
 
 // German, Italian and European Portuguese join English, French and Spanish. No test here needs installed voices or Azure.
@@ -55,6 +55,27 @@ describe('language definitions', () => {
       expect(s.replay.button).not.toBe(t('en').replay.button)
       expect(s.agentsUi.title).not.toBe(t('en').agentsUi.title)
       expect(a11yStrings(lang).speech.noVoice).not.toBe(a11yStrings('en').speech.noVoice)
+    }
+  })
+
+  it('no supported language silently reuses English text (only reviewed cognates and identifiers may match)', () => {
+    // Identical to English on purpose: same word in that language, key names, product names or pure templates.
+    const allowed: Record<string, string[]> = {
+      fr: ['text.normal', 'describe.title', 'agents', 'pause', 'match', 'possession', 'minute', 'replay.pause', 'replay.legend', 'replay.events.INTERCEPTION', 'replay.events.CORNER'],
+      es: ['text.normal'],
+      de: ['text.normal', 'highlights', 'pause', 'minute', 'replay.pause', 'replay.clipOf', 'replay.events.PASS', 'replay.events.FOUL'],
+      it: ['keys.replayList.2.0', 'replay.clipOf', 'replay.events.CROSS'],
+      pt: ['text.normal', 'keys.list.0.0', 'keys.replayList.2.0', 'replay.clipOf'],
+    }
+    const always = ['keys.list.2.0', 'keys.list.4.0', 'keys.replayList.1.0', 'keys.replayList.4.0', 'ad.clip', 'agentsUi.modeLive', 'agentsUi.entraId', 'agentsUi.tokens']
+    const enUi = leaves(t('en'))
+    const enA11y = leaves(a11yStrings('en'))
+    for (const lang of LANGUAGE_CODES.filter(l => l !== 'en')) {
+      const same = [...leaves(t(lang)), ...leaves(a11yStrings(lang))]
+        .filter(([k, v]) => typeof v === 'string' && v.length > 1 && (v === enUi.get(k) || v === enA11y.get(k)))
+        .map(([k]) => k)
+        .filter(k => !always.includes(k) && !allowed[lang].includes(k))
+      expect(same, `${lang} strings identical to English`).toEqual([])
     }
   })
 
@@ -197,6 +218,16 @@ describe('verification and live status wording', () => {
       expect(s.verdict[verdict(exec('LIVE_FOUNDRY', 'APPROVED', true))!.kind][0]).toBe(s.verdict.verified[0])
       expect(modeLabel(s, 'OFFLINE_TEMPLATE')).toMatch(/^OFFLINE TEMPLATE · /)
       expect(modeLabel(s, 'RECORDED_DEMO')).toMatch(/^RECORDED DEMO · /)
+    }
+  })
+
+  it('the published-result note is localized (English keeps the server notice)', () => {
+    const server = 'Verified by the MatchShift Verification Agent and deterministic validation.'
+    expect(publishedNotice(t('en'), 'APPROVED', server, true)).toBe(server)
+    for (const lang of NEW) {
+      expect(publishedNotice(t(lang), 'APPROVED', server, false)).toBe(t(lang).verdict.verified[1])
+      expect(publishedNotice(t(lang), 'REJECTED', server, false)).toBe(t(lang).verdict.rejected[1])
+      expect(publishedNotice(t(lang), 'FALLBACK_UNVERIFIED', 'Live AI analysis is temporarily unavailable', false)).toBe(t(lang).verdict.unverified[1])
     }
   })
 

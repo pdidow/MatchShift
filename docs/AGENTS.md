@@ -128,6 +128,26 @@ execution type/mode, provider, deployment, timings, superstep, status, handoffs,
 summaries, model calls, retries, failure codes, recovery actions, verifier decision and token counts.
 They never contain prompts, agent instructions, hidden reasoning, tokens or keys.
 
+### Multilingual grounding and wording
+
+German phrasing the validator understands narrowly:
+- minute ranges "von der 50. bis zur 62. Minute" and "zwischen (der) 50. und (der) 62. Minute", with both ends checked as
+  match minutes;
+- "1./2. Halbzeit" as periods: only 1 or 2, and the second half not before half-time;
+- counts with German nouns ("35 Angriffe", "9 Pässe", "8 Spieler"), checked in the same category as the English noun;
+- spelled percentages ("Prozent", "per cento", "por cento"), checked as percentages.
+
+Paired tests keep these strict: an invented or future range, a wrong attack count, "3. Halbzeit" and "8 Spieler" all fail.
+A bare window such as "50-62" is still rejected in every language; MatchShift itself always writes 50'-62'.
+
+Live check (2026-10-20, one German and one Portuguese workflow on the flagship insight):
+- **German:** published verified, but still needed one constrained repair. The verifier's own correction carried numbers ('50',
+  '27', '62') that failed re-validation, and an optional detail field with the two sample sizes ('10', '35') was removed.
+  Raw drafts are not recorded, so those exact sentences are unknown.
+- **Portuguese:** passed first time and read as European Portuguese ("o seu padrão", "face aos 31%", "grande área"), with
+  minor Brazilian-leaning phrasing ("trocar um jogador", "Isso"). The agents are told explicitly to write pt-PT with
+  Portugal football terms.
+
 ## Evaluation
 
 The workflow's output is measured in three separate layers: deterministic validation, the Verification Agent, and
