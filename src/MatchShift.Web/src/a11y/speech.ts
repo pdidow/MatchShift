@@ -1,12 +1,55 @@
-// Speech queue on top of the Web Speech API (window.speechSynthesis).
+// The single MatchShift speech coordinator on top of the Web Speech API (window.speechSynthesis).
 //  - one voice at a time, highest priority first
+//  - TIMELINE-AWARE: a cue names the second it describes on its own clock (match or replay); once that clock has moved
+//    past the cue's relevance window the cue is dropped, never spoken late. The timeline never waits for speech.
+//  - BOUNDED: at most one cue waiting per source (plus the one speaking); a newer or more important cue replaces it
+//  - AUDIO FOCUS: Evidence Replay takes exclusive focus; match narration is silenced and cleared until focus is released
 //  - de-duplicates by key (the same insight is never spoken twice)
-//  - discards stale low-priority messages
-//  - critical messages interrupt lower-priority speech
-//  - mute / pause / resume / repeat last
-//  - every message is also kept as text (captions + transcript), even when muted or no voice exists
+//  - critical messages (and the viewer's own requests) interrupt lower-ranked speech; interrupted speech is not resumed
+//  - goals and match boundaries (half-time, full-time) are never silently lost: they outrank every other cue and wait
+//    a short grace period behind a sentence that is already speaking
+//  - mute / pause / resume / repeat last; the speech rate is the viewer's setting and is never scaled by playback speed
+//  - every message is also kept as text (captions + transcript), even when muted, silenced or no voice exists
 
 export type Priority = 0 | 1 | 2 // 0 = low (detail, replay narration), 1 = normal, 2 = critical (goals, dangerous moments)
+
+/** Who a cue belongs to. "ui" is something the viewer asked for (read aloud, test voice) and is never timeline-bound. */
+export type SpeechSource = 'match' | 'replay' | 'ui'
+
+/** Which timeline owns MatchShift narration. Evidence Replay is exclusive while it is open. */
+export type AudioFocus = 'match' | 'replay'
+
+/** Seconds of its own timeline a cue stays relevant, by source and priority (match: match seconds; replay: replay seconds). */
+export const RELEVANCE: Record<'match' | 'replay', Record<Priority, number>> = {
+  // At the default 2x one real second is one match minute: 45 / 90 / 180 match seconds are 0.75 / 1.5 / 3 s of viewing.
+  match: { 0: 45, 1: 90, 2: 180 },
+  replay: { 0: 1.5, 1: 3, 2: 4 },
+}
+
+/**
+ * What a cue is, when that matters more than its priority. Decided from match event semantics, never by AI:
+ *   goal / boundary (half-time, full-time)  >  major (a verified, high-severity insight)  >  other critical  >  normal  >  low
+ */
+export type CueClass = 'goal' | 'boundary' | 'major'
+
+/** Rank used for interruption and for which cue waits. Unclassified cues rank by priority (0-2). */
+export const cueRank = (q: { priority?: Priority; cueClass?: CueClass }): number =>
+  q.cueClass === 'goal' || q.cueClass === 'boundary' ? 4 : q.cueClass === 'major' ? 3 : (q.priority ?? 1)
+
+/**
+ * Goals and boundaries are sticky: real milliseconds they may still wait behind a sentence that is already speaking once
+ * their timeline window has passed (long enough for the longest single sentence, about 12.5 s detailed at 1x).
+ */
+export const STICKY_GRACE_MS = 15_000
+
+const isSticky = (q: { cueClass?: CueClass }) => q.cueClass === 'goal' || q.cueClass === 'boundary'
+
+/** Is a cue at timeline second `at` still current when the clock reads `clock`? A cue "from the future" (after a seek back) is not. */
+export function isCurrent(at: number | undefined, clock: number | undefined, validFor: number): boolean {
+  if (at === undefined || clock === undefined) return true
+  const age = clock - at
+  return age >= -1 && age <= validFor
+}
 
 export interface SpeechMessage {
   text: string
@@ -20,8 +63,16 @@ export interface SpeechMessage {
   /** Match clock for the transcript, e.g. "63:10". */
   clock?: string
   lang: string
-  /** Override the default time-to-live. */
+  /** Override the default time-to-live (a wall-clock backstop only). */
   ttlMs?: number
+  /** Owner. Defaults: "replay" for kind "replay", "ui" for the viewer's own repeatable requests, otherwise "match". */
+  source?: SpeechSource
+  /** The timeline second this cue describes, on its source's clock. */
+  at?: number
+  /** Override the relevance window (timeline seconds). */
+  validFor?: number
+  /** Semantic class (goal, match boundary, major insight); see cueRank. */
+  cueClass?: CueClass
 }
 
 export interface TranscriptEntry {
@@ -82,7 +133,7 @@ export function chooseVoice(voices: VoiceLike[], lang: string): VoiceLike | null
   return same.find(v => v.default) ?? same.find(v => (v as { localService?: boolean }).localService) ?? same[0]
 }
 
-interface Queued extends SpeechMessage { priority: Priority; createdAt: number; entry: TranscriptEntry }
+interface Queued extends SpeechMessage { priority: Priority; source: SpeechSource; createdAt: number; entry: TranscriptEntry; merged?: TranscriptEntry[] }
 
 const DEFAULT_TTL: Record<Priority, number> = { 0: 15_000, 1: 40_000, 2: 120_000 }
 const MAX_TRANSCRIPT = 200
@@ -102,6 +153,12 @@ export class SpeechQueue {
 
   rate = 1
   volume = 1
+
+  private focus: AudioFocus = 'match'
+  private readonly clocks: Record<'match' | 'replay', { time?: number; playing: boolean }> = {
+    match: { playing: true },
+    replay: { playing: true },
+  }
 
   constructor(options?: { synth?: SynthLike | null; makeUtterance?: (text: string) => UtteranceLike; now?: () => number }) {
     const browserSynth = typeof window !== 'undefined' && 'speechSynthesis' in window ? (window.speechSynthesis as unknown as SynthLike) : null
@@ -149,8 +206,63 @@ export class SpeechQueue {
 
   getState() { return this.state }
 
+  getFocus() { return this.focus }
+
+  /** Cues waiting (not counting the one speaking). Bounded: at most one per source. */
+  get pending() { return this.queue.length }
+
+  /**
+   * The current position of a timeline. Waiting cues of that source that are no longer current are dropped at once. A
+   * sentence already speaking is allowed to finish (cutting every sentence mid-word would be worse); a seek or restart
+   * makes it stale, and the caller then clears it with clearSource / clearKind. While a timeline is paused none of its
+   * waiting cues start.
+   */
+  setTimeline(source: 'match' | 'replay', time: number, playing: boolean) {
+    const clock = this.clocks[source]
+    const wasPlaying = clock.playing
+    clock.time = time
+    clock.playing = playing
+    this.queue = this.queue.filter(q => q.source !== source || this.isRelevant(q))
+    if (playing && !wasPlaying) this.pump()
+  }
+
+  /** Drop everything waiting for a source and stop it if it is speaking (a seek, reset or new match made it stale). */
+  clearSource(source: SpeechSource) {
+    this.queue = this.queue.filter(q => q.source !== source)
+    if (this.currentItem?.source === source) this.cancelCurrent()
+  }
+
+  /**
+   * Evidence Replay opens and becomes the only MatchShift narration owner: match narration speaking now is stopped and
+   * everything queued for the match (or for the page) is discarded - it describes a moment the viewer has left.
+   */
+  acquireReplayFocus() {
+    this.focus = 'replay'
+    this.queue = this.queue.filter(q => q.source === 'replay')
+    if (this.currentItem && this.currentItem.source !== 'replay') this.cancelCurrent()
+    this.clocks.replay = { playing: true }
+  }
+
+  /** Evidence Replay closes: replay speech stops; earlier match narration is NOT resumed - only new match cues speak. */
+  releaseReplayFocus() {
+    this.focus = 'match'
+    this.queue = this.queue.filter(q => q.source !== 'replay')
+    if (this.currentItem?.source === 'replay') this.cancelCurrent()
+    this.clocks.replay = { playing: true }
+  }
+
+  private isRelevant(q: Pick<Queued, 'source' | 'at' | 'validFor' | 'priority' | 'cueClass' | 'createdAt'>, arriving = false) {
+    if (q.source === 'ui') return true
+    const clock = this.clocks[q.source].time
+    if (isCurrent(q.at, clock, q.validFor ?? RELEVANCE[q.source][q.priority])) return true
+    // A goal or boundary that was current when raised may still be spoken for a short, bounded grace period (it waited
+    // behind a sentence already speaking). Never one from the future, and ordinary cues get no grace.
+    return !arriving && isSticky(q) && this.now() - q.createdAt <= STICKY_GRACE_MS && isCurrent(q.at, clock, Number.MAX_SAFE_INTEGER)
+  }
+
   /** Queue a message. Returns false if it was a duplicate. */
   say(message: SpeechMessage, options?: { allowRepeat?: boolean }): boolean {
+    const source: SpeechSource = message.source ?? (message.kind === 'replay' ? 'replay' : options?.allowRepeat ? 'ui' : 'match')
     if (message.key && !options?.allowRepeat) {
       if (this.spokenKeys.has(message.key)) return false
       this.spokenKeys.add(message.key)
@@ -162,6 +274,8 @@ export class SpeechQueue {
     }
     this.pushTranscript(entry)
     if (!this.synth || this.state.muted) { this.emit(); return true }
+    // Audio focus: while Evidence Replay is open, match narration is text only and never queues behind the replay.
+    if (source === 'match' && this.focus === 'replay') { this.emit(); return true }
 
     // Voices are loaded but none speaks this language: still speak with utterance.lang set (the browser picks the best it
     // has) and surface a notice so the viewer knows pronunciation may suffer; the text is always in the transcript.
@@ -169,9 +283,33 @@ export class SpeechQueue {
     if (voice === undefined) this.update({ missingVoice: message.lang })
     else if (this.state.missingVoice === message.lang) this.update({ missingVoice: null })
 
-    const item: Queued = { ...message, priority, createdAt: this.now(), entry }
-    if (priority === 2 && this.currentItem && this.currentItem.priority < 2) {
-      // Critical news interrupts lower-priority speech; the interrupted message is dropped (it would be stale).
+    const item: Queued = { ...message, priority, source, createdAt: this.now(), entry }
+    if (!this.isRelevant(item, true)) { this.emit(); return true }          // already stale: text only, never spoken late
+
+    // Bounded: at most one cue waiting per source. A newer cue replaces the waiting one unless that one ranks higher.
+    // The one exception keeps goals and boundaries from being lost: a source may hold one waiting goal AND one waiting
+    // boundary. A newer boundary replaces a waiting one (full time supersedes half-time); a newer goal is MERGED into the
+    // waiting goal, so both are spoken in one cue and no goal is lost. Ordinary cues waiting behind them are dropped.
+    const rank = cueRank(item)
+    const waiting = this.queue.filter(q => q.source === source)
+    if (isSticky(item)) {
+      const waitingGoal = item.cueClass === 'goal' ? waiting.find(q => q.cueClass === 'goal' && q.lang === item.lang) : undefined
+      if (waitingGoal) { item.text = `${waitingGoal.text} ${item.text}`; item.merged = [...(waitingGoal.merged ?? []), waitingGoal.entry] }
+      this.queue = this.queue.filter(q => q.source !== source || (isSticky(q) && q.cueClass !== item.cueClass))
+    } else {
+      if (waiting.some(q => cueRank(q) > rank)) { this.emit(); return true }
+      this.queue = this.queue.filter(q => q.source !== source)
+    }
+    // A goal interrupts anything below a goal. A boundary interrupts only non-critical speech and otherwise waits (with
+    // its grace) for the sentence to finish, so half-time never cuts a goal. Other critical news interrupts lower ranks.
+    const current = this.currentItem
+    const interrupts = !!current && (
+      (item.cueClass === 'goal' ? rank > cueRank(current)
+        : item.cueClass === 'boundary' ? current.priority < 2 && rank > cueRank(current)
+        : priority === 2 && rank > cueRank(current)) ||
+      (source === 'ui' && current.source !== 'ui'))                       // the viewer's own request is answered now
+    if (interrupts) {
+      // The interrupted message is dropped (it would be stale), never resumed.
       this.queue.unshift(item)
       this.cancelCurrent()
     } else {
@@ -242,11 +380,17 @@ export class SpeechQueue {
   private pump() {
     if (!this.synth || this.currentItem || this.state.paused || this.state.muted) return
     const now = this.now()
-    this.queue = this.queue.filter(q => now - q.createdAt <= (q.ttlMs ?? DEFAULT_TTL[q.priority]))
-    if (this.queue.length === 0) return
-    // Highest priority first; FIFO within a priority.
-    let bestIndex = 0
-    for (let i = 1; i < this.queue.length; i++) if (this.queue[i].priority > this.queue[bestIndex].priority) bestIndex = i
+    this.queue = this.queue.filter(q => now - q.createdAt <= (q.ttlMs ?? DEFAULT_TTL[q.priority]) && this.isRelevant(q)
+      && !(q.source === 'match' && this.focus === 'replay'))
+    // A paused timeline starts no new cues of its own (the viewer's own requests still speak).
+    const eligible = (q: Queued) => q.source === 'ui' || this.clocks[q.source].playing
+    // Highest rank first; FIFO within a rank.
+    let bestIndex = -1
+    for (let i = 0; i < this.queue.length; i++) {
+      if (!eligible(this.queue[i])) continue
+      if (bestIndex < 0 || cueRank(this.queue[i]) > cueRank(this.queue[bestIndex])) bestIndex = i
+    }
+    if (bestIndex < 0) return
     const item = this.queue.splice(bestIndex, 1)[0]
     const u = this.makeUtterance(item.text)
     u.lang = item.lang
@@ -265,6 +409,7 @@ export class SpeechQueue {
     this.currentItem = item
     this.lastSpoken = item
     item.entry.spoken = true
+    for (const e of item.merged ?? []) e.spoken = true
     this.update({ speaking: true, current: item.entry })
     this.synth.speak(u)
   }

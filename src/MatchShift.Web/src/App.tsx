@@ -23,6 +23,9 @@ import type { GuideStep } from './guide/guide'
 import { FLAGSHIP, GUIDE_STEPS, findFlagship, wantsGuideFromUrl } from './guide/guide'
 import { evidenceLegend, splitEvidence } from './evidence'
 import { isLang } from './languages'
+import { capDetail, insightCueClass, matchNarrationPolicy, matchTimelineLive } from './a11y/narrationPolicy'
+import { ReplayAudioFocus } from './a11y/audioFocus'
+import type { CueClass } from './a11y/speech'
 
 type Tab = 'live' | 'highlights' | 'recap' | 'agents'
 const TABS: Tab[] = ['live', 'highlights', 'recap', 'agents']
@@ -209,6 +212,17 @@ export default function App() {
 
   const openReplay = (insightId: string) => { setSelected(insightId); setWhy(null); setReplayId(insightId) }
 
+  // Evidence Replay owns the audio and the clock while it is open. Opening it (from a card, WHY?, SHOW ME, highlights or the
+  // guided demo) pauses the underlying match, stops and clears match narration and gives the replay exclusive focus.
+  // Closing it releases focus (old match narration is not resumed) and restores the match's play/pause state; the
+  // playback speed is never touched. A new match or reset while it was open is never auto-resumed.
+  const replayFocus = useRef(new ReplayAudioFocus())
+  useEffect(() => {
+    const deps = { speech: a11y.speech, pause: () => void api.pause(), play: () => void api.play() }
+    if (replayId) replayFocus.current.open(currentSnapshot.current, deps)
+    else replayFocus.current.close(currentSnapshot.current, deps)
+  }, [replayId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const showHighlight = async (h: HighlightCard) => {
     const card = snap?.insights.find((i) => i.id === h.insightId)
     if (card) return showInsight(card)
@@ -280,6 +294,15 @@ export default function App() {
     return profile.focusTeamId === detail.summary.home.id ? detail.homeSquad : detail.awaySquad
   }, [detail, profile.focusTeamId])
 
+  // ---------------------------------------------------------------- speech follows the match clock
+  // The coordinator learns the current match second first, so every cue below is judged against the live clock: anything
+  // the match has already moved past is dropped instead of being spoken late. Speech never slows the match down. A
+  // finished match no longer moves, so its final cues (the goal on the whistle, full time) may still speak.
+  useEffect(() => {
+    if (snap) a11y.speech.setTimeline('match', snap.clock.second, matchTimelineLive(snap))
+  }, [snap?.clock.second, snap?.isPlaying, snap?.finished, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
+  const policy = matchNarrationPolicy(snap?.speed ?? 2)
+
   // ---------------------------------------------------------------- accessibility: new insights
   // Only insights that arrive while watching are news. On load, a new match, a reset or a seek, the existing
   // insights are marked as seen so nothing is read out as a backlog.
@@ -290,6 +313,7 @@ export default function App() {
     if (seenInsights.current?.key !== key) {
       seenInsights.current = { key, ids: new Set(snap.insights.map(i => i.id)) }
       a11y.speech.resetKeys('insight:')
+      a11y.speech.clearSource('match')   // a seek, reset or new match: anything said about the old position is stale
       return
     }
     const seen = seenInsights.current.ids
@@ -300,13 +324,15 @@ export default function App() {
     const ranked = [...fresh].sort((a, b) => priorityOf(b) - priorityOf(a) || b.importance - a.importance).slice(0, 3)
     a11y.cue(cueFor(ranked[0].type))
     if (prefs.spokenInsights) {
+      // Faster playback says less, never later: the speed policy caps detail and drops lower-priority insights.
+      const detail = capDetail(prefs.speechDetail, policy.detailCap)
       for (const card of ranked) {
-        if (!shouldSpeak(card, prefs.speechDetail)) continue
+        if (!shouldSpeak(card, detail) || priorityOf(card) < policy.minPriority) continue
         if (prefs.audioMatchMode && card.type === 'GOAL') continue // Audio Match Mode already announces goals with the score.
         a11y.say({
-          text: insightSpeech(card, prefs.speechDetail, prefs.simplified, as, teamName, opponentOf),
+          text: insightSpeech(card, detail, prefs.simplified, as, teamName, opponentOf),
           priority: priorityOf(card), kind: 'insight', label: card.narrative.typeLabel, key: `insight:${card.id}`,
-          clock: `${card.minute}'`, lang: voiceLang,
+          clock: `${card.minute}'`, lang: voiceLang, source: 'match', at: card.second, cueClass: insightCueClass(card),
         })
       }
     } else {
@@ -314,8 +340,8 @@ export default function App() {
       const top = ranked[0]
       a11y.announce(`${top.minute}' ${top.narrative.typeLabel}: ${top.narrative.headline}`, priorityOf(top) === 2)
     }
-    if (prefs.periodicRecap === 'shifts' && ranked.some(c => SHIFT_TYPES.has(c.type) && c.severity === 'High')) {
-      a11y.say({ text: matchStatus(snap, as), priority: 0, kind: 'recap', key: `recap:${key}:${snap.clock.minute}`, clock: snap.clock.label, lang: voiceLang, label: as.opt.periodicRecap[0] })
+    if (prefs.periodicRecap === 'shifts' && policy.minPriority === 0 && ranked.some(c => SHIFT_TYPES.has(c.type) && c.severity === 'High')) {
+      a11y.say({ text: matchStatus(snap, as), priority: 0, kind: 'recap', key: `recap:${key}:${snap.clock.minute}`, clock: snap.clock.label, lang: voiceLang, label: as.opt.periodicRecap[0], source: 'match', at: snap.clock.second })
     }
   }, [snap?.insights, snap?.matchId, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -328,18 +354,20 @@ export default function App() {
     const now = { key, minute: snap.clock.minute, home: snap.score.home, away: snap.score.away, finished: snap.finished }
     matchState.current = now
     if (!prev || prev.key !== key) return
-    const status = (k: string, text: string, priority: 0 | 1 | 2, kind = 'status') =>
-      a11y.say({ text, priority, kind, key: k, clock: snap.clock.label, lang: voiceLang, label: as.opt.audioMatchMode[0] })
+    const status = (k: string, text: string, priority: 0 | 1 | 2, kind = 'status', cueClass?: CueClass) => {
+      if (priority < policy.minPriority) return
+      a11y.say({ text, priority, kind, key: k, clock: snap.clock.label, lang: voiceLang, label: as.opt.audioMatchMode[0], source: 'match', at: snap.clock.second, cueClass })
+    }
     if (now.home + now.away > prev.home + prev.away) {
       const text = goalAnnouncement(snap, now.home > prev.home ? snap.home.id : snap.away.id, as)
       a11y.announce(text, true)
-      if (prefs.audioMatchMode) status(`goal:${key}:${now.home}-${now.away}`, text, 2)
+      if (prefs.audioMatchMode) status(`goal:${key}:${now.home}-${now.away}`, text, 2, 'status', 'goal')
     }
     if (!prev.finished && now.finished) {
       a11y.announce(as.status_.fulltime)
-      if (prefs.audioMatchMode || prefs.periodicRecap !== 'off') status(`ft:${key}`, `${as.status_.fulltime} ${matchStatus(snap, as)}`, 1)
+      if (prefs.audioMatchMode || prefs.periodicRecap !== 'off') status(`ft:${key}`, `${as.status_.fulltime} ${matchStatus(snap, as)}`, 2, 'status', 'boundary')
     } else if (prev.minute < 45 && now.minute >= 45) {
-      if (prefs.audioMatchMode || prefs.periodicRecap !== 'off') status(`ht:${key}`, `${as.status_.halftime} ${matchStatus(snap, as)}`, 1)
+      if (prefs.audioMatchMode || prefs.periodicRecap !== 'off') status(`ht:${key}`, `${as.status_.halftime} ${matchStatus(snap, as)}`, 2, 'status', 'boundary')
     } else if (prefs.periodicRecap !== 'halftime' && periodicDue(prefs.periodicRecap, prev.minute, now.minute)) {
       a11y.speech.clearKind('recap') // an older recap still waiting is stale
       status(`recap:${key}:${now.minute}`, matchStatus(snap, as), 0, 'recap')

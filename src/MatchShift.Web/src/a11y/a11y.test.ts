@@ -89,16 +89,17 @@ function makeQueue(now = { t: 0 }) {
 }
 
 describe('speech queue', () => {
-  it('speaks one message at a time, in priority order', () => {
+  it('speaks one message at a time and keeps at most one waiting (the newer or more important one)', () => {
     const { synth, queue } = makeQueue()
     queue.say({ text: 'first', kind: 'insight', lang: 'en-GB', priority: 1 })
     queue.say({ text: 'low', kind: 'insight', lang: 'en-GB', priority: 0 })
-    queue.say({ text: 'normal', kind: 'insight', lang: 'en-GB', priority: 1 })
+    queue.say({ text: 'normal', kind: 'insight', lang: 'en-GB', priority: 1 })      // replaces "low": no backlog
     expect(synth.spoken.map(u => u.text)).toEqual(['first'])
+    expect(queue.pending).toBe(1)
     synth.end()
     synth.end()
     synth.end()
-    expect(synth.spoken.map(u => u.text)).toEqual(['first', 'normal', 'low'])
+    expect(synth.spoken.map(u => u.text)).toEqual(['first', 'normal'])
   })
 
   it('never repeats the same key', () => {

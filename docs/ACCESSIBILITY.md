@@ -59,18 +59,79 @@ persona, because the options are independent of the persona.
 
 Speech uses the browser's Web Speech API (`speechSynthesis`) through one queue (`src/a11y/speech.ts`):
 
-- **One voice at a time**, highest priority first. Critical items are goals and dangerous turnovers. Normal-priority
-  items are most insights, WHY? reading and status. Low-priority items are minor insights, replay narration and
-  periodic recaps.
+- **One voice at a time**, highest priority first. Critical items are goals, dangerous turnovers, half-time and
+  full-time. Normal-priority items are most insights, WHY? reading and status. Low-priority items are minor insights
+  and periodic recaps.
 - **No repeats.** Each insight has a key and is spoken at most once. A reset or seek clears the keys.
-- **Stale items are dropped.** Each priority has a time limit: 15 s for low, 40 s for normal and 120 s for critical.
-  Bursts during fast playback are trimmed to the three most important insights.
-- **Critical items interrupt** lower-priority speech.
+- **Critical items interrupt** lower-ranked speech. Interrupted speech is never resumed.
+- **Semantic rank.** Ranks come from match event semantics only, never from AI:
+  goal = match boundary (half-time, full-time) > major insight (high severity, accepted by the Verification Agent)
+  > other critical > normal > low.
+- **Goals and boundaries are never silently lost.**
+  - A goal interrupts any speech below a goal, such as a key moment or a major insight.
+  - A goal that arrives while another goal is speaking waits. If a further goal arrives, it is merged into the waiting
+    goal and both are spoken in one cue, so there is still only one waiting goal.
+  - Half-time and full-time interrupt only non-critical speech and never cut a goal. Behind a critical sentence they
+    wait.
+  - Goals and boundaries waiting behind a speaking sentence keep a bounded grace of 15 real seconds after their
+    match-time window passes. After that they go to the transcript only.
+  - A full-time announcement replaces a half-time one that is still waiting.
+  - Ordinary cues get no grace and never wait behind a goal or boundary.
+
+### Speech follows the timeline
+
+The timeline is authoritative: the match never waits for speech, and speech never runs behind the match. MatchShift
+**speaks less, not later**.
+
+**Normal match.**
+
+- Every match cue carries the match second it describes. A cue is spoken only while the match is still within its
+  window: 45 match-seconds for low, 90 for normal and 180 for critical. Anything older goes to the transcript
+  unspoken.
+- The queue is bounded: at most one cue waits per source (match, replay, or the viewer's own requests). A newer cue
+  replaces a waiting one unless the waiting one is more important.
+- A sentence that has started is allowed to finish. A reset, seek or new match stops it.
+- While the match is paused, its waiting cues do not start. The viewer's own requests (READ EXPLANATION, Repeat,
+  Match status, Test voice) still speak. Full time is still announced although the match clock has stopped.
+- **Speech is never sped up to match playback.** The speech rate is the viewer's own setting at every speed. Faster
+  playback changes how much is said:
+
+| Playback | What is spoken |
+|---|---|
+| 1× | The viewer's chosen detail level; every cue that passes it. |
+| 2× (default) | Concise. Minute, type, team and headline (the *Major* level, about 4 s of speech instead of about 12 s with the fact sentence, measured in Chrome). Stale cues are dropped. |
+| 5× | Key events and meaningful insights only (normal and critical priority), concise. |
+| 10× | Critical moments only: goals, dangerous turnovers, half-time and full-time. |
+
+  Bursts during fast playback are also trimmed to the three most important insights before they reach the queue.
+
+**Evidence Replay.** Opening the replay (from a card, WHY?, SHOW ME, a highlight or the guided demo) does the
+following:
+
+- pauses the underlying match if it was playing;
+- stops and clears any match narration;
+- gives the replay exclusive audio focus. New match cues go to the transcript only while it is open.
+
+Replay narration then follows the **replay clock**:
+
+- each event is spoken only within a few replay-seconds of its time;
+- pausing the replay starts no new narration;
+- a seek or restart drops what is waiting and describes the event now on screen;
+- faster replay speeds narrate only supporting evidence, goals and BEFORE/AFTER transitions.
+
+Closing the replay:
+
+- stops replay speech and releases focus;
+- never resumes earlier match narration;
+- resumes the match only if it was playing before (and is still the same match), at the same speed.
+
+The crowd is visual only and never speaks or plays sound.
+
 - **Controls:** Mute, Pause/Resume (only while speaking), Repeat last (only once something has been spoken),
   Match status (in Audio match mode) and Transcript.
 - **Language-aware.** Speech is the viewer's browser Web Speech API (`speechSynthesis`); the server never makes audio,
   so voices come from the viewer's browser/OS and nothing is installed on Azure. Every utterance sets `lang` to en-GB,
-  fr-FR or es-ES to match the UI language, and the voice is chosen as: exact locale, then any voice of the same language
+  fr-FR, es-ES, de-DE, it-IT or pt-PT to match the UI language, and the voice is chosen as: exact locale, then any voice of the same language
   (platform default first, then a local voice), else no explicit voice so the browser picks one for that `lang`.
   A voice of another language is never chosen explicitly. Voices that load late are picked up via `voiceschanged`.
   If the device has no voice for the language, speech still runs with the right `lang` and a notice says so.
@@ -213,6 +274,14 @@ The accessibility unit tests are in `src/a11y/a11y.test.ts`. They cover:
 - System reduced motion, presets, option independence, persistence and garbage-tolerant loading.
 - The speech queue: priority, dedupe, stale discard, interrupt, mute, repeat, a missing voice, clearing a category,
   rate and volume, and running without synthesis.
+- Audio synchronisation and focus (`src/a11y/audioSync.test.ts`):
+  - match-clock relevance, the bounded queue and preemption;
+  - the speed policy at 1×, 2×, 5× and 10× (the speech rate is never scaled);
+  - goal and boundary protection (`src/a11y/audioPriority.test.ts`): semantic rank, goal preemption and merging,
+    half-time and full-time grace, bounded queue, and a four-goal match at 10×;
+  - pause and full time;
+  - Evidence Replay focus: pause, cancel, replay clock, seek, restart, speed, close and restore;
+  - all six languages, and a check that the crowd is silent.
 - Description helpers: detail levels, simplified text, WHY? and what-changed narration, match status, recap
   scheduling, team-frame spatial language and the SHOW ME summary.
 

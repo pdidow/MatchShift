@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { autoCrowdTier, loadCrowdChoice, readCrowdCapabilities, resolveCrowdTier, saveCrowdChoice } from './crowd'
 import type { CrowdCapabilities, CrowdChoice, CrowdTier } from './crowd'
+import { replayCuePriority, replayNarrationPolicy } from '../a11y/narrationPolicy'
 import type { InsightCard, Lang, Team } from '../api'
 import { api } from '../api'
 import type { Strings } from '../i18n'
@@ -180,20 +181,26 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
     if (!tick) return
     const prev = lastAd.current
     lastAd.current = { time: tick.time, clip: tick.clipIndex }
+    // The replay clock is authoritative for replay narration: cues are judged against it, never against wall-clock time.
+    // A paused replay starts no new cues (a sentence already speaking finishes, unless a seek or restart makes it stale).
+    speech.setTimeline('replay', tick.time, tick.playing && !tick.introActive)
     if (!audioDescription || !seq || !timeline || tick.introActive) return
-    // A seek makes queued narration stale: drop it and describe from the new position.
+    // A seek or restart makes current and queued narration stale: drop it and describe from the new position only.
     const jumped = tick.time < prev.time - 1e-3 || tick.time - prev.time > 1.5
     if (jumped) speech.clearKind('replay')
     if (!tick.playing && !jumped) return
+    const minPriority = replayNarrationPolicy(speed).minPriority
     const placed = timeline.placed[tick.clipIndex]
     if (placed && tick.clipIndex !== prev.clip && seq.clips.length > 1) {
-      say({ text: fill(as.ad.clip, { label: clipLabel(placed.clip.key), clock: placed.clip.events[0]?.clock ?? '' }), kind: 'replay', priority: 1, lang: adLang, ttlMs: 8000, label: r.title })
+      // BEFORE / AFTER transitions are critical: they frame the evidence.
+      say({ text: fill(as.ad.clip, { label: clipLabel(placed.clip.key), clock: placed.clip.events[0]?.clock ?? '' }), kind: 'replay', source: 'replay',
+        priority: 2, at: placed.offset, lang: adLang, label: r.title })
     }
     if (jumped) {
-      // After a seek, describe only the event now on screen.
-      if (event) {
+      // After a seek, describe only the event now on screen - never the skipped ones.
+      if (event && placed) {
         const text = describeEvent(event)
-        if (text) say({ text, kind: 'replay', priority: 0, lang: adLang, ttlMs: 6000, clock: event.clock, label: r.title })
+        if (text) say({ text, kind: 'replay', source: 'replay', priority: 1, at: placed.offset + event.time, lang: adLang, clock: event.clock, label: r.title })
       }
       return
     }
@@ -202,8 +209,11 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
         const at = p.offset + e.time
         if (at <= prev.time || at > tick.time) continue
         if (e.type === 'Carry' && !e.isEvidence && !e.isContext) continue
+        const priority = replayCuePriority(e)
+        if (priority < minPriority) continue   // faster replay: supporting evidence, goals and transitions only
         const text = describeEvent(e)
-        if (text) say({ text, kind: 'replay', priority: e.label === 'GOAL' ? 1 : 0, lang: adLang, ttlMs: 6000, clock: e.clock, label: r.title })
+        // Bounded and timeline-tied: one cue may wait; a newer event replaces it; anything the replay has passed is dropped.
+        if (text) say({ text, kind: 'replay', source: 'replay', priority, at, lang: adLang, clock: e.clock, label: r.title })
       }
     }
   }, [tick, audioDescription]) // eslint-disable-line react-hooks/exhaustive-deps

@@ -206,8 +206,10 @@ The default MatchShift experience is the full broadcast one. **Accessibility ada
 - **Motion:** reduced motion (follows the OS by default; direct camera cuts in 3D) and reduced flashing.
 - **Content:** simplified insights.
 
-Speech is queued (one voice, priority, no repeats, stale items dropped, critical news interrupts) and is generated only
-from the deterministic evidence. Keyboard navigation, focus management and selective screen-reader live regions are
+Speech follows the match clock: MatchShift speaks less, not later. Each cue is dropped once the match has moved past
+it, at most one cue waits per source, and critical news interrupts. Faster playback means fewer, shorter cues; the
+speech rate is never sped up. Evidence Replay pauses the match and takes exclusive audio focus while it is open, then
+narrates against the replay clock. Speech is generated only from the deterministic evidence. Keyboard navigation, focus management and selective screen-reader live regions are
 built in for everyone; press **?** for shortcuts. Details, keyboard map and test plan: [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md).
 
 ## Quick start (no keys, no cloud)
