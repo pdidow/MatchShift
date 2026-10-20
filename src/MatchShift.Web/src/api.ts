@@ -8,7 +8,8 @@ export const isStaticDemo = import.meta.env.MODE === 'pages'
 
 export type ViewerMode = 'TeachMe' | 'WhatMatters' | 'Analyst' | 'MyTeam' | 'Studio'
 export type RecapStyle = 'Casual' | 'Analyst' | 'Broadcast' | 'Social'
-export type Lang = 'en' | 'fr' | 'es'
+export type { Lang } from './languages'
+import type { Lang } from './languages'
 
 export interface Profile {
   mode: ViewerMode

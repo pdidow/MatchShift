@@ -14,7 +14,7 @@ public class NarrativeTests
     private static readonly Match Flagship = SyntheticMatchGenerator.GenerateFlagship().Match;
     private static readonly LiveMatchAnalyzer Analysis = LiveMatchAnalyzer.AnalyzeFull(Flagship);
     private static readonly MatchRoster Roster = new(Flagship);
-    private static readonly string[] Languages = ["en", "fr", "es"];
+    private static readonly string[] Languages = ["en", "fr", "es", "de", "it", "pt"];
 
     public static TheoryData<string, ViewerMode> LanguagesAndModes()
     {
@@ -70,9 +70,38 @@ public class NarrativeTests
                 .Select(l => VerificationAgent.ExtractNumbers(TemplateInsightProvider.Narrate(insight, Context(l, ViewerMode.Analyst)).Fact)
                     .OrderBy(x => x).ToList())
                 .ToList();
-            Assert.Equal(numbers[0], numbers[1]);
-            Assert.Equal(numbers[0], numbers[2]);
+            for (var i = 1; i < numbers.Count; i++) Assert.Equal(numbers[0], numbers[i]);
         }
+    }
+
+    [Fact]
+    public void Every_lexicon_has_exactly_the_English_template_keys_and_no_corrupted_characters()
+    {
+        var english = LexiconRegistry.Get("en").Keys.ToHashSet();
+        Assert.Equal(Languages.Order(), LexiconRegistry.Supported.Select(l => l.Code).Order());
+        foreach (var lex in LexiconRegistry.Supported)
+        {
+            var keys = lex.Keys.ToHashSet();
+            Assert.True(english.SetEquals(keys), $"{lex.Code}: missing [{string.Join(", ", english.Except(keys))}] extra [{string.Join(", ", keys.Except(english))}]");
+            foreach (var key in keys)
+            {
+                var text = lex.Get(key);
+                // A '?' between letters, or as an arrow between two values, is an encoding casualty (e.g. "pass?e", "{from} ? {to}").
+                Assert.False(System.Text.RegularExpressions.Regex.IsMatch(text, @"\p{L}\?\p{L}|\} \? \{"), $"{lex.Code}.{key}: {text}");
+            }
+        }
+    }
+
+    [Fact]
+    public void New_languages_use_their_own_culture_and_minute_wording()
+    {
+        Assert.Equal("de-DE", LexiconRegistry.Get("de").Culture.Name);
+        Assert.Equal("it-IT", LexiconRegistry.Get("it").Culture.Name);
+        Assert.Equal("pt-PT", LexiconRegistry.Get("pt").Culture.Name);
+        Assert.Equal("50. Minute", NarrativeSlots.Minute(LexiconRegistry.Get("de"), 50));
+        Assert.Equal("50° minuto", NarrativeSlots.Minute(LexiconRegistry.Get("it"), 50));
+        Assert.Equal("minuto 50", NarrativeSlots.Minute(LexiconRegistry.Get("pt"), 50));
+        Assert.Equal("Golo", LexiconRegistry.Get("pt").Get("type.GOAL"));               // European Portuguese, not "Gol"
     }
 
     [Fact]
@@ -128,6 +157,9 @@ public class NarrativeTests
     [InlineData("en")]
     [InlineData("fr")]
     [InlineData("es")]
+    [InlineData("de")]
+    [InlineData("it")]
+    [InlineData("pt")]
     public void Recaps_render_in_every_style_and_pass_verification(string language)
     {
         var verifier = new VerificationAgent();

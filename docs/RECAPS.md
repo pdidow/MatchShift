@@ -27,7 +27,7 @@ Highlights appear on the playback scrubber, in the Highlights tab (each with SHO
   recoveries×0.5 + positive insight mentions×3;
 - ordered **story beats** (momentum, goals, shifts, the most important dangerous turnover).
 
-## Recap styles (`RecapNarrator`, EN/FR/ES)
+## Recap styles (`RecapNarrator`, EN/FR/ES/DE/IT/PT)
 
 | Style | Shape |
 |---|---|

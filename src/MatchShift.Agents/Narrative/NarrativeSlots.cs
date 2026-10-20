@@ -105,6 +105,9 @@ public sealed partial class NarrativeSlots
         {
             "fr" => $"{minute}e minute",
             "es" => $"minuto {minute}",
+            "de" => $"{minute}. Minute",
+            "it" => $"{minute}° minuto",
+            "pt" => $"minuto {minute}",
             _ => $"{minute}'",
         };
 

@@ -54,7 +54,7 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
         <span className="card-minute">{card.minute}'</span>
       </div>
 
-      <small className="narrative-source" title={n.verificationNote}>{n.source === 'mock' ? 'Mock — no model call' : n.source === 'microsoft-foundry' ? 'Microsoft Foundry — verified selection' : 'Deterministic MatchShift wording'}</small>
+      <small className="narrative-source" title={n.verificationNote}>{n.source === 'mock' ? s.sources.mock : n.source === 'microsoft-foundry' ? s.sources.foundry : s.sources.template}</small>
       <h3 className="card-headline" id={headingId}>{n.headline}</h3>
 
       {simple ? <p className="card-simple">{simplified!.text}</p> : <>

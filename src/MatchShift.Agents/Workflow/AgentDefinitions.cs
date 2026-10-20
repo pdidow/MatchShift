@@ -22,7 +22,8 @@ public static class MatchShiftAgents
         "Never mention anything after insightContext.matchTime. Cite evidence only with IDs listed in insightContext.sourceEvents. " +
         "No claims of intent (what a coach or player decided or wanted) and no certainty words (definitely, proves). " +
         GroundingRules + " " +
-        "Write all viewer-facing text in the language code insightContext.language. Return only the requested JSON object.";
+        "Write all viewer-facing text in the language code insightContext.language (en English, fr French, es Spanish, de German, it Italian, " +
+        "pt European Portuguese), with natural football terms for that language. Return only the requested JSON object.";
 
     /// <summary>
     /// Shared by all four agents (and therefore by audience, spoken, accessible and replay text). The deterministic validator

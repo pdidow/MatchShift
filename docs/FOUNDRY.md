@@ -27,7 +27,7 @@ The provider settings below configure the older, optional editorial-selection pa
 
 | `Narration__Provider` | Behavior | Output source |
 |---|---|---|
-| `template` | Immediate deterministic English/French/Spanish narratives | `template` |
+| `template` | Immediate deterministic narratives in English, French, Spanish, German, Italian and Portuguese | `template` |
 | `mock` | Offline simulation of the production interpreter/skeptic/editor protocol, with simulated delays | `mock` |
 | `foundry` | Calls the configured Microsoft Foundry deployment; verified templates cover missing configuration, failures and timeouts | `microsoft-foundry` on acceptance; `template` on fallback |
 

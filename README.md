@@ -23,7 +23,7 @@ MatchShift watches a stream of football-realistic synthetic events and, live, an
 | **What changed?** | 12 shift detectors + key-moment detection with thresholds, sample minimums, persistence and cooldowns |
 | **Why does it matter?** | Importance model, highlight ranking, recap story beats |
 | **What evidence supports it?** | Every insight carries structured evidence: windows, before/after values, thresholds, sample sizes, z-scores, supporting event IDs |
-| **How should this viewer hear it?** | Five viewer modes × three languages (EN/FR/ES), offline templates, mock or Foundry editorial selection |
+| **How should this viewer hear it?** | Five viewer modes × six languages (EN/FR/ES/DE/IT/PT), offline templates, mock or Foundry editorial selection |
 | **What story is emerging?** | Live narrative cards, highlight timeline, half-time and full-time recaps in four styles |
 
 ![MatchShift - WHY? panel for the 63rd-minute attack-channel shift](docs/img/why.png)
@@ -60,6 +60,15 @@ an ordinary button you could press yourself. Close it at any time with ✕ to ke
 
 Offline or recorded runs are labelled OFFLINE TEMPLATE or RECORDED DEMO and are never shown as verified.
 Insight used: `MS-FLAGSHIP-001-I015`.
+
+## Languages
+
+MatchShift currently supports English, French, Spanish, German, Italian and Portuguese (European Portuguese, pt-PT)
+across localized UI and narration, using available browser/device voices with graceful fallback. Speech uses the
+browser's own text-to-speech: if a device has no voice for a language, the text is still shown, the utterance keeps the
+correct language tag and a localized notice explains it. Not every browser or device has a native voice for every
+language. The language list lives in one place on each side (`src/MatchShift.Web/src/languages.ts` and
+`LexiconRegistry`), and tests check they match.
 
 ## The core principle
 
@@ -265,7 +274,7 @@ src/
   MatchShift.Core            Domain: events, teams, players, pitch conventions, insight/evidence/story models
   MatchShift.SyntheticData   Seeded simulator, fictional clubs, flagship + labelled scenarios, datasets
   MatchShift.Analytics       MatchState, window metrics, indices, detectors, live analyzer, highlights, recaps
-  MatchShift.Agents          Narrative engine (EN/FR/ES lexicons, viewer modes), agents, verification
+  MatchShift.Agents          Narrative engine (EN/FR/ES/DE/IT/PT lexicons, viewer modes), agents, verification
   MatchShift.Infrastructure  Microsoft Foundry provider, DI, dataset exporter, detector evaluator
   MatchShift.Api             ASP.NET Core minimal API, playback engine, SSE stream, telemetry
   MatchShift.Web             React + TypeScript + Vite broadcast UI

@@ -10,7 +10,7 @@
    rendered afterwards, per viewer, from that record.
 3. **Live and honest.** The analyzer ingests events one at a time and evaluates at minute ticks using only events
    it has already seen. Replaying to minute *N* yields exactly the insights a live viewer had at *N* (tested).
-4. **Runs offline.** Template narratives in three languages make the whole product work without keys or network.
+4. **Runs offline.** Template narratives in six languages make the whole product work without keys or network.
    Cloud services strengthen it; they never block it.
 
 ## Components

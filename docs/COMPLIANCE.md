@@ -59,7 +59,7 @@ Statuses describe evidence available in this audit, not a decision by the organi
 | Personalize for different audiences | Strong | TeachMe, WhatMatters, Analyst, MyTeam and Studio modes; filtering and wording differ. Club/player focus includes involvement in supporting events, not continuous tracking of every player's movement. |
 | Narratives and automated recaps | Implemented | Deterministic live cards, ranked highlights, generated halftime/fulltime recaps on request; optional Foundry in Agents and Recap. Recap availability is clock-gated. |
 | Data innovation | Strong | Seeded possession simulator, six labelled scenario families, ground truth separate from analytics, JSONL/CSV/Parquet export. |
-| Multiple languages | Implemented | English/French/Spanish lexicons and number consistency tests. Some diagnostic labels and recap-style names remain English. |
+| Multiple languages | Implemented | English/French/Spanish/German/Italian/Portuguese lexicons, UI and accessibility strings, and number consistency tests. Some diagnostic labels and recap-style names remain English. |
 | Player tags, pass difficulty, ball/shot speed, video auto-eventing | Partial / absent | Events carry player identity and location. No full pass-quality suite, ball/shot speed or video inference. Section 4.1(ii) presents these as features to consider; their absence is not automatically a disqualification. |
 
 ## Category and judging assessment

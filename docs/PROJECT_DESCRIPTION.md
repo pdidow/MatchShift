@@ -29,7 +29,7 @@ in the 50'-62' window**. The viewer can inspect the comparison and visualize the
 - **My Club / My Player:** club-aware filtering, player-related insight ranking, and a full observed-event player summary with a timeline and evidence IDs.
 - **Studio:** concise talking points and on-air wording.
 
-Narratives are available in English, French and Spanish. Highlights and halftime/fulltime recaps help
+Narratives are available in English, French, Spanish, German, Italian and Portuguese. Highlights and halftime/fulltime recaps help
 turn individual moments into a match story.
 
 ## Deterministic analysis with optional AI narration

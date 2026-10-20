@@ -287,11 +287,11 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
             <span className="replay-time">{formatTime(tick.time)} / {formatTime(tick.duration)}</span>
           </div>
 
-          <Scrubber seq={seq} total={timeline.total} time={tick.time} placed={timeline.placed}
+          <Scrubber label={r.timeline} seq={seq} total={timeline.total} time={tick.time} placed={timeline.placed}
             onSeek={(t) => sceneRef.current?.seek(t)} describe={describe} />
 
           <div className="replay-options">
-            <div className="replay-group" role="group" aria-label="Speed">
+            <div className="replay-group" role="group" aria-label={s.speed}>
               {SPEEDS.map(sp => (
                 <button key={sp} className={`chip ${speed === sp ? 'active' : ''}`} aria-pressed={speed === sp}
                   onClick={() => { setSpeed(sp); sceneRef.current?.setSpeed(sp) }}>{sp}×</button>
@@ -320,13 +320,14 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   )
 }
 
-function Scrubber({ seq, total, time, placed, onSeek, describe }: {
+function Scrubber({ seq, total, time, placed, onSeek, describe, label }: {
   seq: ReplaySequence
   total: number
   time: number
   placed: ReturnType<typeof layout>['placed']
   onSeek: (t: number) => void
   describe: (e: ReplayEvent) => string
+  label: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -336,7 +337,7 @@ function Scrubber({ seq, total, time, placed, onSeek, describe }: {
   }
   const pct = (t: number) => `${(t / Math.max(total, 0.001)) * 100}%`
   return (
-    <div className="replay-scrubber" ref={ref} role="slider" tabIndex={0} aria-label="Replay timeline" aria-valuemin={0} aria-valuemax={Math.round(total)} aria-valuenow={Math.round(time)}
+    <div className="replay-scrubber" ref={ref} role="slider" tabIndex={0} aria-label={label} aria-valuemin={0} aria-valuemax={Math.round(total)} aria-valuenow={Math.round(time)}
       aria-valuetext={`${formatTime(time)} / ${formatTime(total)}`}
       onKeyDown={(e) => {
         if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); onSeek(Math.min(total, time + 1)) }

@@ -63,7 +63,7 @@ Code checks what code can check exactly (`GroundingValidator.cs`), before and af
   the evidence, other identifiers (`event-203`, `id:17`) are ignored; sentences copied verbatim from the deterministic
   wording are grounded by construction;
 - English number words before a unit or counted noun ("ninety per cent", "eight key players", "thirty-four minutes
-  and thirty-three seconds") are normalised and checked; French and Spanish number words are not (the verifier is the
+  and thirty-three seconds") are normalised and checked; French, Spanish, German, Italian and Portuguese number words are not (the verifier is the
   backstop there);
 - named players are involved in the evidence; other clubs are not mentioned (`UNKNOWN_PLAYER`, `FOREIGN_TEAM`);
 - no intent claims, no un-negated certainty words, no causes inside facts; confidence and sample wording match the deterministic inputs.

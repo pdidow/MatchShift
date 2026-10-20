@@ -5,8 +5,8 @@
 MatchShift turns synthetic football events into explainable match stories for fans and studio presenters.
 Its .NET analytics engine detects tactical changes and attaches the before/after statistics and supporting
 events to each insight. A React web app lets viewers inspect WHY?, replay SHOW ME evidence, switch between
-casual, analyst, teaching and studio modes, and follow a fictional club or player in English, French or
-Spanish. Microsoft Foundry is the configurable production provider for evidence-bound editorial agents and recap
+casual, analyst, teaching and studio modes, and follow a fictional club or player in English, French,
+Spanish, German, Italian or Portuguese. Microsoft Foundry is the configurable production provider for evidence-bound editorial agents and recap
 ordering, with strict application validation and template fallback. An explicitly labelled mock exercises
 the same workflow locally without credentials; it does not demonstrate a real model call. The repository includes Azure Container Apps deployment
 definitions, Azure Monitor instrumentation, GitHub Actions CI and Fabric-compatible dataset exports.

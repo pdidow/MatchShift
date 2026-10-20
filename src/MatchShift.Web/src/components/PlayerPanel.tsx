@@ -1,10 +1,15 @@
 import type { PlayerPerformance, Lang } from '../api'
 
-export const performanceLabels = (lang: string) => lang === 'fr'
-  ? { passes: 'Passes', completed: 'Réussies', progressive: 'Progressives', shots: 'Tirs', recoveries: 'Récupérations', turnovers: 'Pertes', long: 'Longs ballons', title: 'Depuis le coup d’envoi', events: 'Événements du joueur' }
-  : lang === 'es'
-    ? { passes: 'Pases', completed: 'Completados', progressive: 'Progresivos', shots: 'Tiros', recoveries: 'Recuperaciones', turnovers: 'Pérdidas', long: 'Balones largos', title: 'Desde el inicio', events: 'Eventos del jugador' }
-    : { passes: 'Passes', completed: 'Completed', progressive: 'Progressive', shots: 'Shots', recoveries: 'Recoveries', turnovers: 'Turnovers', long: 'Long balls', title: 'Since kick-off', events: 'Player events' }
+const PERFORMANCE_LABELS: Record<Lang, { passes: string; completed: string; progressive: string; shots: string; recoveries: string; turnovers: string; long: string; title: string; events: string }> = {
+  en: { passes: 'Passes', completed: 'Completed', progressive: 'Progressive', shots: 'Shots', recoveries: 'Recoveries', turnovers: 'Turnovers', long: 'Long balls', title: 'Since kick-off', events: 'Player events' },
+  fr: { passes: 'Passes', completed: 'Réussies', progressive: 'Progressives', shots: 'Tirs', recoveries: 'Récupérations', turnovers: 'Pertes', long: 'Longs ballons', title: 'Depuis le coup d’envoi', events: 'Événements du joueur' },
+  es: { passes: 'Pases', completed: 'Completados', progressive: 'Progresivos', shots: 'Tiros', recoveries: 'Recuperaciones', turnovers: 'Pérdidas', long: 'Balones largos', title: 'Desde el inicio', events: 'Eventos del jugador' },
+  de: { passes: 'Pässe', completed: 'Angekommen', progressive: 'Raumgewinnend', shots: 'Schüsse', recoveries: 'Ballgewinne', turnovers: 'Ballverluste', long: 'Lange Bälle', title: 'Seit dem Anpfiff', events: 'Aktionen des Spielers' },
+  it: { passes: 'Passaggi', completed: 'Riusciti', progressive: 'In verticale', shots: 'Tiri', recoveries: 'Recuperi', turnovers: 'Palle perse', long: 'Lanci lunghi', title: 'Dal calcio d’inizio', events: 'Azioni del giocatore' },
+  pt: { passes: 'Passes', completed: 'Certos', progressive: 'Progressivos', shots: 'Remates', recoveries: 'Recuperações', turnovers: 'Perdas de bola', long: 'Passes longos', title: 'Desde o pontapé de saída', events: 'Ações do jogador' },
+}
+
+export const performanceLabels = (lang: string) => PERFORMANCE_LABELS[lang as Lang] ?? PERFORMANCE_LABELS.en
 
 export function PlayerPanel({ player, name, lang }: { player: PlayerPerformance; name: string; lang: Lang }) {
   const s = performanceLabels(lang)

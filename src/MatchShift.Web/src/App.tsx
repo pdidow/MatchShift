@@ -22,6 +22,7 @@ import { JudgeGuide } from './guide/JudgeGuide'
 import type { GuideStep } from './guide/guide'
 import { FLAGSHIP, GUIDE_STEPS, findFlagship, wantsGuideFromUrl } from './guide/guide'
 import { evidenceLegend, splitEvidence } from './evidence'
+import { isLang } from './languages'
 
 type Tab = 'live' | 'highlights' | 'recap' | 'agents'
 const TABS: Tab[] = ['live', 'highlights', 'recap', 'agents']
@@ -36,7 +37,7 @@ const loadProfile = (): Profile => {
   const q = new URLSearchParams(window.location.search)
   if (q.get('lang') || q.get('mode')) {
     return {
-      language: (q.get('lang') as Lang) ?? 'en',
+      language: isLang(q.get('lang')) ? (q.get('lang') as Lang) : 'en',
       mode: (q.get('mode') as ViewerMode) ?? 'Analyst',
       focusTeamId: q.get('team'),
       focusPlayerId: q.get('player'),
@@ -392,7 +393,7 @@ export default function App() {
     return (
       <>
         {showSplash && <Splash tagline={s.tagline} synthetic={s.synthetic} />}
-        <p className="empty">{connected ? '…' : 'Connecting to the MatchShift API…'}</p>
+        <p className="empty">{connected ? '…' : s.connecting}</p>
       </>
     )
   }
@@ -424,7 +425,7 @@ href = {`${import.meta.env.BASE_URL}broadcast?session=${sessionId}&lang=${profil
 target = "_blank"
 rel = "noreferrer"
     >
-    Broadcast
+    {s.broadcast}
     </a>
           <label className="control-label">{s.match}
             <select value={snap.matchId} onChange={(e) => { setFocus(null); setSelected(null); void api.reset(e.target.value) }}>

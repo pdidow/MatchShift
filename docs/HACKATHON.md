@@ -12,7 +12,7 @@ This is a feature mapping, not a declaration of eligibility or submission comple
 | **Generate stories, highlights and recaps** | Live narrative cards (ticker, commentator/studio, analyst, fan), ranked highlight timeline, half-time & full-time recaps in casual / analyst / broadcast / social styles | `HighlightRanker`, `RecapBuilder`, `RecapNarrator`, [RECAPS.md](RECAPS.md) |
 | **Explain key moments and tactical patterns** | 12 shift detectors + key moments; every insight has structured evidence; **WHY?** evidence panel and **SHOW ME** pitch replay; FACT / INFERENCE / POSSIBLE EXPLANATION separated; intent never claimed | [EXPLAINABILITY.md](EXPLAINABILITY.md), [MATCH_SHIFT_DETECTION.md](MATCH_SHIFT_DETECTION.md) |
 | **Expand datasets for AI and analytics** | Seeded simulator, seven labelled scenario families with ground truth kept outside the event stream, batch generation, detector evaluation (precision / recall / false alarms), Fabric-ready JSONL/CSV/Parquet export | [SYNTHETIC_DATA.md](SYNTHETIC_DATA.md), `DetectorEvaluator`, `matchshift export` |
-| **Deliver multilingual insights** | Semantic insights rendered via English, French and Spanish lexicons with culture-correct numbers; tests prove facts carry identical numbers in every language; Foundry can select evidence-bound editorial treatments | [NARRATIVES.md](NARRATIVES.md), `NarrativeTests` |
+| **Deliver multilingual insights** | Semantic insights rendered via English, French, Spanish, German, Italian and Portuguese lexicons with culture-correct numbers; tests prove facts carry identical numbers in every language; Foundry can select evidence-bound editorial treatments | [NARRATIVES.md](NARRATIVES.md), `NarrativeTests` |
 | **Deliver personalized studio, streaming and fan experiences** | Teach me football, Just what matters, Tactical analyst, My club / my player, Studio mode; broadcast-style UI with talking points and on-air lines | `ViewerMode`, `NarrativeFilter`, React UI |
 | **Use Microsoft technologies meaningfully** | Configurable production Microsoft Foundry provider for editorial agents and recap ordering, with credential-free mock/template modes; Container Apps + ACR + Application Insights deployment definitions; Fabric-compatible exports and manual ingestion instructions; GitHub Actions workflow and Copilot guidance. Live cloud operation and Copilot usage are not established by these files alone. | [MICROSOFT_INTEGRATION.md](MICROSOFT_INTEGRATION.md) |
 
@@ -23,7 +23,7 @@ This is a feature mapping, not a declaration of eligibility or submission comple
 - **Evidence constrains AI wording.** Exact claim bindings and canonical rendering retain team/player attribution,
   values, windows and references. A deterministic replay gate withholds inconsistent evidence.
   This establishes consistency with implemented analytics, not proof of tactical causation.
-- **Offline fallback.** Template narratives in three languages keep the local demo usable without AI quota
+- **Offline fallback.** Template narratives in six languages keep the local demo usable without AI quota
   or network access. Judges still need a reachable deployment or accessible test build.
 
 ## Responsible use

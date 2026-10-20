@@ -1,4 +1,5 @@
 import type { AgentRuntimeStatus, ExecutionMode, InsightCard, WorkflowExecution } from '../api'
+import type { Strings } from '../i18n'
 
 /**
  * The guided judge demo: a fixed path through the REAL product (real match state, real insight, real workflow).
@@ -30,32 +31,51 @@ export const wantsGuideFromUrl = (search: string) => ['judge', '1', 'true'].incl
 
 export interface RuntimeChip { key: string; label: string; tone: 'live' | 'neutral' | 'warn' | 'ok' | 'bad' }
 
-const CREDENTIAL_LABEL: Record<string, string> = {
-  ManagedIdentity: 'Managed identity',
-  AzureCli: 'Entra ID (Azure CLI)',
-  Default: 'Entra ID',
+/** Chip wording. Mode names (LIVE, OFFLINE TEMPLATE, RECORDED DEMO), the model and Microsoft product names stay exact. */
+export interface ChipLabels {
+  modeLive: string
+  modeOffline: string
+  modeRecorded: string
+  verification: string
+  notApplicable: string
+  managedIdentity: string
+  entraId: string
 }
+
+export const ENGLISH_CHIP_LABELS: ChipLabels = {
+  modeLive: 'LIVE · Microsoft Foundry', modeOffline: 'OFFLINE TEMPLATE · no model calls', modeRecorded: 'RECORDED DEMO · not live',
+  verification: 'Verification', notApplicable: 'not applicable (no AI output)', managedIdentity: 'Managed identity', entraId: 'Entra ID',
+}
+
+export const chipLabels = (s: Strings): ChipLabels => s.agentsUi
+
+/** The execution-mode label in the viewer's language. */
+export const modeLabel = (s: Strings, mode: ExecutionMode) =>
+  mode === 'LIVE_FOUNDRY' ? s.agentsUi.modeLive : mode === 'OFFLINE_TEMPLATE' ? s.agentsUi.modeOffline : s.agentsUi.modeRecorded
+
+const credentialLabel = (cred: string, l: ChipLabels) =>
+  cred === 'ManagedIdentity' ? l.managedIdentity : cred === 'AzureCli' ? `${l.entraId} (Azure CLI)` : cred === 'Default' ? l.entraId : `${l.entraId} (${cred})`
 
 /**
  * Status chips built ONLY from runtime metadata and the execution trace. "LIVE", the model and the credential appear only
  * when the execution (or, before one exists, the runtime) is actually LIVE_FOUNDRY.
  */
-export function runtimeChips(status: AgentRuntimeStatus | null, x: WorkflowExecution | null): RuntimeChip[] {
+export function runtimeChips(status: AgentRuntimeStatus | null, x: WorkflowExecution | null, labels: ChipLabels = ENGLISH_CHIP_LABELS): RuntimeChip[] {
   const mode: ExecutionMode | undefined = x?.executionMode ?? status?.runtime.executionMode
   if (!mode) return []
   const chips: RuntimeChip[] = []
-  if (mode === 'LIVE_FOUNDRY') chips.push({ key: 'mode', label: 'LIVE · Microsoft Foundry', tone: 'live' })
-  else if (mode === 'OFFLINE_TEMPLATE') chips.push({ key: 'mode', label: 'OFFLINE TEMPLATE · no model calls', tone: 'neutral' })
-  else chips.push({ key: 'mode', label: 'RECORDED DEMO · not live', tone: 'warn' })
+  if (mode === 'LIVE_FOUNDRY') chips.push({ key: 'mode', label: labels.modeLive, tone: 'live' })
+  else if (mode === 'OFFLINE_TEMPLATE') chips.push({ key: 'mode', label: labels.modeOffline, tone: 'neutral' })
+  else chips.push({ key: 'mode', label: labels.modeRecorded, tone: 'warn' })
   chips.push({ key: 'af', label: 'Microsoft Agent Framework', tone: 'neutral' })
   if (mode === 'LIVE_FOUNDRY') {
     const model = x?.modelDeployment ?? status?.runtime.modelDeployment
     if (model) chips.push({ key: 'model', label: model, tone: 'neutral' })
     const cred = status?.runtime.credential
-    if (cred) chips.push({ key: 'cred', label: CREDENTIAL_LABEL[cred] ?? `Entra ID (${cred})`, tone: 'neutral' })
+    if (cred) chips.push({ key: 'cred', label: credentialLabel(cred, labels), tone: 'neutral' })
   }
   const v = verdict(x)
-  if (v) chips.push({ key: 'verdict', label: `Verification: ${v.short}`, tone: v.tone })
+  if (v) chips.push({ key: 'verdict', label: `${labels.verification}: ${v.kind === 'deterministic' ? labels.notApplicable : v.short}`, tone: v.tone })
   return chips
 }
 

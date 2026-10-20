@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, subscribeDemo, type Snapshot, type Lang } from '../api'
+import { isLang } from '../languages'
 import { Pitch } from './Pitch'
 
 export function BroadcastView() {
@@ -8,8 +9,8 @@ export function BroadcastView() {
     useEffect(() => {
         document.body.classList.add('broadcast-body')
 
-        const language = new URLSearchParams(location.search).get('lang') ?? 'en'
-        const profile = { mode: 'Studio' as const, language: language as Lang }
+        const requested = new URLSearchParams(location.search).get('lang')
+        const profile = { mode: 'Studio' as const, language: (isLang(requested) ? requested : 'en') as Lang }
 
         // Static GitHub Pages demo
         if (subscribeDemo) {

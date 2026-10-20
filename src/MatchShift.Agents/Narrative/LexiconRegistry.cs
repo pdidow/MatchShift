@@ -10,6 +10,9 @@ public static class LexiconRegistry
         ["en"] = new EnglishLexicon(),
         ["fr"] = new FrenchLexicon(),
         ["es"] = new SpanishLexicon(),
+        ["de"] = new GermanLexicon(),
+        ["it"] = new ItalianLexicon(),
+        ["pt"] = new PortugueseLexicon(),
     };
 
     public static IReadOnlyCollection<Lexicon> Supported => All.Values;

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import type { AgentRuntimeStatus, ExecutionMode, Profile, PublishedInsight, StageStatus, TraceStep, WorkflowExecution } from '../api'
+import type { AgentRuntimeStatus, Profile, PublishedInsight, StageStatus, TraceStep, WorkflowExecution } from '../api'
 import type { Strings } from '../i18n'
 import { AgentRefusal, api } from '../api'
-import { EVALUATION, runtimeChips, verdict } from '../guide/guide'
+import { EVALUATION, chipLabels, modeLabel, runtimeChips, verdict } from '../guide/guide'
 
 // Node order of the Microsoft Agent Framework workflow graph (executor IDs, as in MatchShift.Agents/Workflow/Stages).
 const STAGES = {
@@ -17,22 +17,12 @@ const STAGES = {
   repair: 'constrained-repair',
 } as const
 
-const NODE_LABELS: Record<string, { title: string; agent: boolean; role: string }> = {
-  [STAGES.grounding]: { title: 'Deterministic Match Analytics', agent: false, role: 'C# analytics fix the facts (InsightContext)' },
-  [STAGES.tactical]: { title: 'Tactical Analyst', agent: true, role: 'What the evidence might mean' },
-  [STAGES.audience]: { title: 'Audience Narrative', agent: true, role: 'Wording for this viewer' },
-  [STAGES.accessibility]: { title: 'Accessibility Narrator', agent: true, role: 'Spoken and nonvisual version' },
-  [STAGES.fanIn]: { title: 'Fan-in barrier', agent: false, role: 'Waits for both branches' },
-  [STAGES.validation]: { title: 'Deterministic Validation', agent: false, role: 'Code checks every number, time, player and event ID' },
-  [STAGES.verifier]: { title: 'Verification Agent', agent: true, role: 'Independent review of every claim' },
-  [STAGES.final]: { title: 'Final Validation', agent: false, role: 'Code re-checks the verifier corrections' },
-  [STAGES.repair]: { title: 'Constrained repair', agent: true, role: 'One rewrite of rejected wording' },
-}
+/** Which stages are AI agents (dashed) and which are deterministic code. Titles and roles come from the UI strings. */
+const AGENT_STAGES = new Set<string>([STAGES.tactical, STAGES.audience, STAGES.accessibility, STAGES.verifier, STAGES.repair])
 
-export const MODE_LABEL: Record<ExecutionMode, string> = {
-  LIVE_FOUNDRY: 'LIVE · Microsoft Foundry',
-  OFFLINE_TEMPLATE: 'OFFLINE TEMPLATE · no model calls',
-  RECORDED_DEMO: 'RECORDED DEMO · replay, not live',
+const nodeLabel = (s: Strings, stage: string) => {
+  const [title, role] = (s.agentsUi.nodes as Record<string, readonly string[]>)[stage] ?? [stage, '']
+  return { title, role, agent: AGENT_STAGES.has(stage) }
 }
 
 const OK: StageStatus[] = ['COMPLETED']
@@ -47,22 +37,22 @@ const ms = (v?: number) => (v === undefined ? '…' : v >= 1000 ? `${(v / 1000).
 /** All invocations of a stage (the repair loop can run validation and verification twice). */
 const stepsFor = (x: WorkflowExecution | null, stage: string) => x?.steps.filter(s => s.stage === stage) ?? []
 
-function Node({ x, stage }: { x: WorkflowExecution | null; stage: string }) {
+function Node({ x, stage, s }: { x: WorkflowExecution | null; stage: string; s: Strings }) {
   const runs = stepsFor(x, stage)
   const step = runs[runs.length - 1]
-  const label = NODE_LABELS[stage]
+  const label = nodeLabel(s, stage)
   const af = step?.executionType === 'MICROSOFT_AGENT_FRAMEWORK'
   const status = step?.status
   return (
     <div className={`wf-node ${label.agent ? 'wf-agent' : 'wf-det'} ${af ? 'wf-live' : ''} ${status ? `wf-${statusClass(status)}` : 'wf-pending'}`}
-      aria-label={`${label.title}: ${status ?? 'waiting'}`}>
+      aria-label={`${label.title}: ${status ?? s.agentsUi.waiting}`}>
       <div className="wf-node-top">
         <span className="wf-node-title">{label.title}{runs.length > 1 && <small> ×{runs.length}</small>}</span>
         {status && <span className={`wf-pill wf-${statusClass(status)}`}>{status}</span>}
       </div>
       <div className="wf-role">{label.role}</div>
       <div className="wf-kind">
-        {step ? (af ? `MICROSOFT AGENT FRAMEWORK · ${step.modelDeployment ?? ''}` : 'DETERMINISTIC') : label.agent ? 'agent · waiting' : 'deterministic · waiting'}
+        {step ? (af ? `MICROSOFT AGENT FRAMEWORK · ${step.modelDeployment ?? ''}` : s.agentsUi.deterministic) : label.agent ? s.agentsUi.agentWaiting : s.agentsUi.detWaiting}
       </div>
       {step && (
         <div className="wf-meta">
@@ -83,26 +73,26 @@ function Arrow({ label }: { label?: string }) {
 }
 
 /** Bars from each step's real start/end: overlapping bars are concurrent execution. */
-function Timeline({ x }: { x: WorkflowExecution }) {
+function Timeline({ x, s }: { x: WorkflowExecution; s: Strings }) {
   const start = Date.parse(x.startedAt)
-  const end = Math.max(...x.steps.map(s => Date.parse(s.completedAt ?? new Date().toISOString())), start + 1)
+  const end = Math.max(...x.steps.map(st => Date.parse(st.completedAt ?? new Date().toISOString())), start + 1)
   const span = end - start
   const c = x.concurrency
   return (
     <div className="wf-timeline">
       <p className="sr-only">
-        {c ? `Audience and Accessibility branches ${c.overlapped ? `overlapped for ${c.overlapMs} milliseconds` : 'did not overlap'}${c.sameSuperstep ? ' in the same superstep' : ''}.` : ''}
+        {c ? `${nodeLabel(s, STAGES.audience).title} / ${nodeLabel(s, STAGES.accessibility).title}: ${c.sameSuperstep ? s.agentsUi.sameStep : s.agentsUi.diffStep} · ${c.overlapped ? s.agentsUi.concurrent.replace('{ms}', ms(c.overlapMs)) : s.agentsUi.noOverlap}.` : ''}
       </p>
-      {x.steps.map(s => {
-        const left = ((Date.parse(s.startedAt) - start) / span) * 100
-        const width = Math.max(0.8, ((Date.parse(s.completedAt ?? new Date(end).toISOString()) - Date.parse(s.startedAt)) / span) * 100)
+      {x.steps.map(step => {
+        const left = ((Date.parse(step.startedAt) - start) / span) * 100
+        const width = Math.max(0.8, ((Date.parse(step.completedAt ?? new Date(end).toISOString()) - Date.parse(step.startedAt)) / span) * 100)
         return (
-          <div className="wf-row" key={s.sequence}>
-            <span className="wf-row-label">{NODE_LABELS[s.stage]?.title ?? s.stage}</span>
+          <div className="wf-row" key={step.sequence}>
+            <span className="wf-row-label">{nodeLabel(s, step.stage).title}</span>
             <span className="wf-track" aria-hidden>
-              <i className={s.executionType === 'MICROSOFT_AGENT_FRAMEWORK' ? 'af' : 'det'} style={{ left: `${left}%`, width: `${width}%` }} />
+              <i className={step.executionType === 'MICROSOFT_AGENT_FRAMEWORK' ? 'af' : 'det'} style={{ left: `${left}%`, width: `${width}%` }} />
             </span>
-            <span className="wf-row-ms">{ms(s.durationMs)}</span>
+            <span className="wf-row-ms">{ms(step.durationMs)}</span>
           </div>
         )
       })}
@@ -186,21 +176,22 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible, s }:
         if (next) setX(next)
         if (next?.status === 'RUNNING') timer = window.setTimeout(load, 700)
       } catch (e) {
-        if (!cancelled) setError(e instanceof AgentRefusal ? e.message : `Agent workflow unavailable: ${(e as Error).message}`)
+        if (!cancelled) setError(e instanceof AgentRefusal ? e.message : `${s.agentsUi.unavailable}: ${(e as Error).message}`)
       }
     }
     void load()
     return () => { cancelled = true; window.clearTimeout(timer) }
   }, [insightId, profile.language, profile.mode, profile.focusTeamId, profile.focusPlayerId, accessible])
 
+  const u = s.agentsUi
   const mode = x?.executionMode ?? status?.runtime.executionMode
   const p = x?.published
   const c = x?.concurrency
   return (
     <div className="wf">
-      <h2 className="panel-title">Agent workflow</h2>
-      <div className="wf-chips" aria-label="Execution status">
-        {runtimeChips(status, x).map(c => <span key={c.key} className={`wf-chip wf-chip-${c.tone}`}>{c.label}</span>)}
+      <h2 className="panel-title">{u.title}</h2>
+      <div className="wf-chips" aria-label={u.status}>
+        {runtimeChips(status, x, chipLabels(s)).map(c => <span key={c.key} className={`wf-chip wf-chip-${c.tone}`}>{c.label}</span>)}
       </div>
       {status && (
         <p className="wf-runtime">
@@ -212,48 +203,48 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible, s }:
           {status.runtime.configurationNote && <><br />{status.runtime.configurationNote}</>}
         </p>
       )}
-      {x?.recordedFrom && <p className="wf-banner">Replay of a recorded trace ({x.recordedFrom}). Nothing is executing live in this static demo.</p>}
+      {x?.recordedFrom && <p className="wf-banner">{u.recorded.replace('{from}', x.recordedFrom)}</p>}
       {mode !== 'RECORDED_DEMO' && <label className="wf-toggle">
         <input type="checkbox" checked={accessible} onChange={e => setAccessible(e.target.checked)} />
-        Include the Accessibility Narrator branch (when off, the branch is skipped without a model call)
+        {u.toggle}
       </label>}
 
-      {!insightId && <p className="empty">Select an insight card to see its agent workflow.</p>}
+      {!insightId && <p className="empty">{u.select}</p>}
       {error && <p className="empty">{error}</p>}
 
       {insightId && !error && (
         <>
           <VerdictBanner x={x} s={s} />
           <div className="wf-legend" aria-hidden>
-            <span><i className="det" />Deterministic C#</span>
-            <span><i className="agent" />AI agent · Microsoft Agent Framework</span>
-            <span><i className="live" />ran live on Microsoft Foundry</span>
+            <span><i className="det" />{u.legendDet}</span>
+            <span><i className="agent" />{u.legendAgent}</span>
+            <span><i className="live" />{u.legendLive}</span>
           </div>
-          <div className="wf-graph" role="group" aria-label="Workflow topology">
-            <Node x={x} stage={STAGES.grounding} />
+          <div className="wf-graph" role="group" aria-label={u.topology}>
+            <Node x={x} stage={STAGES.grounding} s={s} />
             <Arrow label="InsightContext → shared workflow state" />
-            <Node x={x} stage={STAGES.tactical} />
+            <Node x={x} stage={STAGES.tactical} s={s} />
             <Arrow label="fan-out" />
             <div className="wf-branches">
-              <Node x={x} stage={STAGES.audience} />
-              <Node x={x} stage={STAGES.accessibility} />
+              <Node x={x} stage={STAGES.audience} s={s} />
+              <Node x={x} stage={STAGES.accessibility} s={s} />
             </div>
             {c && <div className={`wf-concurrency ${c.overlapped ? 'yes' : ''}`}>
-              {c.sameSuperstep ? 'same Agent Framework superstep' : 'different supersteps'} · {c.overlapped ? `ran concurrently, overlapped ${ms(c.overlapMs)}` : 'no overlap (a branch was skipped or instant)'}
+              {c.sameSuperstep ? u.sameStep : u.diffStep} · {c.overlapped ? u.concurrent.replace('{ms}', ms(c.overlapMs)) : u.noOverlap}
             </div>}
             <Arrow label="fan-in" />
-            <Node x={x} stage={STAGES.fanIn} />
+            <Node x={x} stage={STAGES.fanIn} s={s} />
             <Arrow />
-            <Node x={x} stage={STAGES.validation} />
+            <Node x={x} stage={STAGES.validation} s={s} />
             <Arrow />
-            <Node x={x} stage={STAGES.verifier} />
+            <Node x={x} stage={STAGES.verifier} s={s} />
             <Arrow />
-            <Node x={x} stage={STAGES.final} />
-            {stepsFor(x, STAGES.repair).length > 0 && <><div className="wf-loop">↺ verifier rejected: one constrained repair, then validation and verification again</div><Node x={x} stage={STAGES.repair} /></>}
+            <Node x={x} stage={STAGES.final} s={s} />
+            {stepsFor(x, STAGES.repair).length > 0 && <><div className="wf-loop">↺ {u.loop}</div><Node x={x} stage={STAGES.repair} s={s} /></>}
             <Arrow />
             <div className={`wf-decision ${x?.outcome ?? 'pending'}`}>
-              {x?.status === 'RUNNING' ? 'Running…' : x?.outcome ?? x?.status ?? 'Waiting'}
-              {x && x.status !== 'RUNNING' && <small>{x.verified ? 'Verified: verifier approved and code re-validated' : 'Not AI-verified: deterministic insight shown'}</small>}
+              {x?.status === 'RUNNING' ? u.running : x?.outcome ?? x?.status ?? u.waiting}
+              {x && x.status !== 'RUNNING' && <small>{x.verified ? u.verifiedNote : u.notVerifiedNote}</small>}
             </div>
           </div>
 
@@ -264,23 +255,23 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible, s }:
                 <span>{x.modelCalls}/{x.modelCallLimit} model calls · {x.inputTokens}+{x.outputTokens} tokens</span>
                 <span>{ms(x.durationMs)}</span>
                 <span className={x.authoritativeFactsUnchanged ? 'ok' : ''}>
-                  {x.authoritativeFingerprintAfter ? (x.authoritativeFactsUnchanged ? `✓ authoritative facts unchanged (${x.authoritativeFingerprintBefore})` : '✗ facts changed') : 'facts fingerprint pending'}
+                  {x.authoritativeFingerprintAfter ? (x.authoritativeFactsUnchanged ? `✓ ${u.factsUnchanged} (${x.authoritativeFingerprintBefore})` : `✗ ${u.factsChanged}`) : u.factsPending}
                 </span>
               </div>
 
               {p && (
                 <article className={`card wf-published ${p.verified ? '' : 'unverified'}`}>
-                  <div className="card-top"><span className="card-kicker">{p.verified ? `Agent-verified insight · ${p.outcome}` : `Published: ${p.outcome}`}</span></div>
+                  <div className="card-top"><span className="card-kicker">{p.verified ? `${u.publishedVerified} · ${p.outcome}` : `${u.published}: ${p.outcome}`}</span></div>
                   {p.verified ? (
                     <>
                       <h3 className="card-headline">{p.headline}</h3>
                       <p className="card-fact">{p.summary}</p>
-                      <p className="card-sub"><b>Inference (AI): </b>{p.inference}</p>
-                      {p.possibleExplanation && <p className="card-sub"><b>Possible explanation (AI): </b>{p.possibleExplanation}</p>}
-                      {p.confidenceQualification && <p className="card-sub"><b>Confidence: </b>{p.confidenceQualification}</p>}
-                      {p.spokenSummary && <p className="card-sub"><b>Spoken: </b>{p.spokenSummary}</p>}
-                      {p.visualDescription && <p className="card-sub"><b>Visual description: </b>{p.visualDescription}</p>}
-                      {p.limitations.length > 0 && <p className="card-sub"><b>Limitations: </b>{p.limitations.join(' ')}</p>}
+                      <p className="card-sub"><b>{u.inferenceAi}: </b>{p.inference}</p>
+                      {p.possibleExplanation && <p className="card-sub"><b>{u.explanationAi}: </b>{p.possibleExplanation}</p>}
+                      {p.confidenceQualification && <p className="card-sub"><b>{u.confidence}: </b>{p.confidenceQualification}</p>}
+                      {p.spokenSummary && <p className="card-sub"><b>{u.spoken}: </b>{p.spokenSummary}</p>}
+                      {p.visualDescription && <p className="card-sub"><b>{u.visual}: </b>{p.visualDescription}</p>}
+                      {p.limitations.length > 0 && <p className="card-sub"><b>{u.limitations}: </b>{p.limitations.join(' ')}</p>}
                     </>
                   ) : null}
                   <p className="note">{p.notice}</p>
@@ -289,27 +280,27 @@ export function AgentWorkflowPanel({ insightId, profile, defaultAccessible, s }:
               )}
 
               <details className="wf-trace">
-              <summary>Detailed trace: timeline, handoffs and every stage</summary>
-              <h3 className="wf-h">Execution timeline</h3>
-              <Timeline x={x} />
+              <summary>{u.trace}</summary>
+              <h3 className="wf-h">{u.timeline}</h3>
+              <Timeline x={x} s={s} />
 
-              <h3 className="wf-h">Handoffs</h3>
+              <h3 className="wf-h">{u.handoffs}</h3>
               <ol className="wf-handoffs">
                 {x.handoffs.map((h, i) => <li key={i}><code>{h.from}</code> → {h.to.map(t => <code key={t}>{t}</code>)} <small>{h.message}</small></li>)}
               </ol>
 
               {x.recoveryActions.length > 0 && (
                 <>
-                  <h3 className="wf-h">Recovery actions</h3>
+                  <h3 className="wf-h">{u.recovery}</h3>
                   <ul className="wf-findings">{x.recoveryActions.map((r, i) => <li key={i}>{r}</li>)}</ul>
                 </>
               )}
               {x.error && <p className="note">{x.error}</p>}
 
-              <h3 className="wf-h">Stage details</h3>
-              {x.steps.map(s => <StepDetail key={s.sequence} s={s} />)}
+              <h3 className="wf-h">{u.stages}</h3>
+              {x.steps.map(step => <StepDetail key={step.sequence} s={step} />)}
               </details>
-              <p className="note">Traces show summaries, counts and decisions only: no prompts, hidden reasoning or credentials.</p>
+              <p className="note">{u.traceNote}</p>
             </>
           )}
         </>
@@ -332,7 +323,7 @@ export function AgentInsight({ agent, s, compact }: { agent?: PublishedInsight; 
   }
   return (
     <div className="agent-verified">
-      <span className="agent-badge">{s.agentVerified} · {agent.outcome} · {MODE_LABEL[agent.executionMode]}</span>
+      <span className="agent-badge">{s.agentVerified} · {agent.outcome} · {modeLabel(s, agent.executionMode)}</span>
       {agent.summary && <p className="card-sub">{agent.summary}</p>}
       {!compact && agent.inference && <p className="card-sub"><b>{s.inference} (AI) </b>{agent.inference}</p>}
       {!compact && agent.possibleExplanation && <p className="card-sub"><b>{s.possibleExplanation} (AI) </b>{agent.possibleExplanation}</p>}

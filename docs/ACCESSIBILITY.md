@@ -260,10 +260,12 @@ the default is restored.
 10. **Presets:** Low vision, Audio-first, Reduced motion, Default. Changing any option shows *Custom*.
 11. **Accessible audio persona** (Viewer menu). Switch back to *Tactical analyst* and check that your previous options
     return.
-12. **Language:** switch to Français or Español; speech uses that language and voice, and narration queued in the
+12. **Language:** switch to Français, Español, Deutsch, Italiano or Português (de-DE, it-IT, pt-PT); speech uses that language and voice, and narration queued in the
     previous language stops. Without a voice for that language on the device, a notice shows and the browser picks a
     voice for the requested `lang`. (Verified on the hosted app in Chrome on Windows: en-GB → Microsoft George,
     fr-FR → Google français, es-ES → Google español; French and Spanish replay audio description.)
+    German, Italian and Portuguese speech (de-DE, it-IT, pt-PT) use the same voice selection and fallback and are
+    covered by unit tests with simulated voices; they have not yet been checked by hand in a browser.
 13. **Combinations to spot-check:**
     - High contrast + Extra large + Monochrome.
     - Reduced motion + Audio description in the replay.

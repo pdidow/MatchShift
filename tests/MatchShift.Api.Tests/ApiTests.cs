@@ -25,7 +25,8 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
         Assert.True(health.GetProperty("synthetic").GetBoolean());
         var meta = await Get("/api/meta");
         Assert.Equal("template", meta.GetProperty("aiProvider").GetString());
-        Assert.Equal(3, meta.GetProperty("languages").GetArrayLength());
+        // Same six codes, in the same order, as src/MatchShift.Web/src/languages.ts.
+        Assert.Equal(["en", "fr", "es", "de", "it", "pt"], meta.GetProperty("languages").EnumerateArray().Select(l => l.GetProperty("code").GetString()));
         Assert.Contains("synthetic", meta.GetProperty("dataNotice").GetString());
     }
 

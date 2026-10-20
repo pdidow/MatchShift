@@ -53,14 +53,16 @@ public static partial class NumericGrounding
         //    Ranges ("minutes 50 to 62", "entre el minuto 50 y 62", "between the 50th and 62nd minute") are two match minutes.
         //    French: "entre la 50e et la 62e minute", "à la 35e" (only "la Ne" closed by "minute" or punctuation, so "la 2e
         //    tentative" is not a time). Spanish: "a los 35 minutos" ("minuto 35" is MinuteWordPattern).
-        foreach (var range in new[] { MinuteRangePattern(), FrenchMinuteRangePattern() })
+        //    German "in der 35. Minute", "zwischen der 50. und der 62. Minute"; Italian "al 35° minuto", "tra il 50° e il 62° minuto";
+        //    Portuguese "aos 35 minutos", "entre os minutos 50 e 62".
+        foreach (var range in new[] { MinuteRangePattern(), FrenchMinuteRangePattern(), OrdinalMinuteRangePattern() })
             work = Take(work, range, m =>
             {
                 CheckMinute(c, v, int.Parse(m.Groups["a"].Value, CultureInfo.InvariantCulture), problems);
                 CheckMinute(c, v, int.Parse(m.Groups["b"].Value, CultureInfo.InvariantCulture), problems);
             });
         foreach (var pattern in new[] { MinuteMarkPattern(), MinuteWordPattern(), OrdinalMinutePattern(), PrepositionMinutePattern(),
-                     FrenchMinutePattern(), SpanishMinutePattern() })
+                     FrenchMinutePattern(), SpanishMinutePattern(), PortugueseMinutePattern() })
             work = Take(work, pattern, m => CheckMinute(c, v, int.Parse(m.Groups["n"].Value, CultureInfo.InvariantCulture), problems));
 
         // 6. "X of (the last) Y <noun>": both values must come from ONE metric (numerator and its sample).
@@ -79,7 +81,7 @@ public static partial class NumericGrounding
         work = Take(work, SecondsPattern(), m => Require(v.Seconds, Num(m.Groups[1].Value), m.Value.Trim(), "duration in seconds", problems));
         work = Take(work, MinutesDurationPattern(), m => Require(v.DurationMinutes, Num(m.Groups[1].Value), m.Value.Trim(), "duration in minutes", problems));
 
-        // 10. Sample sizes ("muestra de 10"): only a metric's sample or baseline sample, never another value that happens to match.
+        // 10. Sample sizes ("muestra de 10", "amostra de 10", "campione di 10", "Stichprobe von 10"): only a metric's sample or baseline sample, never another value that happens to match.
         work = Take(work, SpanishSamplePattern(), m => Require(v.Samples, Num(m.Groups["n"].Value), m.Value.Trim(), "sample size", problems));
 
         //     Counted nouns ("10 attacks", "8 key players", "12 supporting events"). A compound "45 and 30 passes" checks BOTH
@@ -367,7 +369,7 @@ public static partial class NumericGrounding
     [GeneratedRegex(@"\b(\d)\s+nil\b", RegexOptions.IgnoreCase)]
     private static partial Regex NilPattern();
 
-    [GeneratedRegex(@"\b(?:minutes?|minutos?|minuto)\s+(?<a>\d{1,3})\s*(?:to|and|y|et|-|–)\s*(?<b>\d{1,3})\b|\bbetween\s+(?:the\s+)?(?<a>\d{1,3})(?:st|nd|rd|th)?\s+and\s+(?:the\s+)?(?<b>\d{1,3})(?:st|nd|rd|th)?\s+minutes?\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:minutes?|minutos?|minuto)\s+(?<a>\d{1,3})\s*(?:to|and|y|et|e|-|–)\s*(?<b>\d{1,3})\b|\bbetween\s+(?:the\s+)?(?<a>\d{1,3})(?:st|nd|rd|th)?\s+and\s+(?:the\s+)?(?<b>\d{1,3})(?:st|nd|rd|th)?\s+minutes?\b", RegexOptions.IgnoreCase)]
     private static partial Regex MinuteRangePattern();
 
     [GeneratedRegex(@"\b(?:entre|de)\s+la\s+(?<a>\d{1,3})e\s+(?:et|à)\s+la\s+(?<b>\d{1,3})e\s+minute\b", RegexOptions.IgnoreCase)]
@@ -381,7 +383,16 @@ public static partial class NumericGrounding
     [GeneratedRegex(@"\b(?:a|desde|tras|hasta)\s+los\s+(?<n>\d{1,3})\s+minutos?\b(?!\s+y\s+\d)", RegexOptions.IgnoreCase)]
     private static partial Regex SpanishMinutePattern();
 
-    [GeneratedRegex(@"\bmuestras?\s+(?:de\s+)?(?<n>\d+)\b", RegexOptions.IgnoreCase)]
+    // German "zwischen der 50. und der 62. Minute", Italian "tra il 50° e il 62° minuto" / "dal 50° al 62° minuto".
+    [GeneratedRegex(@"\bzwischen\s+der\s+(?<a>\d{1,3})\.\s+und\s+(?:der\s+)?(?<b>\d{1,3})\.\s+Minute\b|\b(?:tra|fra|dal)\s+(?:il\s+)?(?<a>\d{1,3})[°º]\s+(?:e|al)\s+(?:il\s+)?(?<b>\d{1,3})[°º]\s+minuto\b", RegexOptions.IgnoreCase)]
+    private static partial Regex OrdinalMinuteRangePattern();
+
+    // Portuguese "aos 35 minutos", "desde os 50 minutos": a match minute ("minuto 35" is MinuteWordPattern).
+    [GeneratedRegex(@"\b(?:aos|desde\s+os|até\s+aos)\s+(?<n>\d{1,3})\s+minutos?\b(?!\s+e\s+\d)", RegexOptions.IgnoreCase)]
+    private static partial Regex PortugueseMinutePattern();
+
+    // Sample sizes: Spanish "muestra de 10", Portuguese "amostra (é) de 10", Italian "campione (è) di 10", German "Stichprobe (umfasst|von|mit) 10".
+    [GeneratedRegex(@"\b(?:muestras?|amostras?)\s+(?:é\s+)?(?:de\s+)?(?<n>\d+)\b|\bcampion[ei]\s+(?:è\s+)?(?:di\s+)?(?<n>\d+)\b|\bStichprobe\s+(?:(?:umfasst|von|mit)\s+)?(?<n>\d+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex SpanishSamplePattern();
 
     [GeneratedRegex(@"\b(?<a>\d+)\s+(?:and|y|et)\s+(?<b>\d+)\s+(?:[\p{L}-]+\s+){0,2}?(?<noun>" + CountNouns + @")\b", RegexOptions.IgnoreCase)]
@@ -393,7 +404,8 @@ public static partial class NumericGrounding
     [GeneratedRegex(@"(?:\b(?:minute|minuto)\s+|\bmin\.\s*)(?<n>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex MinuteWordPattern();
 
-    [GeneratedRegex(@"\b(?<n>\d{1,3})(?:st|nd|rd|th|e|º|ª)?\s*(?:minute|min)\b(?!s)", RegexOptions.IgnoreCase)]
+    // "67th minute", "67e minute", German "67. Minute", Italian "67° minuto" / "67º minuto".
+    [GeneratedRegex(@"\b(?<n>\d{1,3})(?:st|nd|rd|th|e|º|ª|°|\.)?\s*(?:minute|minuto|min)\b(?!s)", RegexOptions.IgnoreCase)]
     private static partial Regex OrdinalMinutePattern();
 
     [GeneratedRegex(@"\b(?:at|since|after|from|until|before|around|by)\s+(?:the\s+)?(?<n>\d{1,3})\s*(?:minutes?|mins?)\b(?!\s+and\s+\d)", RegexOptions.IgnoreCase)]
@@ -417,7 +429,8 @@ public static partial class NumericGrounding
     [GeneratedRegex(@"\b(\d+(?:[.,]\d+)?)\s*(?:seconds?|secs?|s)\b", RegexOptions.IgnoreCase)]
     private static partial Regex SecondsPattern();
 
-    [GeneratedRegex(@"\b(\d+)\s*(?:minutes?|mins?)\b", RegexOptions.IgnoreCase)]
+    // Durations, including German "Minuten", Italian "minuti" and Portuguese/Spanish "minutos" (checked against durations only).
+    [GeneratedRegex(@"\b(\d+)\s*(?:minutes?|mins?|Minuten|minuti|minutos)\b", RegexOptions.IgnoreCase)]
     private static partial Regex MinutesDurationPattern();
 
     [GeneratedRegex(@"\b(\d+(?:[.,]\d+)?)\s+(?:[\p{L}-]+\s+){0,2}?(?<noun>" + CountNouns + @")\b", RegexOptions.IgnoreCase)]

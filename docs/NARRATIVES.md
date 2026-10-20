@@ -5,7 +5,8 @@
 The detector stores a language-neutral `Insight` (type, facts, evidence, interpretation code). Narratives are
 rendered per request from that record, so switching language or viewer mode never changes the facts - it
 re-renders them. `NarrativeTests.Facts_carry_identical_numbers_in_every_language` checks the set of numbers in
-the English, French and Spanish FACT sentences is identical for every flagship insight.
+the English, French, Spanish, German, Italian and Portuguese FACT sentences is identical for every flagship insight.
+`Every_lexicon_has_exactly_the_English_template_keys_and_no_corrupted_characters` keeps the six lexicons complete.
 
 ## Template engine
 

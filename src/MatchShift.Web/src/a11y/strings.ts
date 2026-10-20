@@ -1,4 +1,6 @@
 import type { Lang } from '../api'
+import { localeOf } from '../languages'
+import { de, it, pt } from './stringsMore'
 
 // Strings for accessibility features. Templates use {slot} placeholders; numbers come from structured evidence.
 const en = {
@@ -417,12 +419,12 @@ const es: A11yStrings = {
   },
 }
 
-const all: Record<Lang, A11yStrings> = { en, fr, es }
+const all: Record<Lang, A11yStrings> = { en, fr, es, de, it, pt }
 
 export const a11yStrings = (lang: Lang): A11yStrings => all[lang] ?? en
 
 /** BCP-47 tag for speech in a UI language. */
-export const speechLang = (lang: Lang) => (lang === 'fr' ? 'fr-FR' : lang === 'es' ? 'es-ES' : 'en-GB')
+export const speechLang = (lang: Lang) => localeOf(lang)
 
 export const fill = (template: string, slots: Record<string, string | number | undefined>) =>
   template.replace(/\{(\w+)\}/g, (_, k: string) => (slots[k] === undefined ? '' : String(slots[k])))
