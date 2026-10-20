@@ -146,6 +146,7 @@ export const de: Strings = {
   modes: { TeachMe: 'Fußball erklärt', WhatMatters: 'Nur das Wichtigste', Analyst: 'Taktik-Analyst', MyTeam: 'Mein Verein / Spieler', Studio: 'Studio-Modus' },
   chaosStates: { CONTROLLED: 'Kontrolliert', BALANCED: 'Ausgeglichen', CHAOTIC: 'Chaotisch' },
   replay: {
+    crowd: "Publikum", crowdOn: "An", crowdOff: "Aus", crowdAutoOff: "Publikum ausgeblendet, damit das Replay flüssig bleibt.",
     notice: '3D-Rekonstruktion synthetischer Ereignisse. Positionen bei Ereignissen stammen aus den Ereignisdaten; dazwischen werden sie interpoliert; Spieler, die nicht an nahen Ereignissen beteiligt sind, werden aus ihrer Grundposition geschätzt. Die Ballhöhe wird nicht erfasst - Flugkurven dienen nur der Darstellung.',
     button: 'Beweis-Replay', title: 'Beweis-Replay · 3D-Rekonstruktion', loading: 'Die Szene wird rekonstruiert…', error: 'Replay nicht verfügbar',
     tactical: 'Taktik', sideline: 'Seitenlinie', behindGoal: 'Hinter dem Tor', player: 'Spieler', resetCamera: 'Kamera zurücksetzen', freeCamera: 'Freie Kamera',
@@ -308,6 +309,7 @@ export const it: Strings = {
   modes: { TeachMe: 'Impara il calcio', WhatMatters: "Solo l'essenziale", Analyst: 'Analista tattico', MyTeam: 'La mia squadra / il mio giocatore', Studio: 'Modalità studio' },
   chaosStates: { CONTROLLED: 'Controllata', BALANCED: 'Equilibrata', CHAOTIC: 'Caotica' },
   replay: {
+    crowd: "Pubblico", crowdOn: "Attivo", crowdOff: "Disattivato", crowdAutoOff: "Pubblico disattivato per mantenere fluido il replay.",
     notice: 'Ricostruzione 3D di eventi sintetici. Le posizioni al momento degli eventi provengono dai dati; tra un evento e l’altro sono interpolate; i giocatori non coinvolti negli eventi vicini sono stimati dal loro ruolo nel modulo. L’altezza del pallone non è registrata: le traiettorie curve sono solo grafiche.',
     button: 'Replay delle prove', title: 'Replay delle prove · ricostruzione 3D', loading: 'Ricostruzione della sequenza…', error: 'Replay non disponibile',
     tactical: 'Tattica', sideline: 'Bordocampo', behindGoal: 'Dietro la porta', player: 'Giocatore', resetCamera: 'Reimposta telecamera', freeCamera: 'Telecamera libera',
@@ -470,6 +472,7 @@ export const pt: Strings = {
   modes: { TeachMe: 'Aprender futebol', WhatMatters: 'Só o essencial', Analyst: 'Analista tático', MyTeam: 'O meu clube / jogador', Studio: 'Modo estúdio' },
   chaosStates: { CONTROLLED: 'Controlado', BALANCED: 'Equilibrado', CHAOTIC: 'Caótico' },
   replay: {
+    crowd: "Público", crowdOn: "Ligado", crowdOff: "Desligado", crowdAutoOff: "Público desligado para manter a repetição fluida.",
     notice: 'Reconstrução 3D de eventos sintéticos. As posições no momento dos eventos vêm dos dados; entre eventos são interpoladas; os jogadores que não participam em eventos próximos são estimados a partir da sua posição no sistema. A altura da bola não é registada - as trajetórias curvas são apenas visuais.',
     button: 'Repetição das provas', title: 'Repetição das provas · reconstrução 3D', loading: 'A reconstruir a jogada…', error: 'Repetição indisponível',
     tactical: 'Tática', sideline: 'Lateral', behindGoal: 'Atrás da baliza', player: 'Jogador', resetCamera: 'Repor câmara', freeCamera: 'Câmara livre',

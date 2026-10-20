@@ -584,3 +584,4 @@ kbd { font: 500 12px/1 var(--font-mono); background: var(--surface-sunken); bord
 .replay-list-item.context { border-left: 3px dashed var(--ink-muted); }
 .replay-scrubber .tick.context { background: var(--ink-muted); }
 .context-tag { color: var(--ink-muted); }
+.replay-crowd-note { margin: 4px 0 0; font-size: 11px; color: var(--warning); }

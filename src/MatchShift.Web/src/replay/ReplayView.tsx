@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { autoCrowdTier, loadCrowdChoice, readCrowdCapabilities, resolveCrowdTier, saveCrowdChoice } from './crowd'
+import type { CrowdCapabilities, CrowdChoice, CrowdTier } from './crowd'
 import type { InsightCard, Lang, Team } from '../api'
 import { api } from '../api'
 import type { Strings } from '../i18n'
@@ -44,6 +46,11 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   const [tick, setTick] = useState<ReplayTick | null>(null)
   const [speed, setSpeed] = useState(1)
   const [titleClip, setTitleClip] = useState<number | null>(null)
+  // Optional decorative crowd: default from device capability, an explicit choice is remembered, a slow device switches it off.
+  const crowdChoice = useRef<CrowdChoice | null>(loadCrowdChoice())
+  const crowdEnv = useRef<{ auto: CrowdTier; caps: CrowdCapabilities }>({ auto: 'off', caps: { webgl: false } })
+  const [crowdTier, setCrowdTier] = useState<CrowdTier>('off')
+  const [crowdAutoOff, setCrowdAutoOff] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -64,6 +71,15 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
       accent: cssVar('--accent', '#39e6b0'),
     }, { reducedMotion, steady: prefs.reduceFlashing, shapes: prefs.colorVision !== 'default' })
     sceneRef.current = scene
+    const caps = readCrowdCapabilities(scene.capabilities())
+    crowdEnv.current = { auto: autoCrowdTier(caps), caps }
+    const initialCrowd = resolveCrowdTier(crowdEnv.current.auto, crowdChoice.current, caps, false)
+    scene.setCrowd(initialCrowd, crowdChoice.current === null)   // the frame guard only checks the automatic choice
+    setCrowdTier(initialCrowd)
+    setCrowdAutoOff(false)
+    const offCrowd = scene.onCrowdAutoOff(() => { setCrowdTier('off'); setCrowdAutoOff(true) })
+    // Measurement aid for local checks only (?replayDebug=1): read-only crowd and draw-call figures.
+    if (new URLSearchParams(window.location.search).get('replayDebug') === '1') (window as unknown as { __replayStats?: () => unknown }).__replayStats = () => scene.crowdStats()
     let introSeen = false
     try { introSeen = localStorage.getItem(INTRO_KEY) === '1'; localStorage.setItem(INTRO_KEY, '1') } catch { /* storage unavailable */ }
     // URL options for demos and screenshots: flyin=0|1, replayAt=<seconds>, replayCam=<preset>, replayPause=1.
@@ -80,6 +96,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
     if (hostRef.current) observer.observe(hostRef.current)
     return () => {
       off()
+      offCrowd()
       observer.disconnect()
       scene.dispose()
       sceneRef.current = null
@@ -89,6 +106,16 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   useEffect(() => { sceneRef.current?.setMotion({ reducedMotion, steady: prefs.reduceFlashing }) }, [reducedMotion, prefs.reduceFlashing, seq])
 
   const timeline = useMemo(() => (seq ? layout(seq) : null), [seq])
+
+  const toggleCrowd = () => {
+    const next: CrowdChoice = crowdTier === 'off' ? 'on' : 'off'
+    crowdChoice.current = next
+    saveCrowdChoice(next)
+    const tier = resolveCrowdTier(crowdEnv.current.auto, next, crowdEnv.current.caps, false)
+    sceneRef.current?.setCrowd(tier, false)
+    setCrowdTier(tier)
+    setCrowdAutoOff(false)
+  }
 
   // Title card ("BEFORE SHIFT" / "AFTER SHIFT") whenever a clip starts.
   const clipIndex = tick?.clipIndex ?? -1
@@ -304,6 +331,10 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
               <button className={`chip ${showList ? 'active' : ''}`} aria-pressed={showList} onClick={() => setShowList(v => !v)}
                 title="L">{as.replay.eventList}</button>
             </div>
+            <div className="replay-group" role="group" aria-label={r.crowd}>
+              <button className={`chip ${crowdTier !== 'off' ? 'active' : ''}`} aria-pressed={crowdTier !== 'off'} onClick={toggleCrowd}
+                disabled={!crowdEnv.current.caps.webgl}>{r.crowd}: {crowdTier !== 'off' ? r.crowdOn : r.crowdOff}</button>
+            </div>
             <div className="replay-group" role="group" aria-label={r.camera}>
               {PRESETS.map(p => (
                 <button key={p} className={`chip ${!tick.userCamera && tick.preset === p ? 'active' : ''}`} aria-pressed={!tick.userCamera && tick.preset === p}
@@ -313,6 +344,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
                 title={r.drag}>{tick.userCamera ? r.resetCamera : r.freeCamera}</button>
             </div>
           </div>
+          {crowdAutoOff && <p className="replay-crowd-note" role="status">{r.crowdAutoOff}</p>}
           <p className="replay-notice">{r.notice}</p>
         </div>
       )}

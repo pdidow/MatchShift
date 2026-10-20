@@ -8,6 +8,9 @@ import { REPLAY_MODEL_SCALE } from './modelScale'
 import { ballAt, cameraPose, layout, locate, samplePlayer, toWorld, PITCH_LENGTH, PITCH_WIDTH } from './timeline'
 import type { Placed, PlayerState } from './timeline'
 import type { CameraPreset, ReplayClip, ReplayEvent, ReplayOverlay, ReplayPlayer, ReplaySequence } from './types'
+import { CROWD_PALETTE, CrowdFrameGuard, crowdMotionAllowed, crowdReaction, layoutStand } from './crowd'
+import type { CrowdTier, StandShape } from './crowd'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 export interface SceneColors { home: string; away: string; homeKeeper: string; awayKeeper: string; accent: string }
 
@@ -86,6 +89,16 @@ export class ReplayScene {
   private options: SceneOptions
   private cutPending = true
 
+  // Optional decorative crowd: one InstancedMesh per stand, never part of the evidence or the clip layer.
+  private stands: { group: THREE.Group; shape: StandShape }[] = []
+  private crowdMeshes: THREE.InstancedMesh[] = []
+  private crowdTier: CrowdTier = 'off'
+  private crowdGuard: CrowdFrameGuard | null = null
+  private crowdGuardTripped = false
+  private crowdOffListeners: (() => void)[] = []
+  private reactionEvents: readonly ReplayEvent[] = []
+  private reactionLocal = 0
+
   constructor(canvas: HTMLCanvasElement, colors: SceneColors, options: SceneOptions = { reducedMotion: false, steady: false, shapes: false }) {
     this.canvas = canvas
     this.colors = colors
@@ -155,6 +168,63 @@ export class ReplayScene {
   }
 
   getTime() { return this.time }
+
+  /** WebGL facts for the crowd's capability check (no other use). */
+  capabilities() { return { isWebGL2: this.renderer.capabilities.isWebGL2, maxTextureSize: this.renderer.capabilities.maxTextureSize } }
+
+  /**
+   * Show or hide the decorative crowd. `guard` runs the one-off frame-time check after the crowd appears; if frames get
+   * too slow it switches the crowd off once and tells onCrowdAutoOff listeners. A user choice passes guard=false.
+   */
+  setCrowd(tier: CrowdTier, guard: boolean) {
+    for (const m of this.crowdMeshes) { m.parent?.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose() }
+    this.crowdMeshes = []
+    this.crowdTier = tier
+    this.crowdGuard = tier !== 'off' && guard && !this.crowdGuardTripped ? new CrowdFrameGuard() : null
+    if (tier === 'off') return
+    const material = new THREE.MeshLambertMaterial({ color: '#ffffff' })
+    const palette = CROWD_PALETTE.map(c => new THREE.Color(c))
+    const matrix = new THREE.Matrix4()
+    const quat = new THREE.Quaternion()
+    const scale = new THREE.Vector3()
+    const pos = new THREE.Vector3()
+    this.stands.forEach((stand, i) => {
+      const seats = layoutStand(stand.shape, tier, 7001 + i)
+      if (seats.length === 0) return
+      const geometry = spectatorGeometry(tier)
+      const mesh = new THREE.InstancedMesh(geometry, material, seats.length)
+      seats.forEach((seat, k) => {
+        pos.set(seat.x, seat.y, seat.z)
+        scale.set(seat.scale, seat.scale, seat.scale)
+        mesh.setMatrixAt(k, matrix.compose(pos, quat, scale))
+        mesh.setColorAt(k, palette[seat.color])
+      })
+      mesh.instanceMatrix.needsUpdate = true
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+      mesh.castShadow = false
+      mesh.receiveShadow = false
+      mesh.matrixAutoUpdate = true
+      mesh.userData.decorative = true
+      stand.group.add(mesh)
+      this.crowdMeshes.push(mesh)
+    })
+  }
+
+  onCrowdAutoOff(listener: () => void) {
+    this.crowdOffListeners.push(listener)
+    return () => { this.crowdOffListeners = this.crowdOffListeners.filter(l => l !== listener) }
+  }
+
+  /** Read-only figures for measuring the crowd's cost. */
+  crowdStats() {
+    return {
+      tier: this.crowdTier,
+      spectators: this.crowdMeshes.reduce((n, m) => n + m.count, 0),
+      crowdDrawCalls: this.crowdMeshes.length,
+      frameDrawCalls: this.renderer.info.render.calls,
+      triangles: this.renderer.info.render.triangles,
+    }
+  }
   skipIntro() { this.intro = this.introDuration; this.applyTime(false); this.snapCamera(); this.notify(true) }
 
   setCamera(preset: CameraPreset) {
@@ -229,7 +299,9 @@ export class ReplayScene {
 
     for (const side of [-1, 1] as const) this.scene.add(buildGoal(side))
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.scene.add(buildCornerFlag(sx * PITCH_LENGTH / 2, sz * PITCH_WIDTH / 2))
-    this.scene.add(buildStadium())
+    const stadium = buildStadium()
+    this.stands = stadium.stands
+    this.scene.add(stadium.group)
   }
 
   private buildBall() {
@@ -386,14 +458,32 @@ export class ReplayScene {
       this.updateCamera(dt)
       this.notify(false)
     }
+    this.updateCrowd(elapsed)
     this.controls.update()
     this.renderer.render(this.scene, this.camera)
+  }
+
+  private updateCrowd(elapsed: number) {
+    if (this.crowdMeshes.length === 0) return
+    if (this.crowdGuard && !(typeof document !== 'undefined' && document.hidden) && this.crowdGuard.feed(elapsed)) {
+      this.crowdGuard = null
+      this.crowdGuardTripped = true
+      this.setCrowd('off', false)
+      for (const l of this.crowdOffListeners) l()
+      return
+    }
+    // Group-level reaction: the whole stand rises slightly for a goal or a chance. One transform per stand, no per-seat work.
+    const k = crowdMotionAllowed(this.crowdTier, this.options.reducedMotion, this.crowdGuardTripped)
+      ? crowdReaction(this.reactionEvents, this.reactionLocal) : 0
+    for (const m of this.crowdMeshes) m.position.y = 0.3 * k   // a 30 cm rise reads as standing up; no per-seat change
   }
 
   private applyTime(force: boolean, dt = 0) {
     if (!this.seq || this.placed.length === 0) return
     const { placed, local } = locate(this.placed, this.time)
     const clip = placed.clip
+    this.reactionEvents = clip.events
+    this.reactionLocal = local
     if (placed.index !== this.currentClip) {
       this.currentClip = placed.index
       this.buildClipLayer(clip)
@@ -695,8 +785,9 @@ function buildCornerFlag(x: number, z: number) {
 }
 
 /** Lightweight generic stadium: four stands with a speckled crowd texture and floodlight towers. No likeness of any real venue. */
-function buildStadium() {
+function buildStadium(): { group: THREE.Group; stands: { group: THREE.Group; shape: StandShape }[] } {
   const group = new THREE.Group()
+  const stands: { group: THREE.Group; shape: StandShape }[] = []
   const crowdCanvas = document.createElement('canvas')
   crowdCanvas.width = 512
   crowdCanvas.height = 128
@@ -730,6 +821,7 @@ function buildStadium() {
     rim.position.set(0.2, 1.4, 0)
     const g = new THREE.Group()
     g.add(mesh, roof, rim)
+    stands.push({ group: g, shape: { length, depth, height } })
     return g
   }
   const sideStand = (zSign: number) => {
@@ -756,5 +848,23 @@ function buildStadium() {
     lamp.lookAt(0, 0, 0)
     group.add(tower, lamp)
   }
-  return group
+  return { group, stands }
+}
+
+/** One shared low-poly spectator: a body and a head (NORMAL), or a single 12-triangle box (LOW). */
+function spectatorGeometry(tier: CrowdTier): THREE.BufferGeometry {
+  if (tier === 'low') {
+    const box = new THREE.BoxGeometry(0.42, 1.0, 0.36)
+    box.translate(0, 0.5, 0)
+    return box
+  }
+  // About 20 triangles: an open six-sided body and an octahedron head - enough to read as people from replay distances.
+  const body = new THREE.CylinderGeometry(0.17, 0.24, 0.78, 6, 1, true)
+  body.translate(0, 0.39, 0)
+  const head = new THREE.OctahedronGeometry(0.13, 0)
+  head.translate(0, 0.93, 0)
+  const merged = mergeGeometries([body.toNonIndexed(), head.toNonIndexed()])!
+  body.dispose()
+  head.dispose()
+  return merged
 }

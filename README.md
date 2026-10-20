@@ -122,6 +122,18 @@ interactive, broadcast-style reconstruction of the exact sequence behind the ins
 inside the app. It is a tactical visualisation, not a game engine - its job is to show *why* MatchShift
 raised the insight.
 
+Evidence Replay includes an optional lightweight stadium crowd. Spectators are a decorative layer and can be switched
+off manually (**Crowd: On/Off**, remembered on this device). They are also switched off automatically on constrained
+hardware, or if replay frames slow down, to preserve replay performance.
+- **Cosmetic only:** the crowd never touches evidence. Supporting and context events, flags, counts and the timeline are
+  unchanged, and tests guard this.
+- **Cheap to draw:** one instanced mesh per stand (4 draw calls). LOW has 987 spectators, NORMAL 2,216, with no shadows.
+- **Stays clear of the play:** seats start 4 m back from each stand front, behind the sideline and behind-goal cameras.
+- **Reactions:** goals and chances bring a short, group-level rise, from events already in the replay. They never run on
+  LOW, with Reduced motion, or after the performance switch-off.
+
+Performance and evidence come first; the crowd only adds atmosphere.
+
 ![3D replay - behind-goal view of the 34' press, left-channel attack and cutback](docs/img/replay-3d-behind-goal.png)
 
 **Why reconstruction.** The synthetic event stream records where each *event* happens (the passer, the pass
