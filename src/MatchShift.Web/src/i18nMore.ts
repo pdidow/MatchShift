@@ -68,8 +68,10 @@ export const de: Strings = {
   guide: {
     entry: 'Geführte Demo · 60 s', entryHint: 'Neu hier? MatchShift in 60 Sekunden', label: 'Geführte Demo',
     stepOf: 'Schritt {n} von {total}', next: 'Weiter', back: 'Zurück', exit: 'Demo beenden', finish: 'Fertig',
+    viewersStep: {"languages": "Sechs Sprachen", "languagesHint": "Wählen Sie eine im hervorgehobenen Menü „Sprache“.", "open": "Barrierefreiheit öffnen"},
     steps: {
-      intro: { title: 'MatchShift in 60 Sekunden', body: 'Springen Sie zum stärksten Moment des synthetischen Vorzeigespiels, hinterfragen Sie die Analyse und sehen Sie, wie sie entstanden ist und geprüft wurde.', action: 'Zum Schlüsselmoment' },
+      intro: { title: 'MatchShift in 60 Sekunden', body: 'Springen Sie zum stärksten Moment des synthetischen Vorzeigespiels, hinterfragen Sie die Analyse und sehen Sie, wie sie entstanden ist und geprüft wurde.', action: "Starten" },
+      viewers: {"title": "Für jedes Publikum gemacht", "body": "Sechs Sprachen: Die Formulierung ändert sich, die Belege nicht. Die Barrierefreiheit-Einstellungen passen Sprachausgabe, Anzeige und Bewegung an jede Person an.", "action": "Zum Schlüsselmoment"},
       insight: { title: 'Eine wichtige Veränderung wurde erkannt', body: 'In der 63. Minute verlagert Westhaven das Angriffsspiel nach rechts. Deterministische C#-Analytik hat das aus den Spielereignissen erkannt: Nicht die KI entscheidet, was passiert ist.', action: 'WARUM? fragen' },
       why: { title: 'WARUM? Die genauen Belege', body: 'Kennzahl, Zeitfenster, Schwelle und Stichprobe hinter der Aussage - alles aus den Spielereignissen berechnet.', action: 'ZEIG ES MIR' },
       show: { title: 'ZEIG ES MIR: die Quellereignisse', body: 'Die belegenden Ereignisse werden auf dem Spielfeld gezeigt, jedes mit eigener Ereignis-ID. Graue Pfeile dienen nur zum Vergleich und zählen nicht als Beleg.', action: 'Beweis-Replay öffnen' },
@@ -231,8 +233,10 @@ export const it: Strings = {
   guide: {
     entry: 'Demo guidata · 60 s', entryHint: 'Prima volta? MatchShift in 60 secondi', label: 'Demo guidata',
     stepOf: 'Passo {n} di {total}', next: 'Avanti', back: 'Indietro', exit: 'Esci dalla demo', finish: 'Fine',
+    viewersStep: {"languages": "Sei lingue", "languagesHint": "Scegline una nel menu Lingua evidenziato.", "open": "Apri il Centro per l'accessibilità"},
     steps: {
-      intro: { title: 'MatchShift in 60 secondi', body: "Vai al momento chiave della partita sintetica principale, metti alla prova l'analisi e scopri come è stata prodotta e verificata.", action: 'Vai al momento chiave' },
+      intro: { title: 'MatchShift in 60 secondi', body: "Vai al momento chiave della partita sintetica principale, metti alla prova l'analisi e scopri come è stata prodotta e verificata.", action: "Inizia" },
+      viewers: {"title": "Pensato per ogni spettatore", "body": "Sei lingue: cambia la formulazione, non le prove. Il Centro per l'accessibilità adatta voce, visualizzazione e movimento a ogni spettatore.", "action": "Vai al momento chiave"},
       insight: { title: 'È stato rilevato un cambiamento importante', body: "Al 63' il Westhaven sposta la manovra sulla destra. L'analisi deterministica in C# lo ha rilevato dagli eventi della partita: non è l'IA a decidere cosa è successo.", action: 'Chiedi PERCHÉ?' },
       why: { title: 'PERCHÉ? Le prove esatte', body: "La metrica, le finestre temporali, la soglia e il campione alla base dell'affermazione, tutti calcolati dagli eventi della partita.", action: 'MOSTRAMELO' },
       show: { title: 'MOSTRAMELO: gli eventi di origine', body: 'Gli eventi a supporto sono disegnati sul campo, ognuno con il proprio ID. Le frecce grigie sono solo contesto per il confronto e non contano come prova.', action: 'Apri il replay delle prove' },
@@ -394,8 +398,10 @@ export const pt: Strings = {
   guide: {
     entry: 'Demo guiada · 60 s', entryHint: 'Primeira visita? A MatchShift em 60 segundos', label: 'Demo guiada',
     stepOf: 'Passo {n} de {total}', next: 'Seguinte', back: 'Voltar', exit: 'Sair da demo', finish: 'Terminar',
+    viewersStep: {"languages": "Seis idiomas", "languagesHint": "Escolha um no menu Idioma destacado.", "open": "Abrir o centro de acessibilidade"},
     steps: {
-      intro: { title: 'A MatchShift em 60 segundos', body: 'Salte para o momento mais forte do jogo sintético principal, ponha a análise à prova e veja como foi produzida e verificada.', action: 'Ir para o momento-chave' },
+      intro: { title: 'A MatchShift em 60 segundos', body: 'Salte para o momento mais forte do jogo sintético principal, ponha a análise à prova e veja como foi produzida e verificada.', action: "Começar" },
+      viewers: {"title": "Pensado para cada espectador", "body": "Seis idiomas: muda a redação, não as provas. O centro de acessibilidade adapta a voz, o ecrã e o movimento a cada espectador.", "action": "Ir para o momento-chave"},
       insight: { title: 'Foi detetada uma mudança significativa', body: 'Ao minuto 63, o Westhaven passa a atacar pela direita. A análise determinística em C# detetou-o a partir dos eventos do jogo: não é a IA que decide o que aconteceu.', action: 'Perguntar PORQUÊ?' },
       why: { title: 'PORQUÊ? As provas exatas', body: 'A métrica, as janelas temporais, o limiar e a amostra por trás da afirmação, tudo calculado a partir dos eventos do jogo.', action: 'MOSTRA-ME' },
       show: { title: 'MOSTRA-ME: os eventos de origem', body: 'Os eventos de suporte aparecem no relvado, cada um com o seu ID. As setas a cinzento são contexto para comparação e não contam como prova.', action: 'Abrir a repetição das provas' },

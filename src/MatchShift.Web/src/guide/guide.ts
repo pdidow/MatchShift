@@ -5,8 +5,20 @@ import type { Strings } from '../i18n'
  * The guided judge demo: a fixed path through the REAL product (real match state, real insight, real workflow).
  * Each step describes what is on screen and offers the next real action; nothing is simulated.
  */
-export const GUIDE_STEPS = ['intro', 'insight', 'why', 'show', 'replay', 'agents', 'trust'] as const
+export const GUIDE_STEPS = ['intro', 'viewers', 'insight', 'why', 'show', 'replay', 'agents', 'trust'] as const
 export type GuideStep = (typeof GUIDE_STEPS)[number]
+
+/** Where every entry point starts (?demo=judge, the top-bar button, the empty-state link): one sequence, nothing skipped. */
+export const GUIDE_START: GuideStep = GUIDE_STEPS[0]
+
+/**
+ * Accessibility Center options named on the "Built for every viewer" step, using the Center's own labels so the guide
+ * only ever names features that exist (plus keyboard navigation, which is always on).
+ */
+export const VIEWER_FEATURES = [
+  'spokenInsights', 'audioMatchMode', 'replayAudioDescription', 'transcript', 'highContrast', 'colorVision',
+  'reducedMotion', 'reduceFlashing', 'textSize', 'simplified',
+] as const
 
 export const nextStep = (s: GuideStep): GuideStep | null => GUIDE_STEPS[GUIDE_STEPS.indexOf(s) + 1] ?? null
 export const prevStep = (s: GuideStep): GuideStep | null => GUIDE_STEPS[GUIDE_STEPS.indexOf(s) - 1] ?? null

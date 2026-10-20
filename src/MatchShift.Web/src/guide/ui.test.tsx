@@ -34,36 +34,39 @@ const noop = () => undefined
 
 describe('guided demo panel', () => {
   it('is a labelled region with a polite live title, a step counter and an exit', () => {
-    const out = html(createElement(JudgeGuide, { step: 'why', s: en, onGo: noop, onExit: noop }))
+    const out = html(createElement(JudgeGuide, { step: 'why', s: en, onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))
     expect(out).toContain('role="region"')
     expect(out).toContain('aria-label="Guided demo"')
     expect(out).toContain('aria-live="polite"')
-    expect(out).toContain('Step 3 of 7')
+    expect(out).toContain('Step 4 of 8')
     expect(out).toContain('aria-label="Exit demo"')
     expect(out).toContain('SHOW ME →')                                            // the next real action
     expect(out).toContain('>Back<')
   })
 
   it('starts without Back and ends with Finish', () => {
-    const intro = html(createElement(JudgeGuide, { step: 'intro', s: en, onGo: noop, onExit: noop }))
+    const intro = html(createElement(JudgeGuide, { step: 'intro', s: en, onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))
     expect(intro).not.toContain('>Back<')
-    expect(intro).toContain('Jump to the flagship moment')
-    const insight = html(createElement(JudgeGuide, { step: 'insight', s: en, onGo: noop, onExit: noop }))
-    expect(insight).not.toContain('>Back<')                                       // nothing to go back to before the jump
-    const last = html(createElement(JudgeGuide, { step: 'trust', s: en, onGo: noop, onExit: noop }))
+    expect(intro).toContain('Start →')
+    const viewers = html(createElement(JudgeGuide, { step: 'viewers', s: en, onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))
+    expect(viewers).not.toContain('>Back<')                                       // nothing to go back to before it
+    expect(viewers).toContain('Jump to the flagship moment')
+    const insight = html(createElement(JudgeGuide, { step: 'insight', s: en, onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))
+    expect(insight).toContain('>Back<')                                           // back to "Built for every viewer"
+    const last = html(createElement(JudgeGuide, { step: 'trust', s: en, onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))
     expect(last).toContain('>Finish<')
-    expect(last).toContain('Step 7 of 7')
+    expect(last).toContain('Step 8 of 8')
   })
 
   it('separates deterministic facts, AI interpretation and verification once, on the insight step', () => {
-    const out = html(createElement(JudgeGuide, { step: 'insight', s: en, onGo: noop, onExit: noop }))
+    const out = html(createElement(JudgeGuide, { step: 'insight', s: en, onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))
     for (const k of ['Deterministic facts', 'AI interpretation', 'Verification']) expect(out).toContain(k)
-    expect(html(createElement(JudgeGuide, { step: 'why', s: en, onGo: noop, onExit: noop }))).not.toContain('AI interpretation')
+    expect(html(createElement(JudgeGuide, { step: 'why', s: en, onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))).not.toContain('AI interpretation')
   })
 
   it('renders in French and Spanish from the localization tables', () => {
-    expect(html(createElement(JudgeGuide, { step: 'why', s: t('fr'), onGo: noop, onExit: noop }))).toContain('Étape 3 sur 7')
-    expect(html(createElement(JudgeGuide, { step: 'why', s: t('es'), onGo: noop, onExit: noop }))).toContain('Paso 3 de 7')
+    expect(html(createElement(JudgeGuide, { step: 'why', s: t('fr'), onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))).toContain('Étape 4 sur 8')
+    expect(html(createElement(JudgeGuide, { step: 'why', s: t('es'), onGo: noop, onExit: noop, onOpenA11y: noop, lang: 'en' as const }))).toContain('Paso 4 de 8')
   })
 })
 

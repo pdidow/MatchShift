@@ -5,13 +5,13 @@ import { activeFeatures, speechEnabled } from './prefs'
 import { a11yStrings } from './strings'
 
 /** Topbar button + a subtle status line that appears only when at least one option is on. */
-export function A11yButton({ lang, onOpen }: { lang: Lang; onOpen: () => void }) {
+export function A11yButton({ lang, onOpen, highlight = false }: { lang: Lang; onOpen: () => void; highlight?: boolean }) {
   const { prefs, systemReducedMotion } = useA11y()
   const s = a11yStrings(lang)
   const on = activeFeatures(prefs, systemReducedMotion)
   const labels = on.map(k => s.status[k as keyof typeof s.status] ?? k)
   return (
-    <button className={`chip a11y-open ${on.length ? 'has-active' : ''}`} onClick={onOpen} aria-haspopup="dialog"
+    <button className={`chip a11y-open ${on.length ? 'has-active' : ''} ${highlight ? 'guide-target' : ''}`} onClick={onOpen} aria-haspopup="dialog"
       aria-label={on.length ? `${s.open}: ${labels.join(', ')}` : s.open} title={on.length ? labels.join(' · ') : s.open}>
       <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="4" r="2.2" fill="currentColor" />
         <path d="M4 8.5 L12 10 L20 8.5 M12 10 V15 M12 15 L8 22 M12 15 L16 22" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" /></svg>

@@ -58,12 +58,13 @@ is on screen:
 
 | Step | On screen | What it shows |
 |---|---|---|
-| 1 | Flagship insight at 63' (`MS-FLAGSHIP-001-I015`) | A change detected by deterministic analytics: facts, AI interpretation and verification are separate layers |
-| 2 | WHY? | The metric (31% → 90%), windows, threshold, sample and confidence, from match events |
-| 3 | SHOW ME | The 30 supporting source events (the card's count), plus 1 grey context event that is not counted as evidence |
-| 4 | Evidence Replay | 3D reconstruction before and after the shift, with observed / interpolated / estimated positions |
-| 5 | Agents | The Microsoft Agent Framework graph with parallel branches, deterministic and AI stages kept distinct, and live status chips |
-| 6 | Trust | The verifier verdict and the Microsoft Foundry Evaluations proof |
+| 1 | Built for every viewer | The real Language menu and Accessibility button are outlined. The six languages are named and the Accessibility Center can be opened from the guide; the guide changes no setting itself |
+| 2 | Flagship insight at 63' (`MS-FLAGSHIP-001-I015`) | A change detected by deterministic analytics: facts, AI interpretation and verification are separate layers |
+| 3 | WHY? | The metric (31% → 90%), windows, threshold, sample and confidence, from match events |
+| 4 | SHOW ME | The 30 supporting source events (the card's count), plus 1 grey context event that is not counted as evidence |
+| 5 | Evidence Replay | 3D reconstruction before and after the shift, with observed / interpolated / estimated positions |
+| 6 | Agents | The Microsoft Agent Framework graph with parallel branches, deterministic and AI stages kept distinct, and live status chips |
+| 7 | Trust | The verifier verdict and the Microsoft Foundry Evaluations proof |
 
 The recommended insight is the one documented below: the flagship attack-channel shift. It has the clearest metric
 change, 30 supporting events and before/after replay clips. Live workflows on it were approved in every evaluation

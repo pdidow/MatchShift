@@ -22,8 +22,8 @@ function exec(mode: ExecutionMode, outcome: WorkflowOutcome | undefined, verifie
 }
 
 describe('guided demo steps', () => {
-  it('runs intro -> insight -> WHY? -> SHOW ME -> Evidence Replay -> Agents -> trust', () => {
-    expect(GUIDE_STEPS).toEqual(['intro', 'insight', 'why', 'show', 'replay', 'agents', 'trust'])
+  it('runs intro -> every viewer -> insight -> WHY? -> SHOW ME -> Evidence Replay -> Agents -> trust', () => {
+    expect(GUIDE_STEPS).toEqual(['intro', 'viewers', 'insight', 'why', 'show', 'replay', 'agents', 'trust'])
     let s: GuideStep = GUIDE_STEPS[0]
     const seen: GuideStep[] = [s]
     for (let n = nextStep(s); n; n = nextStep(n)) seen.push(n)

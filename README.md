@@ -38,21 +38,26 @@ Open MatchShift and choose **Guided demo · 60 s** in the top bar, or open `/?de
 over the real product: it uses the real match state, the real insight and the real agent workflow, and every step is
 an ordinary button you could press yourself. Close it at any time with ✕ to keep using MatchShift normally.
 
-1. **Jump to the flagship moment.** The flagship match pauses at 64:00. The selected insight: at 63' Westhaven
+1. **Built for every viewer.** The guide outlines the real Language menu and Accessibility button and names the six
+   languages (English, Français, Español, Deutsch, Italiano, Português). It also lists the Accessibility Center's
+   options: spoken insights, audio match mode, replay audio description, captions, high contrast, colour vision,
+   reduced motion and flashing, text size, simplified insights and keyboard navigation. *Open Accessibility Center*
+   opens the real panel. The guide never changes a language or a setting itself.
+2. **Jump to the flagship moment.** The flagship match pauses at 64:00. The selected insight: at 63' Westhaven
    switch their attack down the right after a substitution (31% → 90%), detected by deterministic C# analytics.
-2. **WHY?** shows the exact metric, windows, threshold, sample and confidence, computed from match events.
-3. **SHOW ME** draws the 30 supporting source events on the pitch. One more attack, the only recent one that did not
+3. **WHY?** shows the exact metric, windows, threshold, sample and confidence, computed from match events.
+4. **SHOW ME** draws the 30 supporting source events on the pitch. One more attack, the only recent one that did not
    use the right channel, is drawn grey for comparison and labelled as context, not counted as evidence.
-4. **EVIDENCE REPLAY** reconstructs those events in 3D, before and after the shift, labelled observed, interpolated or
+5. **EVIDENCE REPLAY** reconstructs those events in 3D, before and after the shift, labelled observed, interpolated or
    estimated.
-5. **Agents** shows the Microsoft Agent Framework workflow:
+6. **Agents** shows the Microsoft Agent Framework workflow:
    - Tactical Analyst first;
    - then Audience Narrative and Accessibility Narrator in parallel;
    - then the Verification Agent.
 
    Code validates before and after the AI. Status chips show the execution mode, model and credential, taken from the
    runtime, never hard-coded.
-6. **Can we trust it?** The verdict (VERIFIED / VERIFIED WITH CHANGES / REJECTED) and the Microsoft Foundry
+7. **Can we trust it?** The verdict (VERIFIED / VERIFIED WITH CHANGES / REJECTED) and the Microsoft Foundry
    Evaluations proof. 28/28 published outputs passed groundedness, relevance and coherence. Injected defects caught:
    - deterministic validator 11/11;
    - Verification Agent 11/11;

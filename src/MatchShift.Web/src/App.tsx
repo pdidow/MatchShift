@@ -20,7 +20,7 @@ import { applyPreset, DEFAULT_PREFS, loadPrefs, speechEnabled } from './a11y/pre
 import { cueFor } from './a11y/sounds'
 import { JudgeGuide } from './guide/JudgeGuide'
 import type { GuideStep } from './guide/guide'
-import { FLAGSHIP, GUIDE_STEPS, findFlagship, wantsGuideFromUrl } from './guide/guide'
+import { FLAGSHIP, GUIDE_START, GUIDE_STEPS, findFlagship, wantsGuideFromUrl } from './guide/guide'
 import { evidenceLegend, splitEvidence } from './evidence'
 import { isLang } from './languages'
 import { capDetail, insightCueClass, matchNarrationPolicy, matchTimelineLive } from './a11y/narrationPolicy'
@@ -86,7 +86,7 @@ export default function App() {
   const [showSplash] = useState(() => !a11y.reducedMotion)
 
   // Guided demo (optional): a step over the real product, started from the top bar, the empty state or ?demo=judge.
-  const [guide, setGuide] = useState<GuideStep | null>(() => (wantsGuideFromUrl(window.location.search) ? 'intro' : null))
+  const [guide, setGuide] = useState<GuideStep | null>(() => (wantsGuideFromUrl(window.location.search) ? GUIDE_START : null))
   const [awaitFlagship, setAwaitFlagship] = useState(false)
 
   useEffect(() => {
@@ -234,7 +234,7 @@ export default function App() {
   /** Moves the guided demo to a step by performing that step's REAL product action. */
   const goGuide = (step: GuideStep) => {
     setGuide(step)
-    if (step === 'intro') return
+    if (step === 'intro' || step === 'viewers') return // explanation only: the real controls are highlighted, nothing is changed
     if (!flagship) {
       // Jump to the flagship moment: the flagship match, paused just after the insight is detected.
       setWhy(null); setFocus(null); setReplayId(null); setTab('live')
@@ -262,7 +262,7 @@ export default function App() {
   // The guide also follows the viewer's own clicks on the flagship insight (forward only), so using the real buttons
   // (including from the keyboard inside WHY?) keeps the explanation in step.
   useEffect(() => {
-    if (!guide || guide === 'intro' || !flagship) return
+    if (!guide || guide === 'intro' || guide === 'viewers' || !flagship) return
     const id = flagship.id
     const derived: GuideStep | null = tab === 'agents' && selected === id ? 'agents'
       : replayId === id ? 'replay' : focus?.insightId === id ? 'show' : why?.id === id ? 'why' : null
@@ -445,8 +445,8 @@ export default function App() {
         </div>
 
         <div className="controls-right">
-          {!guide && <button className="chip guide-entry" onClick={() => goGuide('intro')} title={s.guide.entryHint}>{s.guide.entry}</button>}
-          <A11yButton lang={profile.language} onOpen={() => setCenterOpen(true)} />
+          {!guide && <button className="chip guide-entry" onClick={() => goGuide(GUIDE_START)} title={s.guide.entryHint}>{s.guide.entry}</button>}
+          <A11yButton lang={profile.language} onOpen={() => setCenterOpen(true)} highlight={guide === 'viewers'} />
     < a
 className = "chip"
 href = {`${import.meta.env.BASE_URL}broadcast?session=${sessionId}&lang=${profile.language}`}
@@ -485,7 +485,7 @@ rel = "noreferrer"
               )}
             </>
           )}
-          <label className="control-label">{s.language}
+          <label className={`control-label ${guide === 'viewers' ? 'guide-target' : ''}`}>{s.language}
             <select value={profile.language} onChange={(e) => update({ language: e.target.value as Lang })}>
               {(meta?.languages ?? [{ code: 'en', name: 'English' }]).map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
             </select>
@@ -553,7 +553,7 @@ rel = "noreferrer"
             {tab === 'live' && (snap.insights.length === 0
               ? <div className="empty">
                   <p>{s.waiting}</p>
-                  {!guide && <button className="chip guide-entry" onClick={() => goGuide('insight')}>{s.guide.entryHint} →</button>}
+                  {!guide && <button className="chip guide-entry" onClick={() => goGuide(GUIDE_START)}>{s.guide.entryHint} →</button>}
                 </div>
               : snap.insights.map((card) => (
                 <InsightCardView key={card.id} card={card} mode={profile.mode} s={s} selected={selected === card.id} teamName={teamName}
@@ -597,7 +597,7 @@ rel = "noreferrer"
         </Suspense>
       )}
 
-      {guide && <JudgeGuide step={guide} s={s} onGo={goGuide} onExit={() => setGuide(null)} />}
+      {guide && <JudgeGuide step={guide} s={s} lang={profile.language} onGo={goGuide} onExit={() => setGuide(null)} onOpenA11y={() => setCenterOpen(true)} />}
       <SpeechBar lang={profile.language} overReplay={!!replayId} onStatus={prefs.audioMatchMode ? speakStatus : undefined} />
       {centerOpen && <AccessibilityCenter lang={profile.language} onClose={() => setCenterOpen(false)} onKeyboardHelp={() => { setCenterOpen(false); setKeysOpen(true) }} />}
       {keysOpen && <KeyboardHelp lang={profile.language} onClose={() => setKeysOpen(false)} />}
