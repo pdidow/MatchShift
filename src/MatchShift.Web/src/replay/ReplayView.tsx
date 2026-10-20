@@ -47,11 +47,12 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   const [tick, setTick] = useState<ReplayTick | null>(null)
   const [speed, setSpeed] = useState(1)
   const [titleClip, setTitleClip] = useState<number | null>(null)
-  // Optional decorative crowd: default from device capability, an explicit choice is remembered, a slow device switches it off.
+  // Optional decorative crowd: default from device capability, an explicit choice is remembered, a slow device reduces it.
   const crowdChoice = useRef<CrowdChoice | null>(loadCrowdChoice())
   const crowdEnv = useRef<{ auto: CrowdTier; caps: CrowdCapabilities }>({ auto: 'off', caps: { webgl: false } })
   const [crowdTier, setCrowdTier] = useState<CrowdTier>('off')
-  const [crowdAutoOff, setCrowdAutoOff] = useState(false)
+  /** Set when the frame-time guard reduced the crowd: to LOW ("reduced") or OFF ("disabled"). */
+  const [crowdReduced, setCrowdReduced] = useState<'low' | 'off' | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -75,10 +76,10 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
     const caps = readCrowdCapabilities(scene.capabilities())
     crowdEnv.current = { auto: autoCrowdTier(caps), caps }
     const initialCrowd = resolveCrowdTier(crowdEnv.current.auto, crowdChoice.current, caps, false)
-    scene.setCrowd(initialCrowd, crowdChoice.current === null)   // the frame guard only checks the automatic choice
+    scene.setCrowd(initialCrowd, crowdChoice.current === null ? 'auto' : 'explicit')   // an explicit choice gets a lenient guard
     setCrowdTier(initialCrowd)
-    setCrowdAutoOff(false)
-    const offCrowd = scene.onCrowdAutoOff(() => { setCrowdTier('off'); setCrowdAutoOff(true) })
+    setCrowdReduced(null)
+    const offCrowd = scene.onCrowdAutoChange(tier => { setCrowdTier(tier); setCrowdReduced(tier === 'off' ? 'off' : 'low') })
     // Measurement aid for local checks only (?replayDebug=1): read-only crowd and draw-call figures.
     if (new URLSearchParams(window.location.search).get('replayDebug') === '1') (window as unknown as { __replayStats?: () => unknown }).__replayStats = () => scene.crowdStats()
     let introSeen = false
@@ -113,9 +114,9 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
     crowdChoice.current = next
     saveCrowdChoice(next)
     const tier = resolveCrowdTier(crowdEnv.current.auto, next, crowdEnv.current.caps, false)
-    sceneRef.current?.setCrowd(tier, false)
+    sceneRef.current?.setCrowd(tier, 'explicit')
     setCrowdTier(tier)
-    setCrowdAutoOff(false)
+    setCrowdReduced(null)
   }
 
   // Title card ("BEFORE SHIFT" / "AFTER SHIFT") whenever a clip starts.
@@ -354,7 +355,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
                 title={r.drag}>{tick.userCamera ? r.resetCamera : r.freeCamera}</button>
             </div>
           </div>
-          {crowdAutoOff && <p className="replay-crowd-note" role="status">{r.crowdAutoOff}</p>}
+          {crowdReduced && <p className="replay-crowd-note" role="status">{crowdReduced === 'off' ? r.crowdAutoOff : r.crowdAutoLow}</p>}
           <p className="replay-notice">{r.notice}</p>
         </div>
       )}

@@ -185,7 +185,8 @@ When it is on (explicitly, or because the system asks for it under *Follow syste
 - The camera uses **direct cuts** instead of smooth pans. The shot holds still and cuts only on a camera, clip or seek
   change, or when the action would leave the frame.
 - **The replay itself is kept:** players and ball still move, because the movement is the information.
-- The optional Evidence Replay crowd stays static: its short group reactions to goals and chances are disabled.
+- The optional Evidence Replay crowd stays static: its group reactions to goals, shots and turnovers are disabled, whatever
+  the hardware level.
 - The splash is decided once at page load, so changing the option later never re-plays it.
 
 ## Flashing reduction

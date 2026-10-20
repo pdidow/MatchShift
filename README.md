@@ -128,14 +128,30 @@ inside the app. It is a tactical visualisation, not a game engine - its job is t
 raised the insight.
 
 Evidence Replay includes an optional lightweight stadium crowd. Spectators are a decorative layer and can be switched
-off manually (**Crowd: On/Off**, remembered on this device). They are also switched off automatically on constrained
-hardware, or if replay frames slow down, to preserve replay performance.
+off manually (**Crowd: On/Off**, remembered on this device).
+- **Hardware-aware:** three internal levels.
+  - **NORMAL**, with reactions, only when the browser reports clearly capable hardware: WebGL2, 8+ cores, 8+ GB, a
+    texture limit of 8192+, a known hardware GPU and no more than a 4K frame.
+  - **LOW**, a lighter reactive crowd, for unknown or modest hardware. A missing signal never counts as capable.
+  - **OFF** with no WebGL2, a software renderer, under 4 GB or under 4 cores.
+  - Turning the crowd on never forces NORMAL onto weak hardware.
+- **Frame-time guard:** a one-off check after the crowd appears. If frames are sustained-slow it steps NORMAL → LOW,
+  then LOW → OFF, never back up, with a polite notice ("Crowd reduced…" / "Crowd disabled to maintain replay
+  performance."). A crowd you switched on yourself is only reduced if the replay becomes hard to use.
 - **Cosmetic only:** the crowd never touches evidence. Supporting and context events, flags, counts and the timeline are
-  unchanged, and tests guard this.
-- **Cheap to draw:** one instanced mesh per stand (4 draw calls). LOW has 987 spectators, NORMAL 2,216, with no shadows.
+  unchanged, and tests guard this. It is visual only: no sound.
+- **Cheap to draw:** one instanced mesh per stand (4 draw calls). LOW has 987 spectators (about 12k triangles), NORMAL
+  2,216 (about 44k), with no shadows.
 - **Stays clear of the play:** seats start 4 m back from each stand front, behind the sideline and behind-goal cameras.
-- **Reactions:** goals and chances bring a short, group-level rise, from events already in the replay. They never run on
-  LOW, with Reduced motion, or after the performance switch-off.
+- **Reactions (NORMAL):** spectators stand up, rise slightly and lean towards the pitch. The pose is computed on the
+  GPU from one number per stand, with no per-spectator CPU work.
+  - A goal is strongest (about 2.2 s), shots are medium (about 1.1 s), and interceptions, high recoveries and turnovers
+    are small (about 0.6 s). Passes and carries get nothing.
+  - The four stands differ slightly, deterministically.
+  - Reactions follow the replay clock, so pause holds them, seeking away ends them and a restart replays them.
+  - **LOW reacts more simply:** each stand's mesh rises as one block (one transform, no shader change) - about 0.45 m for
+    a goal and a little for shots, nothing for turnovers. It keeps the same spectators, geometry and draw calls.
+  - Nothing moves with Reduced motion, on OFF, or after the guard has switched the crowd off.
 
 Performance and evidence come first; the crowd only adds atmosphere.
 

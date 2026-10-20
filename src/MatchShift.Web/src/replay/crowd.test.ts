@@ -16,7 +16,7 @@ const END = { length: 82, depth: 15, height: 8 }
 const STANDS = [SIDE, SIDE, END, END]
 const count = (tier: 'off' | 'low' | 'normal') => STANDS.reduce((n, s, i) => n + layoutStand(s, tier, 7001 + i).length, 0)
 
-const strong: CrowdCapabilities = { webgl: true, webgl2: true, cores: 12, deviceMemory: 16, maxTextureSize: 16384, pixelRatio: 1, viewportPixels: 1920 * 1080 }
+const strong: CrowdCapabilities = { webgl: true, webgl2: true, cores: 12, deviceMemory: 16, maxTextureSize: 16384, pixelRatio: 1, viewportPixels: 1920 * 1080, gpu: 'ANGLE (NVIDIA GeForce RTX 3060 Direct3D11)' }
 
 describe('crowd tiers and layout', () => {
   it('OFF renders no spectators; LOW uses fewer than NORMAL', () => {
@@ -52,16 +52,27 @@ describe('crowd tiers and layout', () => {
 })
 
 describe('defaults and user choice', () => {
-  it('capable hardware gets NORMAL; modest gets LOW; limited, unknown or no WebGL2 gets OFF', () => {
+  it('capable hardware gets NORMAL; modest or unknown gets LOW; a capability problem gets OFF', () => {
     expect(autoCrowdTier(strong)).toBe('normal')
     expect(autoCrowdTier({ ...strong, cores: 4, deviceMemory: 8 })).toBe('low')
     expect(autoCrowdTier({ ...strong, pixelRatio: 2, viewportPixels: 3840 * 2160 })).toBe('low')   // heavy screen
     expect(autoCrowdTier({ ...strong, deviceMemory: 2 })).toBe('off')
     expect(autoCrowdTier({ ...strong, cores: 2 })).toBe('off')
-    expect(autoCrowdTier({ ...strong, cores: undefined })).toBe('off')                              // unknown → off
     expect(autoCrowdTier({ ...strong, webgl2: false })).toBe('off')
     expect(autoCrowdTier({ webgl: false })).toBe('off')
-    expect(autoCrowdTier({ ...strong, deviceMemory: undefined })).toBe('normal')                    // Safari/Firefox omit memory
+    expect(autoCrowdTier({ ...strong, gpu: 'Google SwiftShader' })).toBe('off')                    // software rendering
+    expect(autoCrowdTier({ ...strong, maxTextureSize: 2048 })).toBe('off')
+  })
+
+  it('a missing signal never means capable: unknown or ambiguous hardware gets LOW, not NORMAL', () => {
+    expect(autoCrowdTier({ ...strong, cores: undefined })).toBe('low')
+    expect(autoCrowdTier({ ...strong, deviceMemory: undefined })).toBe('low')                      // Safari/Firefox omit memory
+    expect(autoCrowdTier({ ...strong, gpu: undefined })).toBe('low')
+    expect(autoCrowdTier({ ...strong, maxTextureSize: undefined })).toBe('low')
+    expect(autoCrowdTier({ ...strong, viewportPixels: undefined })).toBe('low')
+    expect(autoCrowdTier({ webgl: true, webgl2: true })).toBe('low')                               // nothing else known
+    expect(autoCrowdTier({ ...strong, cores: 16, deviceMemory: 4 })).toBe('low')                  // cores alone are not enough
+    expect(autoCrowdTier({ ...strong, maxTextureSize: 4096 })).toBe('low')
   })
 
   it('an explicit OFF is always respected; an explicit ON wins over the automatic default (LOW on weak hardware)', () => {
@@ -103,16 +114,40 @@ describe('performance guard', () => {
     return { tripped, finished: g.finished }
   }
 
-  it('switches the crowd off once when frames are sustained-slow, and never when they are fine', () => {
+  it('reduces the crowd once when frames are sustained-slow, and never when they are fine', () => {
     expect(run(50)).toEqual({ tripped: 1, finished: true })     // 20 fps
     expect(run(16.7)).toEqual({ tripped: 0, finished: true })   // 60 fps
     expect(run(50, 20).tripped).toBe(1)                         // measured once, then it stops
   })
 
+  it('gives a crowd the viewer chose a lenient budget: only a hard-to-use replay is reduced', () => {
+    const explicit = (frameMs: number) => {
+      const g = new CrowdFrameGuard(CrowdFrameGuard.EXPLICIT_BUDGET_MS)
+      let tripped = 0
+      for (let s = 0; s < 5; s += frameMs / 1000) if (g.feed(frameMs / 1000)) tripped++
+      return tripped
+    }
+    expect(explicit(50)).toBe(0)     // 20 fps: the viewer's choice stands
+    expect(explicit(80)).toBe(1)     // 12 fps: reduced
+  })
+
   it('ignores warm-up and tab-switch gaps', () => {
     const g = new CrowdFrameGuard()
-    for (let i = 0; i < 50; i++) expect(g.feed(0.5)).toBe(false)   // long gaps are ignored entirely
+    for (let i = 0; i < 50; i++) expect(g.feed(3)).toBe(false)     // gaps over 2 s (sleep, tab switch) are ignored entirely
     expect(g.finished).toBe(false)
+    const fine = new CrowdFrameGuard()
+    let tripped = 0
+    for (let i = 0; i < 400; i++) if (fine.feed(i === 100 ? 1.5 : 0.0167)) tripped++   // one hitch among smooth frames
+    expect(tripped).toBe(0)
+  })
+
+  it('catches a device that really renders at a few frames per second (not mistaken for tab switches)', () => {
+    for (const dt of [1, 0.5, 0.3]) {
+      const g = new CrowdFrameGuard(CrowdFrameGuard.EXPLICIT_BUDGET_MS)
+      let tripped = 0
+      for (let i = 0; i < 40; i++) if (g.feed(dt)) tripped++
+      expect(tripped).toBe(1)
+    }
   })
 })
 
@@ -138,10 +173,11 @@ describe('crowd reactions', () => {
     expect(crowdReaction([ev('GOAL', 2)], 2 + CROWD_REACTIONS.GOAL.duration + 0.01)).toBe(0)
   })
 
-  it('never move with reduced motion, on LOW, when OFF, or after the guard', () => {
+  it('never move with reduced motion, when OFF, or after the guard', () => {
     expect(crowdMotionAllowed('normal', false, false)).toBe(true)
+    expect(crowdMotionAllowed('low', false, false)).toBe(true)                    // LOW: the cheap block rise
     expect(crowdMotionAllowed('normal', true, false)).toBe(false)
-    expect(crowdMotionAllowed('low', false, false)).toBe(false)
+    expect(crowdMotionAllowed('low', true, false)).toBe(false)
     expect(crowdMotionAllowed('off', false, false)).toBe(false)
     expect(crowdMotionAllowed('normal', false, true)).toBe(false)
   })

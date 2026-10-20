@@ -8,7 +8,7 @@ import { REPLAY_MODEL_SCALE } from './modelScale'
 import { ballAt, cameraPose, layout, locate, samplePlayer, toWorld, PITCH_LENGTH, PITCH_WIDTH } from './timeline'
 import type { Placed, PlayerState } from './timeline'
 import type { CameraPreset, ReplayClip, ReplayEvent, ReplayOverlay, ReplayPlayer, ReplaySequence } from './types'
-import { CROWD_PALETTE, CrowdFrameGuard, crowdMotionAllowed, crowdReaction, layoutStand } from './crowd'
+import { CROWD_PALETTE, CROWD_POSE, CrowdFrameGuard, LOW_RISE_M, crowdMotionAllowed, crowdStepDown, layoutStand, standReaction } from './crowd'
 import type { CrowdTier, StandShape } from './crowd'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
@@ -92,10 +92,12 @@ export class ReplayScene {
   // Optional decorative crowd: one InstancedMesh per stand, never part of the evidence or the clip layer.
   private stands: { group: THREE.Group; shape: StandShape }[] = []
   private crowdMeshes: THREE.InstancedMesh[] = []
+  /** One reaction value per stand, read by that stand's vertex shader (0 = seated, 1 = full goal reaction). */
+  private crowdUniforms: { value: number }[] = []
   private crowdTier: CrowdTier = 'off'
   private crowdGuard: CrowdFrameGuard | null = null
   private crowdGuardTripped = false
-  private crowdOffListeners: (() => void)[] = []
+  private crowdChangeListeners: ((tier: CrowdTier) => void)[] = []
   private reactionEvents: readonly ReplayEvent[] = []
   private reactionLocal = 0
 
@@ -170,19 +172,31 @@ export class ReplayScene {
   getTime() { return this.time }
 
   /** WebGL facts for the crowd's capability check (no other use). */
-  capabilities() { return { isWebGL2: this.renderer.capabilities.isWebGL2, maxTextureSize: this.renderer.capabilities.maxTextureSize } }
+  capabilities() {
+    const gl = this.renderer.getContext()
+    let gpu: string | undefined
+    try {
+      const info = gl.getExtension('WEBGL_debug_renderer_info')
+      gpu = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '') || undefined
+    } catch { gpu = undefined }
+    return { isWebGL2: this.renderer.capabilities.isWebGL2, maxTextureSize: this.renderer.capabilities.maxTextureSize, gpu }
+  }
 
   /**
-   * Show or hide the decorative crowd. `guard` runs the one-off frame-time check after the crowd appears; if frames get
-   * too slow it switches the crowd off once and tells onCrowdAutoOff listeners. A user choice passes guard=false.
+   * Show or hide the decorative crowd. `guard` runs the one-off frame-time check after the crowd appears: 'auto' for the
+   * automatic default, 'explicit' (a lenient budget) when the viewer chose it. If frames are too slow the guard steps the
+   * crowd down once (NORMAL → LOW, then LOW → OFF) and tells onCrowdAutoChange listeners.
    */
-  setCrowd(tier: CrowdTier, guard: boolean) {
+  setCrowd(tier: CrowdTier, guard: 'auto' | 'explicit' | null) {
     for (const m of this.crowdMeshes) { m.parent?.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose() }
     this.crowdMeshes = []
+    this.crowdUniforms = []
     this.crowdTier = tier
-    this.crowdGuard = tier !== 'off' && guard && !this.crowdGuardTripped ? new CrowdFrameGuard() : null
+    if (guard === 'explicit') this.crowdGuardTripped = false     // the viewer's choice replaces an earlier guard decision
+    this.crowdGuard = tier !== 'off' && guard && !this.crowdGuardTripped
+      ? new CrowdFrameGuard(guard === 'explicit' ? CrowdFrameGuard.EXPLICIT_BUDGET_MS : CrowdFrameGuard.BUDGET_MS) : null
+    this.crowdGuardBudget = guard
     if (tier === 'off') return
-    const material = new THREE.MeshLambertMaterial({ color: '#ffffff' })
     const palette = CROWD_PALETTE.map(c => new THREE.Color(c))
     const matrix = new THREE.Matrix4()
     const quat = new THREE.Quaternion()
@@ -192,6 +206,9 @@ export class ReplayScene {
       const seats = layoutStand(stand.shape, tier, 7001 + i)
       if (seats.length === 0) return
       const geometry = spectatorGeometry(tier)
+      // NORMAL: the reaction pose is drawn by the vertex shader. LOW: a plain material; the stand's mesh just rises.
+      const reaction = { value: 0 }
+      const material = tier === 'normal' ? crowdMaterial(reaction) : new THREE.MeshLambertMaterial({ color: '#ffffff' })
       const mesh = new THREE.InstancedMesh(geometry, material, seats.length)
       seats.forEach((seat, k) => {
         pos.set(seat.x, seat.y, seat.z)
@@ -207,12 +224,16 @@ export class ReplayScene {
       mesh.userData.decorative = true
       stand.group.add(mesh)
       this.crowdMeshes.push(mesh)
+      this.crowdUniforms.push(reaction)
     })
   }
 
-  onCrowdAutoOff(listener: () => void) {
-    this.crowdOffListeners.push(listener)
-    return () => { this.crowdOffListeners = this.crowdOffListeners.filter(l => l !== listener) }
+  private crowdGuardBudget: 'auto' | 'explicit' | null = null
+
+  /** Called with the new tier when the frame-time guard reduces the crowd (to LOW or OFF). */
+  onCrowdAutoChange(listener: (tier: CrowdTier) => void) {
+    this.crowdChangeListeners.push(listener)
+    return () => { this.crowdChangeListeners = this.crowdChangeListeners.filter(l => l !== listener) }
   }
 
   /** Read-only figures for measuring the crowd's cost. */
@@ -221,6 +242,9 @@ export class ReplayScene {
       tier: this.crowdTier,
       spectators: this.crowdMeshes.reduce((n, m) => n + m.count, 0),
       crowdDrawCalls: this.crowdMeshes.length,
+      crowdTriangles: this.crowdMeshes.reduce((n, m) => n + m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3, 0),
+      reaction: this.crowdUniforms.map(u => Math.round(u.value * 1000) / 1000),
+      replayTime: this.time,
       frameDrawCalls: this.renderer.info.render.calls,
       triangles: this.renderer.info.render.triangles,
     }
@@ -464,18 +488,25 @@ export class ReplayScene {
   }
 
   private updateCrowd(elapsed: number) {
-    if (this.crowdMeshes.length === 0) return
+    if (this.crowdMeshes.length === 0) return   // OFF: no spectators and no crowd work at all
     if (this.crowdGuard && !(typeof document !== 'undefined' && document.hidden) && this.crowdGuard.feed(elapsed)) {
+      // Too slow: step down once (NORMAL → LOW, re-checked once; LOW → OFF). Never upward, so it cannot oscillate.
+      const next = crowdStepDown(this.crowdTier)
+      const budget = this.crowdGuardBudget
       this.crowdGuard = null
-      this.crowdGuardTripped = true
-      this.setCrowd('off', false)
-      for (const l of this.crowdOffListeners) l()
+      if (next === 'off') this.crowdGuardTripped = true
+      this.setCrowd(next, next === 'off' ? null : budget)
+      for (const l of this.crowdChangeListeners) l(next)
       return
     }
-    // Group-level reaction: the whole stand rises slightly for a goal or a chance. One transform per stand, no per-seat work.
-    const k = crowdMotionAllowed(this.crowdTier, this.options.reducedMotion, this.crowdGuardTripped)
-      ? crowdReaction(this.reactionEvents, this.reactionLocal) : 0
-    for (const m of this.crowdMeshes) m.position.y = 0.3 * k   // a 30 cm rise reads as standing up; no per-seat change
+    // Group-level reaction from the replay clock: one number per stand. NORMAL hands it to the GPU (stand-up pose); LOW moves
+    // the stand's mesh as one block (one transform). Reduced motion and a tripped guard skip the calculation: everyone stays seated.
+    const moving = crowdMotionAllowed(this.crowdTier, this.options.reducedMotion, this.crowdGuardTripped)
+    for (let i = 0; i < this.crowdUniforms.length; i++) {
+      const k = moving ? standReaction(this.reactionEvents, this.reactionLocal, i, this.crowdTier) : 0
+      this.crowdUniforms[i].value = k
+      if (this.crowdTier === 'low') this.crowdMeshes[i].position.y = LOW_RISE_M * k
+    }
   }
 
   private applyTime(force: boolean, dt = 0) {
@@ -849,6 +880,24 @@ function buildStadium(): { group: THREE.Group; stands: { group: THREE.Group; sha
     group.add(tower, lamp)
   }
   return { group, stands }
+}
+
+/**
+ * Spectator material. The reaction pose is computed in the vertex shader from one uniform per stand: the body stretches
+ * upward from the feet (standing up), rises slightly and leans towards the pitch (local -x). No per-spectator CPU work,
+ * no extra draw calls, no shadows.
+ */
+function crowdMaterial(reaction: { value: number }): THREE.MeshLambertMaterial {
+  const material = new THREE.MeshLambertMaterial({ color: '#ffffff' })
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uCrowdReaction = reaction
+    shader.vertexShader = 'uniform float uCrowdReaction;\n' + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      float crowdH = max(transformed.y, 0.0);
+      transformed.y = crowdH * (1.0 + ${CROWD_POSE.stretch.toFixed(3)} * uCrowdReaction) + ${CROWD_POSE.lift.toFixed(3)} * uCrowdReaction;
+      transformed.x -= ${CROWD_POSE.lean.toFixed(3)} * uCrowdReaction * crowdH;`)
+  }
+  material.customProgramCacheKey = () => 'matchshift-crowd'
+  return material
 }
 
 /** One shared low-poly spectator: a body and a head (NORMAL), or a single 12-triangle box (LOW). */
