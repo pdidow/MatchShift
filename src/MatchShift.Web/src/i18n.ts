@@ -2,6 +2,8 @@ import type { Lang, ViewerMode } from './api'
 import { de, it, pt } from './i18nMore'
 import type { ExplainStrings } from './i18nExplain'
 import { EXPLAIN } from './i18nExplain'
+import type { InsightStrings } from './i18nInsight'
+import { INSIGHT } from './i18nInsight'
 
 // UI chrome only. Match narratives are rendered server-side from verified evidence.
 const strings = {
@@ -289,10 +291,10 @@ const strings = {
 /** The English shape with every literal widened to string: each language must provide every key (checked at compile time). */
 type Widen<T> = T extends string ? string : T extends readonly (infer U)[] ? readonly Widen<U>[] : T extends object ? { [K in keyof T]: Widen<T[K]> } : T
 export type BaseStrings = Widen<(typeof strings)['en']>
-/** Every UI string, including the plain-language Agents-tab wording (i18nExplain.ts). */
-export type Strings = BaseStrings & { explain: ExplainStrings }
+/** Every UI string, including the plain-language Agents-tab (i18nExplain.ts) and insight/WHY? (i18nInsight.ts) wording. */
+export type Strings = BaseStrings & { explain: ExplainStrings; insight: InsightStrings }
 
 const base: Record<Lang, BaseStrings> = { en: strings.en, fr: strings.fr, es: strings.es, de, it, pt }
-const all = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, { ...v, explain: EXPLAIN[k as Lang] }])) as Record<Lang, Strings>
+const all = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, { ...v, explain: EXPLAIN[k as Lang], insight: INSIGHT[k as Lang] }])) as Record<Lang, Strings>
 
 export const t = (lang: Lang): Strings => all[lang] ?? all.en

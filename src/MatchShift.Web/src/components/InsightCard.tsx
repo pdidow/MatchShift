@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { InsightCard as Card, ViewerMode } from '../api'
 import type { Strings } from '../i18n'
 import { AgentInsight } from './AgentWorkflow'
+import { evidenceCounts } from './insightBasis'
 
 interface Props {
   card: Card
@@ -13,6 +14,8 @@ interface Props {
   onShow: () => void
   onReplay: () => void
   onSelect: () => void
+  /** Optional secondary trust link: opens the Agents tab for this insight. */
+  onAgents?: () => void
   /** Simplified Insights (optional): a plain-language sentence shown instead of the full card until MORE DETAIL. */
   simplified?: { text: string; more: string; less: string } | null
   /** Guided demo: this card is the flagship insight being explained. */
@@ -23,7 +26,12 @@ interface Props {
 
 const SHIFT_TYPES = new Set(['ATTACK_CHANNEL_SHIFT', 'POST_SUBSTITUTION_CHANGE', 'CONTROL_SHIFT'])
 
-export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onShow, onReplay, onSelect, simplified, guideTarget, guideNext }: Props) {
+/**
+ * One insight, read top to bottom: what changed (headline), the key evidence (before → after), why it matters (the
+ * inference), how sure MatchShift is and how many events support it, then WHY? and SHOW ME. The detection basis, the
+ * fact / inference / possible explanation split and every measurement live behind WHY?.
+ */
+export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onShow, onReplay, onSelect, onAgents, simplified, guideTarget, guideNext }: Props) {
   const n = card.narrative
   const primary = n.evidence.find((e) => e.isPrimary)
   const compact = mode === 'WhatMatters'
@@ -31,6 +39,8 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
   const [expanded, setExpanded] = useState(false)
   const simple = !!simplified && !expanded
   const headingId = `card-h-${card.id}`
+  const keyNumber = !!primary?.baseline && !compact
+  const { supporting } = evidenceCounts(card)
 
   return (
     <article
@@ -47,24 +57,22 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
       }}
     >
       <div className="card-top">
+        <span className="card-minute">{card.minute}'</span>
         <span className="card-kicker">
           {n.typeLabel}
           {card.teamId && <span style={{ color: 'var(--ink-muted)' }}>· {teamName(card.teamId)}</span>}
         </span>
-        <span className="card-minute">{card.minute}'</span>
       </div>
 
-      <small className="narrative-source" title={n.verificationNote}>{n.source === 'mock' ? s.sources.mock : n.source === 'microsoft-foundry' ? s.sources.foundry : s.sources.template}</small>
       <h3 className="card-headline" id={headingId}>{n.headline}</h3>
 
       {simple ? <p className="card-simple">{simplified!.text}</p> : <>
-      {primary?.baseline && !compact && (
-        <div className="key-number" aria-label={`${primary.label}: ${primary.baseline} → ${primary.recent}`}>
-          <span>{primary.baseline}</span>
-          <span className="arrow">→</span>
-          <span>{primary.recent}</span>
-          <span className="label">{primary.label}</span>
-        </div>
+      {keyNumber && (
+        <p className="key-number">
+          <span className="sr-only">{s.insight.keyEvidence}: </span>
+          <span className="key-values"><span>{primary!.baseline}</span><span className="arrow" aria-hidden>→</span><span className="sr-only"> → </span><span>{primary!.recent}</span></span>
+          <span className="label">{primary!.label}</span>
+        </p>
       )}
 
       {studio ? (
@@ -76,9 +84,9 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
         <p className="card-fact">{n.fact}</p>
       ) : (
         <>
-          <p className="card-fact">{n.fact}</p>
-          <p className="card-sub"><b>{s.inference}</b>{n.inference}</p>
-          {n.explanation && <p className="card-sub"><b>{s.possibleExplanation}</b>{n.explanation}</p>}
+          {/* The fact sentence restates the key number; it is shown here only when there is no key number. */}
+          {!keyNumber && <p className="card-fact">{n.fact}</p>}
+          <p className="card-sub card-matters"><b>{s.insight.whyMatters}</b>{n.inference}</p>
         </>
       )}
 
@@ -93,17 +101,22 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
         </button>
       )}
 
+      <p className="card-meta">
+        <Confidence label={`${s.confidence}: ${n.confidenceLabel}`} level={card.confidence} />
+        <span className="card-meta-sep" aria-hidden>·</span>
+        <span className="card-evidence">{s.supportingLegend.replace('{n}', String(supporting))}</span>
+      </p>
+
       <div className="card-actions">
         {/* The evidence chain: each step goes one level closer to the raw match events. */}
         <div className="evidence-chain" role="group" aria-label={s.chain}>
-          <button className={`chip ${guideNext === 'why' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onWhy() }}>{s.why}</button>
+          <button className={`chip chip-primary ${guideNext === 'why' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onWhy() }}>{s.why}</button>
           <span className="chain-sep" aria-hidden>›</span>
-          <button className={`chip ${guideNext === 'show' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onShow() }}>{s.showMe}</button>
+          <button className={`chip chip-primary ${guideNext === 'show' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onShow() }}>{s.showMe}</button>
           <span className="chain-sep" aria-hidden>›</span>
-          <button className={`chip replay-btn ${guideNext === 'replay' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onReplay() }}>{s.replay.button}</button>
+          <button className={`ghost replay-link ${guideNext === 'replay' ? 'guide-target' : ''}`} onClick={(e) => { e.stopPropagation(); onReplay() }}>{s.replay.button}</button>
         </div>
-        <span className="spacer" />
-        <Confidence label={`${s.confidence}: ${n.confidenceLabel}`} level={card.confidence} />
+        {onAgents && <button className="ghost trust-link" onClick={(e) => { e.stopPropagation(); onAgents() }}>{s.insight.howVerified}</button>}
       </div>
     </article>
   )

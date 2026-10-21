@@ -559,7 +559,8 @@ rel = "noreferrer"
                 <InsightCardView key={card.id} card={card} mode={profile.mode} s={s} selected={selected === card.id} teamName={teamName}
                   guideTarget={!!guide && card.id === flagship?.id} guideNext={card.id === flagship?.id ? guideNext : null}
                   simplified={prefs.simplified ? { text: simplifiedText(card, as, teamName, opponentOf), more: as.simplified.more, less: as.simplified.less } : null}
-                  onSelect={() => setSelected(card.id)} onWhy={() => { setSelected(card.id); setWhy(card) }} onShow={() => void showInsight(card)} onReplay={() => openReplay(card.id)} />
+                  onSelect={() => setSelected(card.id)} onWhy={() => { setSelected(card.id); setWhy(card) }} onShow={() => void showInsight(card)} onReplay={() => openReplay(card.id)}
+                  onAgents={() => { setSelected(card.id); setTab('agents') }} />
               )))}
             {tab === 'highlights' && <HighlightsPanel snap={snap} s={s} onShow={(h) => void showHighlight(h)} onReplay={openReplay} />}
             {tab === 'recap' && <RecapPanel snap={snap} s={s} profile={profile} styles={meta?.recapStyles ?? ['Casual', 'Analyst', 'Broadcast', 'Social']} />}
@@ -586,6 +587,7 @@ rel = "noreferrer"
         const changed = whatChanged(card, as)
         return (
           <WhyPanel card={card} s={s} guideNext={guide === 'why' && card.id === flagship?.id} onClose={() => setWhy(null)} onShow={() => void showInsight(why)} onReplay={() => openReplay(why.id)}
+            onAgents={() => { setWhy(null); setSelected(why.id); setTab('agents') }}
             extraActions={speechEnabled(prefs) ? (
               <>
                 <button className="chip" onClick={() => readAloud(whyNarration(card, as), 'why', card.narrative.typeLabel)}>{as.why.read}</button>

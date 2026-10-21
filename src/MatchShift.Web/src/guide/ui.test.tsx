@@ -90,7 +90,7 @@ describe('insight card evidence chain', () => {
   it('marks the flagship card and the next action only during the guide', () => {
     const out = render({ guideTarget: true, guideNext: 'show' })
     expect(out).toContain('guide-card')
-    expect(out).toMatch(/class="chip guide-target"[^>]*>Show me</)
+    expect(out).toMatch(/class="chip chip-primary guide-target"[^>]*>Show me</)
   })
 })
 
