@@ -13,6 +13,9 @@ import { ReplayScene } from './scene'
 import type { ReplayTick } from './scene'
 import { currentEvent, formatTime, layout, locate, matchClock, stepEvent } from './timeline'
 import type { CameraPreset, ReplayEvent, ReplaySequence } from './types'
+import { coverage, eventRole, positionShare } from './provenance'
+import { AboutReplay, EventStatus, EvidenceSummary, RoleTag } from './ReplayTrust'
+import type { EventRole } from './provenance'
 
 interface Props {
   insightId: string
@@ -109,6 +112,9 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   useEffect(() => { sceneRef.current?.setMotion({ reducedMotion, steady: prefs.reduceFlashing }) }, [reducedMotion, prefs.reduceFlashing, seq])
 
   const timeline = useMemo(() => (seq ? layout(seq) : null), [seq])
+  // What the replay shows of the insight's evidence, and where its positions come from (from the sequence, never the animation).
+  const cover = useMemo(() => (seq ? coverage(seq) : null), [seq])
+  const share = useMemo(() => (seq ? positionShare(seq) : null), [seq])
 
   // ---------------------------------------------------------------- crowd sound (optional atmosphere, never information)
   // Plays only while the crowd is shown and the viewer wants it; follows the replay clock; ducks under any narration.
@@ -199,6 +205,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   const score = clip ? liveScore(clip.scoreAtStart, clip.events, local, seq!.homeTeamId) : null
   const clipLabel = (key?: string) => (key === 'before' ? r.before : key === 'after' ? r.after : r.key)
   const overlayChips = clip ? clip.overlays.filter(o => o.kind === 'Channel').map(o => channelText(o.label, r)) : []
+  const role: EventRole | null = event && seq ? eventRole(seq, event) : null
 
   const describe = (e: ReplayEvent) => {
     const actor = player(e.playerId)
@@ -228,7 +235,8 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
     const placed = timeline.placed[tick.clipIndex]
     if (placed && tick.clipIndex !== prev.clip && seq.clips.length > 1) {
       // BEFORE / AFTER transitions are critical: they frame the evidence.
-      say({ text: fill(as.ad.clip, { label: clipLabel(placed.clip.key), clock: placed.clip.events[0]?.clock ?? '' }), kind: 'replay', source: 'replay',
+      const comparison = cover?.clips[tick.clipIndex]?.supporting === 0 ? `. ${s.replayUi.clipComparison}` : ''
+      say({ text: fill(as.ad.clip, { label: clipLabel(placed.clip.key), clock: placed.clip.events[0]?.clock ?? '' }) + comparison, kind: 'replay', source: 'replay',
         priority: 2, at: placed.offset, lang: adLang, label: r.title })
     }
     if (jumped) {
@@ -297,6 +305,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
                   <span className="replay-chip clip">{clipLabel(clip.key)}{seq.clips.length > 1 ? ` · ${r.clipOf} ${clipIndex + 1}/${seq.clips.length}` : ''}</span>
                   {overlayChips.map(c => <span key={c} className="replay-chip">{c}</span>)}
                 </div>
+                {cover && <div className="replay-trust"><EvidenceSummary cover={cover} clipIndex={tick.clipIndex} s={s} /></div>}
               </div>
               <button className="ghost replay-close" onClick={onClose} aria-label={r.close}>✕</button>
             </div>
@@ -304,15 +313,20 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
             {titleClip !== null && <div className="replay-title-card" key={titleClip}>{clipLabel(seq.clips[titleClip].key)}</div>}
             {tick.introActive && <button className="replay-skip" onClick={() => sceneRef.current?.skipIntro()}>{r.skipIntro}</button>}
 
-            {/* Not a live region: it changes several times a second. Screen readers use the event list or audio description. */}
-            <div className={`replay-event ${event?.isEvidence ? 'evidence' : ''}`}>
+            {/* Not a live region: it changes several times a second. The status is announced once per step or seek while paused
+                (below); screen readers can also use the event list or audio description. */}
+            <div className={`replay-event ${role ? `role-${role}` : ''}`}>
               <span className="replay-event-kicker">{r.currentEvent}</span>
               {event ? <><span className="replay-event-clock">{event.clock}</span> {describe(event)}</> : <span className="muted">—</span>}
+              {event && role && <EventStatus event={event} role={role} s={s} />}
             </div>
+            {/* Announced once per step or seek while paused, never continuously during playback. */}
+            <p className="sr-only" aria-live="polite">{event && role && !tick.playing ? `${event.clock} ${describe(event)}: ${s.replayUi.status[role]}` : ''}</p>
 
             {showList && timeline && (
               <nav className="replay-event-list" aria-label={as.replay.listTitle}>
                 <h2 className="panel-title">{as.replay.listTitle}</h2>
+                <p className="replay-list-key">{s.replayUi.listKey}</p>
                 <ol>
                   {timeline.placed.map(p => (
                     <li key={p.index}>
@@ -320,12 +334,14 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
                       <ol>
                         {p.clip.events.filter(e => e.type !== 'Carry' || e.isEvidence || e.isContext).map(e => {
                           const isCurrent = event?.eventId === e.eventId && clip === p.clip
+                          const itemRole = eventRole(seq, e)
                           return (
                             <li key={e.eventId}>
-                              <button className={`replay-list-item ${e.isEvidence ? 'evidence' : e.isContext ? 'context' : ''}`} aria-current={isCurrent ? 'step' : undefined}
+                              <button className={`replay-list-item ${itemRole === 'supporting' ? 'evidence' : itemRole === 'context' ? 'context' : ''}`} aria-current={isCurrent ? 'step' : undefined}
                                 onClick={() => sceneRef.current?.seek(p.offset + e.time)}>
                                 <span className="replay-event-clock">{e.clock}</span>
-                                <span>{describeEvent(e) ?? describe(e)}{e.isContext && <small className="context-tag"> · {s.contextTag}</small>}</span>
+                                <span>{describeEvent(e) ?? describe(e)}
+                                  <RoleTag role={itemRole} s={s} /></span>
                               </button>
                             </li>
                           )
@@ -394,7 +410,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
             </div>
           </div>
           {crowdReduced && <p className="replay-crowd-note" role="status">{crowdReduced === 'off' ? r.crowdAutoOff : r.crowdAutoLow}</p>}
-          <p className="replay-notice">{r.notice}</p>
+          <AboutReplay share={share} event={event} role={role} s={s} />
         </div>
       )}
     </div>
