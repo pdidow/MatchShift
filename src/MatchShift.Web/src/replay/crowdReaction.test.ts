@@ -2,11 +2,18 @@ import crowdSource from './crowd.ts?raw'
 import sceneSource from './scene.ts?raw'
 import { describe, expect, it } from 'vitest'
 import {
-  CROWD_POSE, CrowdFrameGuard, LOW_REACTIONS, LOW_RISE_M, STAND_VARIATION, autoCrowdTier, crowdMotionAllowed, crowdReaction, crowdStepDown,
+  CROWD_POSE, CrowdFrameGuard, LOW_REACTIONS, LOW_RISE_M, standCheer, STAND_VARIATION, autoCrowdTier, crowdMotionAllowed, crowdReaction, crowdStepDown,
   layoutStand, resolveCrowdTier, standReaction,
 } from './crowd'
 import type { CrowdCapabilities, CrowdTier } from './crowd'
 import type { ReplayEvent, ReplaySequence } from './types'
+
+/** The body of one function or method in a source file (up to its closing brace at the same indent). */
+const body = (raw: string, start: string, indent = '  ') => {
+  const src = raw.replace(/\r\n/g, '\n')
+  const i = src.indexOf(start)
+  return src.slice(i, src.indexOf(`\n${indent}}\n`, i) + indent.length + 2)
+}
 import { t } from '../i18n'
 import { LANGUAGE_CODES } from '../languages'
 
@@ -32,14 +39,18 @@ const activeFor = (label: string) => {
 }
 /** Head-height change in metres at reaction k (body about 1 m tall): stretch + lift, from the shader pose. */
 const headRise = (k: number) => k * (CROWD_POSE.stretch + CROWD_POSE.lift)
+/** How much taller a cheering NORMAL spectator's outline is at the goal peak than a seated neutral one (arms up + standing). */
+const NEUTRAL_TOP = 1.05, CHEERING_TOP = 1.37
+const normalPeakRise = () => CHEERING_TOP * (1 + CROWD_POSE.stretch) + CROWD_POSE.lift - NEUTRAL_TOP
 
 const capable: CrowdCapabilities = { webgl: true, webgl2: true, cores: 12, deviceMemory: 16, maxTextureSize: 16384, pixelRatio: 1, viewportPixels: 1920 * 1080, gpu: 'ANGLE (AMD Radeon RX 6600)' }
 
 describe('reactions on capable hardware', () => {
-  it('1: NORMAL reacts to a goal, visibly (about half a metre of head movement at the peak)', () => {
+  it('1: NORMAL reacts to a goal: spectators stand (about 0.4 m) and many raise their arms', () => {
     expect(crowdMotionAllowed('normal', false, false)).toBe(true)
     expect(standReaction(GOAL_CLIP, 14.5, 0)).toBeGreaterThan(0.95)
-    expect(headRise(peak('GOAL'))).toBeGreaterThanOrEqual(0.5)
+    expect(headRise(peak('GOAL'))).toBeGreaterThanOrEqual(0.35)
+    expect(normalPeakRise()).toBeGreaterThan(0.7)                      // the outline grows by more than 0.7 m for cheering spectators
     expect(CROWD_POSE.lift).toBeLessThanOrEqual(0.2)                    // standing up, not launching into the air
   })
 
@@ -84,10 +95,13 @@ describe('tiers, reduced motion and OFF', () => {
     expect(sceneSource).toContain("if (tier === 'off') return")
   })
 
-  it('stays within the draw-call and geometry budget: one instanced mesh per stand, the reaction is one uniform', () => {
-    expect(sceneSource).toContain('new THREE.InstancedMesh(geometry, material, seats.length)')
-    expect(sceneSource).toContain('shader.uniforms.uCrowdReaction = reaction')
-    expect(sceneSource).not.toMatch(/crowdMeshes[\s\S]{0,200}setMatrixAt[\s\S]{0,80}updateCrowd/)   // no per-seat matrix updates per frame
+  it('stays within the draw-call and geometry budget: at most two instanced meshes per stand, uniforms and counts per frame', () => {
+    expect(sceneSource.match(/new THREE\.InstancedMesh\(/g)).toHaveLength(1)                     // created only in spectatorMesh
+    expect(sceneSource).toContain('const neutral = this.spectatorMesh(')
+    expect(sceneSource).toContain("const cheering = cheeringBase ? this.spectatorMesh(")
+    expect(sceneSource).toContain('Object.assign(shader.uniforms, uniforms)')
+    const update = body(sceneSource, 'private updateCrowd(')
+    expect(update).not.toMatch(/setMatrixAt|setColorAt|new THREE|InstancedMesh\(/)           // no per-seat updates or allocation per frame
     expect(sceneSource).toContain('mesh.castShadow = false')
   })
 })
@@ -196,7 +210,8 @@ describe('LOW: a lightweight reactive crowd', () => {
   })
 
   it('LOW-2: LOW is weaker than NORMAL - smaller movement, fewer kinds of event, no pose change', () => {
-    expect(LOW_RISE_M * lowPeak('GOAL')).toBeLessThan(headRise(peak('GOAL')))
+    expect(LOW_RISE_M * lowPeak('GOAL')).toBeLessThan(normalPeakRise())
+    expect(standCheer(GOAL_CLIP, 14.6, 0, 'low')).toBe(0)                    // LOW never shows the cheering pose
     for (const l of ['SHOT_ON_TARGET', 'SHOT_OFF_TARGET', 'SHOT_BLOCKED']) {
       expect(lowPeak(l)).toBeLessThan(peak(l))                                 // a small reaction to a shot
       expect(lowPeak(l)).toBeLessThan(lowPeak('GOAL') / 2)
@@ -213,7 +228,7 @@ describe('LOW: a lightweight reactive crowd', () => {
 
   it('LOW-4: reduced motion makes LOW completely static', () => {
     expect(crowdMotionAllowed('low', true, false)).toBe(false)
-    expect(sceneSource).toContain("if (this.crowdTier === 'low') this.crowdMeshes[i].position.y = LOW_RISE_M * k")   // k is 0 when not moving
+    expect(sceneSource).toContain("if (this.crowdTier === 'low') c.neutral.position.y = LOW_RISE_M * k")   // k is 0 when not moving
   })
 
   it('LOW-5: OFF stays empty and static', () => {
@@ -240,12 +255,10 @@ describe('LOW: a lightweight reactive crowd', () => {
     expect(crowdSource).not.toMatch(/evidenceEventIds|contextEventIds|supportingEventIds|speechSynthesis|SpeechQueue|\.say\(/)
   })
 
-  it('LOW-8: LOW reactions add no draw calls, geometry or shader: the same mesh per stand, moved as one block', () => {
-    // Geometry and instancing are chosen before (and independently of) the reaction; LOW keeps its box and a plain material.
-    expect(sceneSource).toContain("const material = tier === 'normal' ? crowdMaterial(reaction) : new THREE.MeshLambertMaterial({ color: '#ffffff' })")
-    expect(sceneSource).toContain('const geometry = spectatorGeometry(tier)')
-    expect(sceneSource).toMatch(/if \(tier === 'low'\) \{\s*const box = new THREE\.BoxGeometry\(0\.42, 1\.0, 0\.36\)/)
-    expect(sceneSource.match(/new THREE\.InstancedMesh\(/g)).toHaveLength(1)                                 // one per stand, no extras
+  it('LOW-8: LOW reactions add no draw calls or geometry: one neutral mesh per stand, moved as one block', () => {
+    // LOW builds no cheering geometry or mesh; its reaction is the stand mesh's position.
+    expect(sceneSource).toContain("const cheeringBase = tier === 'normal' ? cheeringSpectator() : null")
+    expect(sceneSource.match(/new THREE\.InstancedMesh\(/g)).toHaveLength(1)
     expect(layoutStand({ length: 125, depth: 18, height: 9 }, 'low', 7001).length).toBeLessThan(layoutStand({ length: 125, depth: 18, height: 9 }, 'normal', 7001).length)
   })
 })

@@ -8,9 +8,9 @@ import { REPLAY_MODEL_SCALE } from './modelScale'
 import { ballAt, cameraPose, layout, locate, samplePlayer, toWorld, PITCH_LENGTH, PITCH_WIDTH } from './timeline'
 import type { Placed, PlayerState } from './timeline'
 import type { CameraPreset, ReplayClip, ReplayEvent, ReplayOverlay, ReplayPlayer, ReplaySequence } from './types'
-import { CROWD_PALETTE, CROWD_POSE, CrowdFrameGuard, LOW_RISE_M, crowdMotionAllowed, crowdStepDown, layoutStand, standReaction } from './crowd'
-import type { CrowdTier, StandShape } from './crowd'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { CROWD_PALETTE, CROWD_POSE, CrowdFrameGuard, LOW_RISE_M, STAND_BAND, cheeringCount, crowdMotionAllowed, crowdStepDown, layoutStand, standCheer, standReaction } from './crowd'
+import { cheeringSpectator, lowSpectator, neutralSpectator, triangles } from './crowdGeometry'
+import type { CrowdTier, Spectator, StandShape } from './crowd'
 
 export interface SceneColors { home: string; away: string; homeKeeper: string; awayKeeper: string; accent: string }
 
@@ -89,11 +89,11 @@ export class ReplayScene {
   private options: SceneOptions
   private cutPending = true
 
-  // Optional decorative crowd: one InstancedMesh per stand, never part of the evidence or the clip layer.
+  // Optional decorative crowd, never part of the evidence or the clip layer. Per stand: a neutral InstancedMesh and (NORMAL)
+  // a cheering InstancedMesh holding the same spectators in opposite rank order, so a reaction only changes two counts.
   private stands: { group: THREE.Group; shape: StandShape }[] = []
   private crowdMeshes: THREE.InstancedMesh[] = []
-  /** One reaction value per stand, read by that stand's vertex shader (0 = seated, 1 = full goal reaction). */
-  private crowdUniforms: { value: number }[] = []
+  private crowdStands: CrowdStand[] = []
   private crowdTier: CrowdTier = 'off'
   private crowdGuard: CrowdFrameGuard | null = null
   private crowdGuardTripped = false
@@ -190,7 +190,7 @@ export class ReplayScene {
   setCrowd(tier: CrowdTier, guard: 'auto' | 'explicit' | null) {
     for (const m of this.crowdMeshes) { m.parent?.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose() }
     this.crowdMeshes = []
-    this.crowdUniforms = []
+    this.crowdStands = []
     this.crowdTier = tier
     if (guard === 'explicit') this.crowdGuardTripped = false     // the viewer's choice replaces an earlier guard decision
     this.crowdGuard = tier !== 'off' && guard && !this.crowdGuardTripped
@@ -198,34 +198,47 @@ export class ReplayScene {
     this.crowdGuardBudget = guard
     if (tier === 'off') return
     const palette = CROWD_PALETTE.map(c => new THREE.Color(c))
+    const neutralBase = tier === 'normal' ? neutralSpectator() : lowSpectator()
+    const cheeringBase = tier === 'normal' ? cheeringSpectator() : null
+    this.stands.forEach((stand, i) => {
+      const seats = layoutStand(stand.shape, tier, 7001 + i)
+      if (seats.length === 0) return
+      const uniforms = { uCrowdReaction: { value: 0 }, uCrowdCheer: { value: 0 } }
+      // Highest rank first in the neutral mesh, lowest first in the cheering mesh: showing the first n - c neutral and the
+      // first c cheering instances shows every spectator exactly once, whatever c is. Nothing is allocated per reaction.
+      const byRank = [...seats].sort((a, b) => a.rank - b.rank)
+      const neutral = this.spectatorMesh(neutralBase, [...byRank].reverse(), uniforms, palette, stand.group)
+      const cheering = cheeringBase ? this.spectatorMesh(cheeringBase, byRank, uniforms, palette, stand.group) : null
+      if (cheering) { cheering.count = 0; cheering.visible = false }
+      this.crowdStands.push({ neutral, cheering, uniforms, n: seats.length })
+    })
+    neutralBase.dispose()
+    cheeringBase?.dispose()
+  }
+
+  private spectatorMesh(base: THREE.BufferGeometry, seats: Spectator[], uniforms: CrowdUniforms, palette: THREE.Color[], parent: THREE.Group) {
+    const geometry = base.clone()
+    geometry.setAttribute('aRank', new THREE.InstancedBufferAttribute(Float32Array.from(seats, s => s.rank), 1))
+    const mesh = new THREE.InstancedMesh(geometry, crowdMaterial(uniforms), seats.length)
     const matrix = new THREE.Matrix4()
     const quat = new THREE.Quaternion()
     const scale = new THREE.Vector3()
     const pos = new THREE.Vector3()
-    this.stands.forEach((stand, i) => {
-      const seats = layoutStand(stand.shape, tier, 7001 + i)
-      if (seats.length === 0) return
-      const geometry = spectatorGeometry(tier)
-      // NORMAL: the reaction pose is drawn by the vertex shader. LOW: a plain material; the stand's mesh just rises.
-      const reaction = { value: 0 }
-      const material = tier === 'normal' ? crowdMaterial(reaction) : new THREE.MeshLambertMaterial({ color: '#ffffff' })
-      const mesh = new THREE.InstancedMesh(geometry, material, seats.length)
-      seats.forEach((seat, k) => {
-        pos.set(seat.x, seat.y, seat.z)
-        scale.set(seat.scale, seat.scale, seat.scale)
-        mesh.setMatrixAt(k, matrix.compose(pos, quat, scale))
-        mesh.setColorAt(k, palette[seat.color])
-      })
-      mesh.instanceMatrix.needsUpdate = true
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-      mesh.castShadow = false
-      mesh.receiveShadow = false
-      mesh.matrixAutoUpdate = true
-      mesh.userData.decorative = true
-      stand.group.add(mesh)
-      this.crowdMeshes.push(mesh)
-      this.crowdUniforms.push(reaction)
+    seats.forEach((seat, k) => {
+      pos.set(seat.x, seat.y, seat.z)
+      scale.set(seat.scale, seat.scale, seat.scale)
+      mesh.setMatrixAt(k, matrix.compose(pos, quat, scale))
+      mesh.setColorAt(k, palette[seat.color])
     })
+    mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    mesh.computeBoundingSphere()      // over every seat, so changing the visible count never affects culling
+    mesh.castShadow = false
+    mesh.receiveShadow = false
+    mesh.userData.decorative = true
+    parent.add(mesh)
+    this.crowdMeshes.push(mesh)
+    return mesh
   }
 
   private crowdGuardBudget: 'auto' | 'explicit' | null = null
@@ -240,10 +253,13 @@ export class ReplayScene {
   crowdStats() {
     return {
       tier: this.crowdTier,
-      spectators: this.crowdMeshes.reduce((n, m) => n + m.count, 0),
-      crowdDrawCalls: this.crowdMeshes.length,
-      crowdTriangles: this.crowdMeshes.reduce((n, m) => n + m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3, 0),
-      reaction: this.crowdUniforms.map(u => Math.round(u.value * 1000) / 1000),
+      spectators: this.crowdStands.reduce((n, c) => n + c.n, 0),
+      cheering: this.crowdStands.reduce((n, c) => n + (c.cheering?.visible ? c.cheering.count : 0), 0),
+      neutral: this.crowdStands.reduce((n, c) => n + (c.neutral.visible ? c.neutral.count : 0), 0),
+      crowdDrawCalls: this.crowdMeshes.filter(m => m.visible && m.count > 0).length,
+      crowdTriangles: this.crowdMeshes.reduce((n, m) => n + (m.visible ? m.count * triangles(m.geometry) : 0), 0),
+      reaction: this.crowdStands.map(c => Math.round(c.uniforms.uCrowdReaction.value * 1000) / 1000),
+      cheer: this.crowdStands.map(c => Math.round(c.uniforms.uCrowdCheer.value * 1000) / 1000),
       replayTime: this.time,
       frameDrawCalls: this.renderer.info.render.calls,
       triangles: this.renderer.info.render.triangles,
@@ -501,11 +517,19 @@ export class ReplayScene {
     }
     // Group-level reaction from the replay clock: one number per stand. NORMAL hands it to the GPU (stand-up pose); LOW moves
     // the stand's mesh as one block (one transform). Reduced motion and a tripped guard skip the calculation: everyone stays seated.
+    // NORMAL also switches a seeded fraction of spectators to the cheering pose: only two instance counts change.
     const moving = crowdMotionAllowed(this.crowdTier, this.options.reducedMotion, this.crowdGuardTripped)
-    for (let i = 0; i < this.crowdUniforms.length; i++) {
+    for (let i = 0; i < this.crowdStands.length; i++) {
+      const c = this.crowdStands[i]
       const k = moving ? standReaction(this.reactionEvents, this.reactionLocal, i, this.crowdTier) : 0
-      this.crowdUniforms[i].value = k
-      if (this.crowdTier === 'low') this.crowdMeshes[i].position.y = LOW_RISE_M * k
+      const f = moving ? standCheer(this.reactionEvents, this.reactionLocal, i, this.crowdTier) : 0
+      c.uniforms.uCrowdReaction.value = k
+      c.uniforms.uCrowdCheer.value = f
+      if (this.crowdTier === 'low') c.neutral.position.y = LOW_RISE_M * k
+      const cheering = c.cheering ? cheeringCount(c.n, f) : 0
+      c.neutral.count = c.n - cheering
+      c.neutral.visible = c.neutral.count > 0
+      if (c.cheering) { c.cheering.count = cheering; c.cheering.visible = cheering > 0 }
     }
   }
 
@@ -882,38 +906,30 @@ function buildStadium(): { group: THREE.Group; stands: { group: THREE.Group; sha
   return { group, stands }
 }
 
+interface CrowdUniforms { uCrowdReaction: { value: number }; uCrowdCheer: { value: number } }
+interface CrowdStand { neutral: THREE.InstancedMesh; cheering: THREE.InstancedMesh | null; uniforms: CrowdUniforms; n: number }
+
 /**
- * Spectator material. The reaction pose is computed in the vertex shader from one uniform per stand: the body stretches
- * upward from the feet (standing up), rises slightly and leans towards the pitch (local -x). No per-spectator CPU work,
- * no extra draw calls, no shadows.
+ * Spectator material (cheap Lambert). The vertex shader adds the stand-up pose from two numbers per stand: the reaction
+ * strength and the cheering fraction. Spectators ranked just above the cheering ones stand fully, the rest only lean
+ * slightly. Heads get a skin tone (varied by rank) so figures read as people. No textures, no shadows, no emissive.
  */
-function crowdMaterial(reaction: { value: number }): THREE.MeshLambertMaterial {
+function crowdMaterial(uniforms: CrowdUniforms): THREE.MeshLambertMaterial {
   const material = new THREE.MeshLambertMaterial({ color: '#ffffff' })
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uCrowdReaction = reaction
-    shader.vertexShader = 'uniform float uCrowdReaction;\n' + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    Object.assign(shader.uniforms, uniforms)
+    shader.vertexShader = 'uniform float uCrowdReaction;\nuniform float uCrowdCheer;\nattribute float aRank;\nattribute float aHead;\n' + shader.vertexShader
+      .replace('#include <color_vertex>', `#include <color_vertex>
+      #if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
+        vColor.xyz = mix(vColor.xyz, mix(vec3(0.86, 0.70, 0.58), vec3(0.42, 0.30, 0.22), fract(aRank * 13.7)), aHead);
+      #endif`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+      float crowdStand = uCrowdReaction * (1.0 - ${(1 - STAND_BAND.rest).toFixed(3)} * smoothstep(uCrowdCheer + ${STAND_BAND.full.toFixed(3)}, uCrowdCheer + ${STAND_BAND.fade.toFixed(3)}, aRank));
       float crowdH = max(transformed.y, 0.0);
-      transformed.y = crowdH * (1.0 + ${CROWD_POSE.stretch.toFixed(3)} * uCrowdReaction) + ${CROWD_POSE.lift.toFixed(3)} * uCrowdReaction;
-      transformed.x -= ${CROWD_POSE.lean.toFixed(3)} * uCrowdReaction * crowdH;`)
+      transformed.y = crowdH * (1.0 + ${CROWD_POSE.stretch.toFixed(3)} * crowdStand) + ${CROWD_POSE.lift.toFixed(3)} * crowdStand;
+      transformed.x -= ${CROWD_POSE.lean.toFixed(3)} * crowdStand * crowdH;`)
   }
-  material.customProgramCacheKey = () => 'matchshift-crowd'
+  material.customProgramCacheKey = () => 'matchshift-crowd-v2'
   return material
 }
 
-/** One shared low-poly spectator: a body and a head (NORMAL), or a single 12-triangle box (LOW). */
-function spectatorGeometry(tier: CrowdTier): THREE.BufferGeometry {
-  if (tier === 'low') {
-    const box = new THREE.BoxGeometry(0.42, 1.0, 0.36)
-    box.translate(0, 0.5, 0)
-    return box
-  }
-  // About 20 triangles: an open six-sided body and an octahedron head - enough to read as people from replay distances.
-  const body = new THREE.CylinderGeometry(0.17, 0.24, 0.78, 6, 1, true)
-  body.translate(0, 0.39, 0)
-  const head = new THREE.OctahedronGeometry(0.13, 0)
-  head.translate(0, 0.93, 0)
-  const merged = mergeGeometries([body.toNonIndexed(), head.toNonIndexed()])!
-  body.dispose()
-  head.dispose()
-  return merged
-}

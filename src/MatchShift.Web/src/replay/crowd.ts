@@ -77,7 +77,8 @@ export function readCrowdCapabilities(renderer?: { isWebGL2?: boolean; maxTextur
 /** A stand as built by the scene, in its own local frame: x = depth from the front edge, z = along its length. */
 export interface StandShape { length: number; depth: number; height: number }
 
-export interface Spectator { x: number; y: number; z: number; scale: number; color: number }
+/** One seat. `rank` (0..1, seeded) decides who reacts first: the lowest ranks cheer, the next ones stand. */
+export interface Spectator { x: number; y: number; z: number; scale: number; color: number; rank: number }
 
 /** Spectators keep this far back from a stand's front edge so low cameras (sideline, behind goal) sit in front of them. */
 export const FRONT_CLEARANCE = 4
@@ -86,8 +87,11 @@ const SEAT_SPACING = 0.9
 const END_MARGIN = 2
 export const OCCUPANCY: Record<Exclude<CrowdTier, 'off'>, number> = { low: 0.22, normal: 0.5 }
 
-/** Muted clothing colours. No club colours: allegiance is not known, so none is implied. */
-export const CROWD_PALETTE = ['#3a4252', '#4a5160', '#2d3340', '#5a4a46', '#3f4a3c', '#4b4f63', '#61594a', '#353a48']
+/**
+ * Restrained clothing colours, light enough to stand out against the dark stands. No club colours: allegiance is not
+ * known, so none is implied.
+ */
+export const CROWD_PALETTE = ['#8a93a6', '#b8bcc6', '#64708a', '#b5a184', '#9a6e60', '#748f7a', '#d2ccbf', '#556078', '#a08a69', '#857a96']
 
 /** Height of the stand's stepped surface at depth x (matches the extruded stand profile in scene.ts). */
 export const standSurface = (s: StandShape, x: number) => 1.2 + (x * (s.height + 0.3)) / s.depth
@@ -108,6 +112,7 @@ export function seeded(seed: number) {
 export function layoutStand(stand: StandShape, tier: CrowdTier, seed: number): Spectator[] {
   if (tier === 'off') return []
   const rand = seeded(seed)
+  const ranks = seeded(seed ^ 0x5bd1e995)            // a separate stream, so ranks never change the seating layout
   const occupancy = OCCUPANCY[tier]
   const out: Spectator[] = []
   for (let x = FRONT_CLEARANCE; x <= stand.depth - 1; x += ROW_SPACING) {
@@ -119,6 +124,7 @@ export function layoutStand(stand: StandShape, tier: CrowdTier, seed: number): S
         z: z + (rand() - 0.5) * 0.25,
         scale: 0.94 + rand() * 0.12,               // narrow, safe range
         color: Math.floor(rand() * CROWD_PALETTE.length),
+        rank: ranks(),
       })
     }
   }
@@ -128,15 +134,16 @@ export function layoutStand(stand: StandShape, tier: CrowdTier, seed: number): S
 // ---------------------------------------------------------------- reactions
 
 /**
- * Event labels that move the crowd, how strongly (0..1) and for how long (replay seconds). A goal is the strongest; a shot
- * or chance is medium; an interception, high recovery or turnover is small. Everything else (passes, carries, routine
- * movement) is ignored.
+ * Event labels that move the crowd: how strongly the crowd stands (0..1), what fraction of spectators switch to the
+ * arms-up cheering pose at the peak, and for how long (replay seconds). A goal is the strongest (more than half cheer);
+ * a shot or chance is medium (a few cheer); an interception, high recovery or turnover only makes some stand. Passes,
+ * carries and routine movement are ignored.
  */
-export const CROWD_REACTIONS: Record<string, { amplitude: number; duration: number }> = {
-  GOAL: { amplitude: 1, duration: 2.2 },
-  SHOT_ON_TARGET: { amplitude: 0.55, duration: 1.2 },
-  SHOT_OFF_TARGET: { amplitude: 0.5, duration: 1.1 },
-  SHOT_BLOCKED: { amplitude: 0.45, duration: 1 },
+export const CROWD_REACTIONS: Record<string, { amplitude: number; duration: number; cheer?: number }> = {
+  GOAL: { amplitude: 1, duration: 2.2, cheer: 0.55 },
+  SHOT_ON_TARGET: { amplitude: 0.55, duration: 1.2, cheer: 0.18 },
+  SHOT_OFF_TARGET: { amplitude: 0.5, duration: 1.1, cheer: 0.15 },
+  SHOT_BLOCKED: { amplitude: 0.45, duration: 1, cheer: 0.12 },
   HIGH_PRESS_INTERCEPTION: { amplitude: 0.25, duration: 0.7 },
   HIGH_PRESSURE_RECOVERY: { amplitude: 0.22, duration: 0.7 },
   INTERCEPTION: { amplitude: 0.2, duration: 0.6 },
@@ -144,11 +151,13 @@ export const CROWD_REACTIONS: Record<string, { amplitude: number; duration: numb
 }
 
 /**
- * The pose at full reaction (k = 1), in metres, applied in the vertex shader to the shared spectator mesh: spectators
- * stand up (the body stretches upward from the feet), rise a little and lean towards the pitch. Sized to read from the
- * tactical camera (about 130 m from the far stand) without looking like jumping.
+ * The stand-up pose at full reaction (k = 1), in metres, applied in the vertex shader: the body stretches upward from the
+ * feet, rises a little and leans towards the pitch. Secondary to the cheering pose (raised arms), so it stays modest.
  */
-export const CROWD_POSE = { stretch: 0.55, lift: 0.18, lean: 0.2 } as const
+export const CROWD_POSE = { stretch: 0.3, lift: 0.08, lean: 0.12 } as const
+
+/** Spectators ranked just above the cheering ones stand fully (a band this wide); the rest only lean. */
+export const STAND_BAND = { full: 0.12, fade: 0.3, rest: 0.3 } as const
 
 /**
  * Small fixed differences between the four stands so they do not move as one block: strength and a timing offset in
@@ -189,20 +198,40 @@ export function crowdReaction(events: readonly { label: string; time: number }[]
   let best = 0
   for (const e of events) {
     const r = table[e.label]
-    if (!r) continue
-    const age = t - e.time
-    if (age < 0 || age > r.duration) continue
-    const rise = Math.min(0.25, r.duration * 0.25)
-    const hold = r.duration * 0.45
-    const envelope = age < rise ? age / rise
-      : age < hold ? 1
-      : 1 - smooth((age - hold) / (r.duration - hold))
-    best = Math.max(best, r.amplitude * envelope)
+    if (r) best = Math.max(best, r.amplitude * envelope(r.duration, t - e.time))
   }
   return best
 }
 
+/** Fraction of spectators in the cheering pose (0..1) at clip-local replay time t. Pure, like crowdReaction. */
+export function crowdCheer(events: readonly { label: string; time: number }[], t: number): number {
+  let best = 0
+  for (const e of events) {
+    const r = CROWD_REACTIONS[e.label]
+    if (r?.cheer) best = Math.max(best, r.cheer * envelope(r.duration, t - e.time))
+  }
+  return best
+}
+
+/** A quick rise, a hold, then an ease back down; 0 before the event and after its duration. */
+function envelope(duration: number, age: number) {
+  if (age < 0 || age > duration) return 0
+  const rise = Math.min(0.25, duration * 0.25)
+  const hold = duration * 0.45
+  return age < rise ? age / rise : age < hold ? 1 : 1 - smooth((age - hold) / (duration - hold))
+}
+
 const smooth = (x: number) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c) }
+
+/** One stand's cheering fraction: NORMAL only (LOW has no cheering pose; OFF nothing), with the stand's fixed variation. */
+export const standCheer = (events: readonly { label: string; time: number }[], t: number, stand: number, tier: CrowdTier = 'normal') => {
+  if (tier !== 'normal') return 0
+  const v = STAND_VARIATION[stand % STAND_VARIATION.length]
+  return v.strength * crowdCheer(events, t - v.delay)
+}
+
+/** How many of a stand's n spectators show the cheering pose at fraction f (the n lowest ranks). */
+export const cheeringCount = (n: number, f: number) => Math.max(0, Math.min(n, Math.floor(n * f)))
 
 /** One stand's reaction (0..1) at a tier, with its fixed strength and timing offset. LOW uses its smaller table; OFF is 0. */
 export const standReaction = (events: readonly { label: string; time: number }[], t: number, stand: number, tier: CrowdTier = 'normal') => {

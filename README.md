@@ -140,17 +140,27 @@ off manually (**Crowd: On/Off**, remembered on this device).
   performance."). A crowd you switched on yourself is only reduced if the replay becomes hard to use.
 - **Cosmetic only:** the crowd never touches evidence. Supporting and context events, flags, counts and the timeline are
   unchanged, and tests guard this. It is visual only: no sound.
-- **Cheap to draw:** one instanced mesh per stand (4 draw calls). LOW has 987 spectators (about 12k triangles), NORMAL
-  2,216 (about 44k), with no shadows.
+- **Spectators read as people:** stadium-scale low-poly figures, not character models.
+  - NORMAL: a torso wider at the shoulders and a round head on a short neck gap (32 triangles). A second, cheering
+    pose has both arms raised in a V (44 triangles).
+  - LOW: the same torso with a small block head (24 triangles).
+  - Heads and raised arms get a skin tone; clothing uses a restrained palette that stands out from the dark stands.
+- **Cheap to draw:** instanced meshes only, with no shadows.
+  - NORMAL: 2,216 spectators, 4 crowd draw calls at rest (about 71k triangles) and 8 at a reaction peak (about 85k).
+  - LOW: 987 spectators, 4 draw calls, about 24k triangles.
 - **Stays clear of the play:** seats start 4 m back from each stand front, behind the sideline and behind-goal cameras.
-- **Reactions (NORMAL):** spectators stand up, rise slightly and lean towards the pitch. The pose is computed on the
-  GPU from one number per stand, with no per-spectator CPU work.
-  - A goal is strongest (about 2.2 s), shots are medium (about 1.1 s), and interceptions, high recoveries and turnovers
-    are small (about 0.6 s). Passes and carries get nothing.
-  - The four stands differ slightly, deterministically.
+- **Reactions (NORMAL) change the crowd's silhouette.** Each spectator has a seeded rank, and each stand keeps its
+  spectators in a neutral mesh and a cheering mesh in opposite rank order.
+  - A reaction only changes how many instances each mesh draws. Nothing is allocated and no spectator is updated on
+    the CPU.
+  - A goal switches about half the crowd to the arms-up pose (about 2.2 s); the next ranks stand up and the rest lean
+    slightly.
+  - A shot switches about 15-18%; interceptions, high recoveries and turnovers only make some stand. Passes and carries
+    get nothing.
+  - The four stands differ slightly, deterministically. No allegiance is implied.
   - Reactions follow the replay clock, so pause holds them, seeking away ends them and a restart replays them.
-  - **LOW reacts more simply:** each stand's mesh rises as one block (one transform, no shader change) - about 0.45 m for
-    a goal and a little for shots, nothing for turnovers. It keeps the same spectators, geometry and draw calls.
+  - **LOW reacts more simply:** each stand rises as one block - about 0.45 m for a goal and a little for shots, nothing
+    for turnovers. It has no cheering pose.
   - Nothing moves with Reduced motion, on OFF, or after the guard has switched the crowd off.
 
 Performance and evidence come first; the crowd only adds atmosphere.

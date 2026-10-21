@@ -216,7 +216,7 @@ describe('the crowd never touches evidence', () => {
 
   it('spectators carry no event, evidence or player identity', () => {
     const p = layoutStand(SIDE, 'normal', 1)[0]
-    expect(Object.keys(p).sort()).toEqual(['color', 'scale', 'x', 'y', 'z'])
+    expect(Object.keys(p).sort()).toEqual(['color', 'rank', 'scale', 'x', 'y', 'z'])
   })
 
   it('the crowd module imports nothing from evidence, analytics, agents or the API', () => {
