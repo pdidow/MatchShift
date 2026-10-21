@@ -5,12 +5,13 @@ import { t } from './i18n'
 import { MomentumChart, PressureChart } from './components/Charts'
 import { InsightCardView } from './components/InsightCard'
 import { MetricsStrip } from './components/MetricsStrip'
-import { HighlightsPanel, Logo, RecapPanel, Splash } from './components/Panels'
+import { HighlightsPanel, Logo, RecapPanel } from './components/Panels'
 import { AgentWorkflowPanel } from './components/AgentWorkflow'
 import { AWAY_COLOR, HOME_COLOR, Pitch } from './components/Pitch'
 import { PlayerPanel } from './components/PlayerPanel'
 import { Transport } from './components/Transport'
 import { WhyPanel } from './components/WhyPanel'
+import { EmptyFeed, FeedIntro } from './components/Home'
 import { isTypingTarget, useA11y } from './a11y/A11yContext'
 import { AccessibilityCenter } from './a11y/AccessibilityCenter'
 import { A11yButton, KeyboardHelp, SpeechBar } from './a11y/Widgets'
@@ -82,8 +83,6 @@ export default function App() {
   const [centerOpen, setCenterOpen] = useState(false)
   const [keysOpen, setKeysOpen] = useState(false)
   const [description, setDescription] = useState<string | null>(null)
-  // The intro splash is decided once at load: toggling motion options later must not replay it over the app.
-  const [showSplash] = useState(() => !a11y.reducedMotion)
 
   // Guided demo (optional): a step over the real product, started from the top bar, the empty state or ?demo=judge.
   const [guide, setGuide] = useState<GuideStep | null>(() => (wantsGuideFromUrl(window.location.search) ? GUIDE_START : null))
@@ -180,6 +179,16 @@ export default function App() {
 
   useEffect(() => { setWhy(null); setFocus(null); setSelected(null); setReplayId(null) }, [snap?.matchId, snap?.epoch])
   useEffect(() => { setDescription(null) }, [focus])
+  // SHOW ME can be below the feed on a phone. Move both the viewport and keyboard focus to its evidence.
+  useEffect(() => {
+    if (!focus) return
+    const frame = requestAnimationFrame(() => {
+      const pitch = document.getElementById('match-evidence')
+      pitch?.focus({ preventScroll: true })
+      pitch?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [focus])
   useEffect(() => { setWhy(null); setFocus(null) }, [profile])
 
   useEffect(() => { document.documentElement.lang = profile.language }, [profile.language])
@@ -198,6 +207,13 @@ export default function App() {
   }, [awaitFlagship, flagship?.id, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (patch: Partial<Profile>) => setProfile((p) => ({ ...p, ...patch }))
+  const openVerification = (insightId?: string) => {
+    if (insightId) setSelected(insightId)
+    setWhy(null)
+    setTab('agents')
+    requestAnimationFrame(() => document.getElementById('tab-agents')?.focus())
+  }
+  useEffect(() => { document.getElementById('tab-panel')?.scrollTo(0, 0) }, [tab])
 
   const teamName = useCallback((id?: string) => (snap ? (id === snap.home.id ? snap.home.shortName : id === snap.away.id ? snap.away.shortName : '') : ''), [snap])
   const opponentOf = useCallback((id?: string) => (snap ? (id === snap.home.id ? snap.away.shortName : id === snap.away.id ? snap.home.shortName : '') : ''), [snap])
@@ -420,20 +436,25 @@ export default function App() {
   if (!snap) {
     return (
       <>
-        {showSplash && <Splash tagline={s.tagline} synthetic={s.synthetic} />}
-        <p className="empty">{connected ? '…' : s.connecting}</p>
+        <p className="empty" role="status">MatchShift · {connected ? '…' : s.connecting}</p>
       </>
     )
   }
 
   return (
     <div className="app">
-      {showSplash && <Splash tagline={s.tagline} synthetic={s.synthetic} />}
+      {/* Keyboard and screen-reader users can go straight to the insights, past the match chrome. */}
+      <a className="skip-link" href="#tab-panel" onClick={(e) => {
+        e.preventDefault()
+        setTab('live')
+        document.getElementById('tab-panel')?.focus()
+      }}>{s.home.skip}</a>
       <header className="topbar">
         <div className="brand">
           <Logo />
-          <span className="brand-name">MatchShift</span>
+          <h1 className="brand-name">MatchShift</h1>
           <span className="badge-synthetic" title={meta?.dataNotice}>{s.synthetic}</span>
+          <span className="brand-tagline">{s.tagline}</span>
         </div>
 
         {/* Not a live region: the clock changes every second. Goals are announced through the shared announcer. */}
@@ -445,57 +466,95 @@ export default function App() {
         </div>
 
         <div className="controls-right">
-          {!guide && <button className="chip guide-entry" onClick={() => goGuide(GUIDE_START)} title={s.guide.entryHint}>{s.guide.entry}</button>}
-          <A11yButton lang={profile.language} onOpen={() => setCenterOpen(true)} highlight={guide === 'viewers'} />
-    < a
-className = "chip"
-href = {`${import.meta.env.BASE_URL}broadcast?session=${sessionId}&lang=${profile.language}`}
-target = "_blank"
-rel = "noreferrer"
-    >
-    {s.broadcast}
-    </a>
-          <label className="control-label">{s.match}
-            <select value={snap.matchId} onChange={(e) => { setFocus(null); setSelected(null); void api.reset(e.target.value) }}>
-              {matches.map((m) => <option key={m.id} value={m.id}>{m.home.shortName} v {m.away.shortName} · {m.scenario.split(':')[0]}</option>)}
-            </select>
-          </label>
-          <label className="control-label">{s.mode}
-            <select value={prefs.audioPersona ? AUDIO_PERSONA : profile.mode} onChange={(e) => chooseMode(e.target.value)}>
-              {(meta?.modes ?? ['TeachMe', 'WhatMatters', 'Analyst', 'MyTeam', 'Studio']).map((m) => <option key={m} value={m}>{s.modes[m]}</option>)}
-              <option value={AUDIO_PERSONA}>{as.persona}</option>
-            </select>
-          </label>
-          {profile.mode === 'MyTeam' && (
-            <>
-              <label className="control-label">{s.focus}
-                <select value={profile.focusTeamId ?? ''} onChange={(e) => update({ focusTeamId: e.target.value || null, focusPlayerId: null })}>
-                  <option value="">{s.noFocus}</option>
-                  <option value={snap.home.id}>{snap.home.shortName}</option>
-                  <option value={snap.away.id}>{snap.away.shortName}</option>
-                </select>
-              </label>
-              {players.length > 0 && (
-                <label className="control-label">&nbsp;
-                  <select value={profile.focusPlayerId ?? ''} onChange={(e) => update({ focusPlayerId: e.target.value || null })}>
-                    <option value="">—</option>
-                    {players.map((p) => <option key={p.id} value={p.id}>{p.shirtNumber} {p.name}</option>)}
+          <div className="viewer-utilities">
+            {!guide && <button className="chip guide-entry" onClick={() => goGuide(GUIDE_START)} title={`${s.home.tour} ${s.guide.entryHint}`}>{s.guide.entry}</button>}
+            <A11yButton lang={profile.language} onOpen={() => setCenterOpen(true)} highlight={guide === 'viewers'} />
+            <label className={`control-label ${guide === 'viewers' ? 'guide-target' : ''}`}>{s.language}
+              <select value={profile.language} onChange={(e) => update({ language: e.target.value as Lang })}>
+                {(meta?.languages ?? [{ code: 'en', name: 'English' }]).map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="match-controls">
+            <label className="control-label">{s.match}
+              <select value={snap.matchId} onChange={(e) => { setFocus(null); setSelected(null); void api.reset(e.target.value) }}>
+                {matches.map((m) => <option key={m.id} value={m.id}>{m.home.shortName} v {m.away.shortName}</option>)}
+              </select>
+            </label>
+            <label className="control-label">{s.mode}
+              <select value={prefs.audioPersona ? AUDIO_PERSONA : profile.mode} onChange={(e) => chooseMode(e.target.value)}>
+                {(meta?.modes ?? ['TeachMe', 'WhatMatters', 'Analyst', 'MyTeam', 'Studio']).map((m) => <option key={m} value={m}>{s.modes[m]}</option>)}
+                <option value={AUDIO_PERSONA}>{as.persona}</option>
+              </select>
+            </label>
+            {profile.mode === 'MyTeam' && (
+              <>
+                <label className="control-label">{s.focus}
+                  <select value={profile.focusTeamId ?? ''} onChange={(e) => update({ focusTeamId: e.target.value || null, focusPlayerId: null })}>
+                    <option value="">{s.noFocus}</option>
+                    <option value={snap.home.id}>{snap.home.shortName}</option>
+                    <option value={snap.away.id}>{snap.away.shortName}</option>
                   </select>
                 </label>
-              )}
-            </>
-          )}
-          <label className={`control-label ${guide === 'viewers' ? 'guide-target' : ''}`}>{s.language}
-            <select value={profile.language} onChange={(e) => update({ language: e.target.value as Lang })}>
-              {(meta?.languages ?? [{ code: 'en', name: 'English' }]).map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
-            </select>
-          </label>
+                {players.length > 0 && (
+                  <label className="control-label">&nbsp;
+                    <select value={profile.focusPlayerId ?? ''} onChange={(e) => update({ focusPlayerId: e.target.value || null })}>
+                      <option value="">—</option>
+                      {players.map((p) => <option key={p.id} value={p.id}>{p.shirtNumber} {p.name}</option>)}
+                    </select>
+                  </label>
+                )}
+              </>
+            )}
+            <a className="broadcast-link" href={`${import.meta.env.BASE_URL}broadcast?session=${sessionId}&lang=${profile.language}`} target="_blank" rel="noreferrer">{s.broadcast}</a>
+          </div>
         </div>
       </header>
 
       <main className="main">
+        <aside className="right">
+          <div className="tabs" role="tablist" aria-label={s.home.navigation} onKeyDown={(e) => {
+            // Arrow keys move between tabs (WAI-ARIA tabs pattern).
+            const i = TABS.indexOf(tab)
+            const next = e.key === 'ArrowRight' ? TABS[(i + 1) % TABS.length] : e.key === 'ArrowLeft' ? TABS[(i + TABS.length - 1) % TABS.length]
+              : e.key === 'Home' ? TABS[0] : e.key === 'End' ? TABS[TABS.length - 1] : null
+            if (!next) return
+            e.preventDefault()
+            setTab(next)
+            document.getElementById(`tab-${next}`)?.focus()
+          }}>
+            {TABS.map((k) => (
+              <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="tab-panel" tabIndex={tab === k ? 0 : -1}
+                className={`${tab === k ? 'active' : ''} ${guide === 'replay' && k === 'agents' ? 'guide-target' : ''}`} onClick={() => setTab(k)}
+                title={k === 'agents' ? s.home.agentsHint : undefined} aria-description={k === 'agents' ? s.home.agentsHint : undefined}>
+                {k === 'live' ? `${s.live} (${snap.insights.length})` : s[k]}
+              </button>
+            ))}
+          </div>
+          <div className="tab-body" role="tabpanel" id="tab-panel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>
+            {tab === 'live' && <FeedIntro s={s} onTrust={() => openVerification(selected ?? snap.insights[0]?.id)} />}
+            {tab === 'live' && (snap.insights.length === 0
+              ? <EmptyFeed s={s} playing={snap.isPlaying} finished={snap.finished} started={snap.clock.second > 0} onStart={() => void api.play()} onTour={guide ? undefined : () => goGuide(GUIDE_START)} />
+              : snap.insights.map((card, index) => (
+                <InsightCardView key={card.id} card={card} mode={profile.mode} s={s} selected={selected === card.id} teamName={teamName} latest={index === 0}
+                  guideTarget={!!guide && card.id === flagship?.id} guideNext={card.id === flagship?.id ? guideNext : null}
+                  simplified={prefs.simplified ? { text: simplifiedText(card, as, teamName, opponentOf), more: as.simplified.more, less: as.simplified.less } : null}
+                  onSelect={() => setSelected(card.id)} onWhy={() => { setSelected(card.id); setWhy(card) }} onShow={() => void showInsight(card)} onReplay={() => openReplay(card.id)}
+                  onAgents={() => openVerification(card.id)} />
+              )))}
+            {tab === 'highlights' && <HighlightsPanel snap={snap} s={s} onShow={(h) => void showHighlight(h)} onReplay={openReplay} />}
+            {tab === 'recap' && <RecapPanel snap={snap} s={s} profile={profile} styles={meta?.recapStyles ?? ['Casual', 'Analyst', 'Broadcast', 'Social']} />}
+            {tab === 'agents' && (() => {
+              // The insight being explained, with the same evidence actions as its card (WHY? > SHOW ME > Evidence Replay).
+              const card = snap.insights.find(i => i.id === selected)
+              return <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} card={card} profile={streamProfile} defaultAccessible s={s}
+                onWhy={card ? () => setWhy(card) : undefined} onShow={card ? () => void showInsight(card) : undefined} onReplay={card ? () => openReplay(card.id) : undefined} />
+            })()}
+          </div>
+        </aside>
+
         <div className="left">
-          <div className="pitch-wrap">
+          <div className="pitch-wrap" id="match-evidence" tabIndex={-1} role="region" aria-label={focus ? `${s.showMe}: ${focus.caption}` : `${snap.home.name} v ${snap.away.name}`}>
             <Pitch home={snap.home} away={snap.away} trail={snap.recentEvents} focus={focus?.events ?? null}
               focusTeamId={focus?.teamId} ariaLabel={focus ? focus.caption : `${snap.home.shortName} v ${snap.away.shortName}`} />
             {focus && (
@@ -510,7 +569,11 @@ rel = "noreferrer"
                     }}>{as.describe.button}</button>
                   )}
                   {focus.insightId && <button className={`chip replay-btn ${guide === 'show' && focus.insightId === flagship?.id ? 'guide-target' : ''}`} onClick={() => openReplay(focus.insightId!)}>{s.replay.button}</button>}
-                  <button className="primary" onClick={() => { setFocus(null) }}>{s.backToLive}</button>
+                  <button className="primary" onClick={() => {
+                    setFocus(null)
+                    setTab('live')
+                    requestAnimationFrame(() => (document.getElementById(`card-${selected}`) ?? document.getElementById('tab-panel'))?.focus())
+                  }}>{s.backToLive}</button>
                 </span>
               </div>
             )}
@@ -530,48 +593,6 @@ rel = "noreferrer"
             name={players.find(p => p.id === snap.focusedPlayer?.playerId)?.name ?? snap.focusedPlayer.playerId} />}
           <MetricsStrip snap={snap} s={s} />
         </div>
-
-        <aside className="right">
-          <div className="tabs" role="tablist" onKeyDown={(e) => {
-            // Arrow keys move between tabs (WAI-ARIA tabs pattern).
-            const i = TABS.indexOf(tab)
-            const next = e.key === 'ArrowRight' ? TABS[(i + 1) % TABS.length] : e.key === 'ArrowLeft' ? TABS[(i + TABS.length - 1) % TABS.length]
-              : e.key === 'Home' ? TABS[0] : e.key === 'End' ? TABS[TABS.length - 1] : null
-            if (!next) return
-            e.preventDefault()
-            setTab(next)
-            document.getElementById(`tab-${next}`)?.focus()
-          }}>
-            {TABS.map((k) => (
-              <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="tab-panel" tabIndex={tab === k ? 0 : -1}
-                className={`${tab === k ? 'active' : ''} ${guide === 'replay' && k === 'agents' ? 'guide-target' : ''}`} onClick={() => setTab(k)}>
-                {k === 'live' ? `${s.live} (${snap.insights.length})` : s[k]}
-              </button>
-            ))}
-          </div>
-          <div className="tab-body" role="tabpanel" id="tab-panel" aria-labelledby={`tab-${tab}`}>
-            {tab === 'live' && (snap.insights.length === 0
-              ? <div className="empty">
-                  <p>{s.waiting}</p>
-                  {!guide && <button className="chip guide-entry" onClick={() => goGuide(GUIDE_START)}>{s.guide.entryHint} →</button>}
-                </div>
-              : snap.insights.map((card) => (
-                <InsightCardView key={card.id} card={card} mode={profile.mode} s={s} selected={selected === card.id} teamName={teamName}
-                  guideTarget={!!guide && card.id === flagship?.id} guideNext={card.id === flagship?.id ? guideNext : null}
-                  simplified={prefs.simplified ? { text: simplifiedText(card, as, teamName, opponentOf), more: as.simplified.more, less: as.simplified.less } : null}
-                  onSelect={() => setSelected(card.id)} onWhy={() => { setSelected(card.id); setWhy(card) }} onShow={() => void showInsight(card)} onReplay={() => openReplay(card.id)}
-                  onAgents={() => { setSelected(card.id); setTab('agents') }} />
-              )))}
-            {tab === 'highlights' && <HighlightsPanel snap={snap} s={s} onShow={(h) => void showHighlight(h)} onReplay={openReplay} />}
-            {tab === 'recap' && <RecapPanel snap={snap} s={s} profile={profile} styles={meta?.recapStyles ?? ['Casual', 'Analyst', 'Broadcast', 'Social']} />}
-            {tab === 'agents' && (() => {
-              // The insight being explained, with the same evidence actions as its card (WHY? > SHOW ME > Evidence Replay).
-              const card = snap.insights.find(i => i.id === selected)
-              return <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} card={card} profile={streamProfile} defaultAccessible s={s}
-                onWhy={card ? () => setWhy(card) : undefined} onShow={card ? () => void showInsight(card) : undefined} onReplay={card ? () => openReplay(card.id) : undefined} />
-            })()}
-          </div>
-        </aside>
       </main>
 
       <footer className="bottom">
@@ -587,7 +608,7 @@ rel = "noreferrer"
         const changed = whatChanged(card, as)
         return (
           <WhyPanel card={card} s={s} guideNext={guide === 'why' && card.id === flagship?.id} onClose={() => setWhy(null)} onShow={() => void showInsight(why)} onReplay={() => openReplay(why.id)}
-            onAgents={() => { setWhy(null); setSelected(why.id); setTab('agents') }}
+            onAgents={() => openVerification(why.id)}
             extraActions={speechEnabled(prefs) ? (
               <>
                 <button className="chip" onClick={() => readAloud(whyNarration(card, as), 'why', card.narrative.typeLabel)}>{as.why.read}</button>

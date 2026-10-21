@@ -68,19 +68,6 @@ export function RecapPanel({ snap, s, profile, styles }: { snap: Snapshot; s: St
   )
 }
 
-export function Splash({ tagline, synthetic }: { tagline: string; synthetic: string }) {
-  return (
-    <div className="splash" aria-hidden>
-      <div className="splash-inner">
-        <Logo size={72} />
-        <h1>MatchShift</h1>
-        <p>{tagline}</p>
-        <span className="badge-synthetic">{synthetic}</span>
-      </div>
-    </div>
-  )
-}
-
 export function Logo({ size = 30 }: { size?: number }) {
   return (
     <svg className="brand-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden>

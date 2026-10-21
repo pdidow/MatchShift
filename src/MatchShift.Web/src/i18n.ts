@@ -6,12 +6,14 @@ import type { InsightStrings } from './i18nInsight'
 import { INSIGHT } from './i18nInsight'
 import type { ReplayStrings } from './i18nReplay'
 import { REPLAY_UI } from './i18nReplay'
+import type { HomeStrings } from './i18nHome'
+import { HOME } from './i18nHome'
 
 // UI chrome only. Match narratives are rendered server-side from verified evidence.
 const strings = {
   en: {
     synthetic: 'Synthetic data',
-    tagline: 'Football intelligence that explains itself.',
+    tagline: 'Football intelligence you can question, verify, and replay.',
     live: 'Live insights',
     highlights: 'Highlights',
     recap: 'Recap',
@@ -104,7 +106,7 @@ const strings = {
   },
   fr: {
     synthetic: 'Données synthétiques',
-    tagline: "L'intelligence football qui s'explique d'elle-même.",
+    tagline: "L'intelligence football que l'on peut questionner, vérifier et revoir.",
     live: 'Analyses en direct',
     highlights: 'Temps forts',
     recap: 'Résumé',
@@ -197,7 +199,7 @@ const strings = {
   },
   es: {
     synthetic: 'Datos sintéticos',
-    tagline: 'Inteligencia futbolística que se explica sola.',
+    tagline: 'Inteligencia futbolística que puedes cuestionar, verificar y repetir.',
     live: 'Análisis en directo',
     highlights: 'Momentos clave',
     recap: 'Resumen',
@@ -294,9 +296,9 @@ const strings = {
 type Widen<T> = T extends string ? string : T extends readonly (infer U)[] ? readonly Widen<U>[] : T extends object ? { [K in keyof T]: Widen<T[K]> } : T
 export type BaseStrings = Widen<(typeof strings)['en']>
 /** Every UI string, including the plain-language Agents-tab (i18nExplain.ts) insight/WHY? (i18nInsight.ts) and Evidence Replay trust (i18nReplay.ts) wording. */
-export type Strings = BaseStrings & { explain: ExplainStrings; insight: InsightStrings; replayUi: ReplayStrings }
+export type Strings = BaseStrings & { explain: ExplainStrings; insight: InsightStrings; replayUi: ReplayStrings; home: HomeStrings }
 
 const base: Record<Lang, BaseStrings> = { en: strings.en, fr: strings.fr, es: strings.es, de, it, pt }
-const all = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, { ...v, explain: EXPLAIN[k as Lang], insight: INSIGHT[k as Lang], replayUi: REPLAY_UI[k as Lang] }])) as Record<Lang, Strings>
+const all = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, { ...v, explain: EXPLAIN[k as Lang], insight: INSIGHT[k as Lang], replayUi: REPLAY_UI[k as Lang], home: HOME[k as Lang] }])) as Record<Lang, Strings>
 
 export const t = (lang: Lang): Strings => all[lang] ?? all.en

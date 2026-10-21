@@ -18,6 +18,8 @@ interface Props {
   onAgents?: () => void
   /** Simplified Insights (optional): a plain-language sentence shown instead of the full card until MORE DETAIL. */
   simplified?: { text: string; more: string; less: string } | null
+  /** The newest insight in the feed: marked "Latest" so a first-time viewer knows where to start. */
+  latest?: boolean
   /** Guided demo: this card is the flagship insight being explained. */
   guideTarget?: boolean
   /** Guided demo: the next evidence action to point at on this card. */
@@ -31,7 +33,7 @@ const SHIFT_TYPES = new Set(['ATTACK_CHANNEL_SHIFT', 'POST_SUBSTITUTION_CHANGE',
  * inference), how sure MatchShift is and how many events support it, then WHY? and SHOW ME. The detection basis, the
  * fact / inference / possible explanation split and every measurement live behind WHY?.
  */
-export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onShow, onReplay, onSelect, onAgents, simplified, guideTarget, guideNext }: Props) {
+export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onShow, onReplay, onSelect, onAgents, simplified, latest, guideTarget, guideNext }: Props) {
   const n = card.narrative
   const primary = n.evidence.find((e) => e.isPrimary)
   const compact = mode === 'WhatMatters'
@@ -45,7 +47,7 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
   return (
     <article
       id={`card-${card.id}`}
-      className={`card ${SHIFT_TYPES.has(card.type) ? 'shift' : ''} ${selected ? 'selected' : ''} ${simple ? 'simple' : ''} ${guideTarget ? 'guide-card' : ''}`}
+      className={`card ${SHIFT_TYPES.has(card.type) ? 'shift' : ''} ${latest ? 'latest' : ''} ${selected ? 'selected' : ''} ${simple ? 'simple' : ''} ${guideTarget ? 'guide-card' : ''}`}
       onClick={onSelect}
       // Keyboard: the card itself is focusable; Enter or Space selects it (buttons inside keep their own keys).
       tabIndex={0}
@@ -57,7 +59,7 @@ export function InsightCardView({ card, mode, s, selected, teamName, onWhy, onSh
       }}
     >
       <div className="card-top">
-        <span className="card-minute">{card.minute}'</span>
+        <span className="card-minute">{card.minute}'{latest && <span className="card-latest">{s.home.latest}</span>}</span>
         <span className="card-kicker">
           {n.typeLabel}
           {card.teamId && <span style={{ color: 'var(--ink-muted)' }}>· {teamName(card.teamId)}</span>}

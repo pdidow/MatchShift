@@ -5,7 +5,7 @@ import type { BaseStrings } from './i18n'
 
 export const de: BaseStrings = {
   synthetic: 'Synthetische Daten',
-  tagline: 'Fußball-Analyse, die sich selbst erklärt.',
+  tagline: 'Fußball-Analyse, die man hinterfragen, prüfen und wiederholen kann.',
   live: 'Live-Analysen',
   highlights: 'Highlights',
   recap: 'Zusammenfassung',
@@ -170,7 +170,7 @@ export const de: BaseStrings = {
 
 export const it: BaseStrings = {
   synthetic: 'Dati sintetici',
-  tagline: "L'analisi calcistica che si spiega da sola.",
+  tagline: "L'analisi calcistica che puoi mettere in discussione, verificare e rivedere.",
   live: 'Analisi live',
   highlights: 'Momenti salienti',
   recap: 'Riepilogo',
@@ -335,7 +335,7 @@ export const it: BaseStrings = {
 
 export const pt: BaseStrings = {
   synthetic: 'Dados sintéticos',
-  tagline: 'Inteligência futebolística que se explica a si própria.',
+  tagline: 'Inteligência futebolística que pode questionar, verificar e rever.',
   live: 'Análises em direto',
   highlights: 'Momentos-chave',
   recap: 'Resumo',

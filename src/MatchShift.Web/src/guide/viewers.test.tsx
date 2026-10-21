@@ -9,6 +9,7 @@ import { a11yStrings } from '../a11y/strings'
 import { GUIDE_START, GUIDE_STEPS, VIEWER_FEATURES, nextStep, prevStep, wantsGuideFromUrl } from './guide'
 import type { GuideStep } from './guide'
 import appSource from '../App.tsx?raw'
+import { EmptyFeed } from '../components/Home'
 
 // "Built for every viewer": the guide step that shows the six languages and the real Accessibility Center. Rendered to
 // static markup and, for clicks, by calling the (hook-free) guide components directly. No network, no Azure.
@@ -57,8 +58,15 @@ describe('one guide, every entry point', () => {
     expect(nextStep(GUIDE_START)).toBe('viewers')
     expect(appSource).toContain('wantsGuideFromUrl(window.location.search) ? GUIDE_START : null')
     const entries = appSource.match(/className="chip guide-entry" onClick=\{\(\) => goGuide\(([^)]*)\)\}/g) ?? []
-    expect(entries.length).toBe(2)                                     // top bar + empty-state link
+    expect(entries.length).toBe(1)                                     // top bar; empty state is a component
     for (const e of entries) expect(e).toContain('goGuide(GUIDE_START)')
+    expect(appSource).toContain('onTour={guide ? undefined : () => goGuide(GUIDE_START)}')
+    const tour = vi.fn()
+    const entry = buttons(EmptyFeed({ s: t('en'), playing: false, finished: false, started: false, onStart: vi.fn(), onTour: tour }))
+      .find(b => b.text === t('en').guide.entry)
+    expect(entry).toBeDefined()
+    entry!.onClick()
+    expect(tour).toHaveBeenCalledOnce()
     expect(appSource).not.toMatch(/goGuide\('(insight|why|show|replay|agents|trust)'\)/)   // no entry skips a step
   })
 
