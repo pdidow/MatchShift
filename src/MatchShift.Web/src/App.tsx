@@ -563,7 +563,12 @@ rel = "noreferrer"
               )))}
             {tab === 'highlights' && <HighlightsPanel snap={snap} s={s} onShow={(h) => void showHighlight(h)} onReplay={openReplay} />}
             {tab === 'recap' && <RecapPanel snap={snap} s={s} profile={profile} styles={meta?.recapStyles ?? ['Casual', 'Analyst', 'Broadcast', 'Social']} />}
-            {tab === 'agents' && <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} profile={streamProfile} defaultAccessible s={s} />}
+            {tab === 'agents' && (() => {
+              // The insight being explained, with the same evidence actions as its card (WHY? > SHOW ME > Evidence Replay).
+              const card = snap.insights.find(i => i.id === selected)
+              return <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} card={card} profile={streamProfile} defaultAccessible s={s}
+                onWhy={card ? () => setWhy(card) : undefined} onShow={card ? () => void showInsight(card) : undefined} onReplay={card ? () => openReplay(card.id) : undefined} />
+            })()}
           </div>
         </aside>
       </main>

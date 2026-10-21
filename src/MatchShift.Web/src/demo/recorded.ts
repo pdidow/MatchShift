@@ -8,7 +8,9 @@ export type AgentRecordings = { recordedAt: string; note: string; executions: Re
  * it is presented as RECORDED_DEMO and never as live; its original mode is kept in recordedFrom.
  */
 export function asRecorded(x: WorkflowExecution, recordedAt: string): WorkflowExecution {
-  const original = x.executionMode === 'RECORDED_DEMO' ? x.recordedFrom ?? 'unknown' : `${x.executionMode} run recorded ${recordedAt}`
+  // Each run keeps its own date (one file can hold runs recorded on different days); the file date is only a fallback.
+  const when = x.completedAt ? `${x.completedAt.slice(0, 10)} ${x.completedAt.slice(11, 16)} UTC` : recordedAt
+  const original = x.executionMode === 'RECORDED_DEMO' ? x.recordedFrom ?? 'unknown' : `${x.executionMode} run recorded ${when}`
   return {
     ...x,
     executionMode: 'RECORDED_DEMO',

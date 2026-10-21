@@ -1,9 +1,9 @@
-import type { Strings } from './i18n'
+import type { BaseStrings } from './i18n'
 
 // UI strings for German, Italian and European Portuguese. Complete objects typed against the English shape, so a missing
 // key is a compile error. Technical identifiers (LIVE_FOUNDRY, OFFLINE_TEMPLATE, RECORDED_DEMO, gpt-4.1-mini) stay exact.
 
-export const de: Strings = {
+export const de: BaseStrings = {
   synthetic: 'Synthetische Daten',
   tagline: 'Fußball-Analyse, die sich selbst erklärt.',
   live: 'Live-Analysen',
@@ -168,7 +168,7 @@ export const de: Strings = {
   },
 }
 
-export const it: Strings = {
+export const it: BaseStrings = {
   synthetic: 'Dati sintetici',
   tagline: "L'analisi calcistica che si spiega da sola.",
   live: 'Analisi live',
@@ -333,7 +333,7 @@ export const it: Strings = {
   },
 }
 
-export const pt: Strings = {
+export const pt: BaseStrings = {
   synthetic: 'Dados sintéticos',
   tagline: 'Inteligência futebolística que se explica a si própria.',
   live: 'Análises em direto',
