@@ -171,8 +171,10 @@ off manually (**Crowd: On/Off**, remembered on this device).
   information that is not on screen and in the narration.
   - Clips: a goal roar with applause (2.4 s), a smaller "ooh" for shots (1.25 s, at 45-60%), a faint stir when the
     ball is won high up the pitch (0.8 s, at 18-20%). Passes, carries and anything else are silent.
-  - The clips are original to MatchShift, rendered offline from seeded noise by `tools/crowd-audio/generate_crowd_audio.py`:
-    no recordings, broadcast audio, chants or music, and nothing that could pass for a referee's whistle.
+  - The goal clip is a trimmed, normalized excerpt of a real crowd recording released under CC0 (Freesound 763816 by
+    ShangusBurger / Shane Vincent; see [docs/THIRD_PARTY_ASSETS.md](docs/THIRD_PARTY_ASSETS.md)). The chance and
+    murmur clips are synthesized for MatchShift. No broadcast audio, chants or music, and nothing that could pass for
+    a referee's whistle.
   - Each clip is loaded and decoded once when the replay opens. A clip plays when the replay clock crosses its event,
     once per pass. Pause, a seek of any size, a restart or a clip change fade the current clip out; skipped events
     never play.

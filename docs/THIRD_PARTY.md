@@ -19,6 +19,7 @@ license obligations still apply.
 | TypeScript, Vite, plugins, linters and test packages | Versions in npm lockfile and project files | Review the installed versions' licenses and bundled dependencies before distributing source/builds. |
 | Barlow Condensed, Inter, JetBrains Mono web fonts | Google Fonts CSS import in `src/MatchShift.Web/src/index.css` | Confirm each font's applicable license; retain notices if bundling/self-hosting. Current fonts are remotely loaded. |
 | Foundry, Azure and GitHub services | Optional integrations and development/deployment tooling | Entrant confirms authorized accounts, applicable terms and any sponsor-support restriction. |
+| Crowd goal audio (`public/audio/crowd-goal.wav`) | Excerpt of Freesound 763816 by ShangusBurger / Shane Vincent, CC0 1.0 (checked 2026-10-21); details in [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md) | None required by CC0; provenance recorded. |
 | Future demo voice, music, logos or footage | No final video supplied for review | Use original/authorized media and retain permissions; review before upload. |
 
 The original simulator and analytics build substantial functionality on dependencies; they are not a

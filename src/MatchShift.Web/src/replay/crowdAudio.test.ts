@@ -192,24 +192,36 @@ describe('cheap, isolated and safe', () => {
     expect(block).toContain('fetch(`${import.meta.env.BASE_URL}audio/${file}`)')
   })
 
-  it('the clips are short, small, mono files that start and end in silence', () => {
+  it('the clips are short, small browser-ready WAVs (mono or stereo) that start and end in silence', () => {
     const wav = (url: string) => {
       const bin = atob(url.split(',')[1])
       const bytes = Uint8Array.from(bin, c => c.charCodeAt(0))
       const v = new DataView(bytes.buffer)
-      const channels = v.getUint16(22, true), rate = v.getUint32(24, true), bits = v.getUint16(34, true), dataSize = v.getUint32(40, true)
-      const samples = new Int16Array(bytes.buffer.slice(44, 44 + dataSize))
-      const abs = (from: number, to: number) => Math.max(...Array.from(samples.slice(from, to), x => Math.abs(x) / 32768))
-      return { channels, rate, bits, seconds: samples.length / rate, kb: bytes.length / 1024, start: abs(0, 20), end: abs(samples.length - 20, samples.length), peak: abs(0, samples.length) }
+      // Walk the RIFF chunks: files may carry extra chunks (LIST, etc.) before 'data'.
+      const tag = (at: number) => String.fromCharCode(...bytes.slice(at, at + 4))
+      let channels = 0, rate = 0, bits = 0, dataAt = -1, dataSize = 0
+      for (let at = 12; at + 8 <= bytes.length;) {
+        const id = tag(at), size = v.getUint32(at + 4, true)
+        if (id === 'fmt ') { channels = v.getUint16(at + 10, true); rate = v.getUint32(at + 12, true); bits = v.getUint16(at + 22, true) }
+        if (id === 'data') { dataAt = at + 8; dataSize = size; break }
+        at += 8 + size + (size % 2)
+      }
+      expect(dataAt).toBeGreaterThan(0)
+      const samples = new Int16Array(bytes.buffer.slice(dataAt, dataAt + dataSize - (dataSize % 2)))
+      const edge = 20 * channels
+      const abs = (from: number, to: number) => { let m = 0; for (let i = from; i < to; i++) m = Math.max(m, Math.abs(samples[i]) / 32768); return m }
+      return { channels, rate, bits, seconds: samples.length / channels / rate, kb: bytes.length / 1024, start: abs(0, edge), end: abs(samples.length - edge, samples.length), peak: abs(0, samples.length) }
     }
     const goal = wav(goalWav), chance = wav(chanceWav), murmur = wav(murmurWav)
     for (const c of [goal, chance, murmur]) {
-      expect([c.channels, c.rate, c.bits]).toEqual([1, 22050, 16])
-      expect(c.start).toBeLessThan(0.01); expect(c.end).toBeLessThan(0.01)
-      expect(c.peak).toBeLessThan(0.75)
-      expect(c.kb).toBeLessThan(120)
+      expect([1, 2]).toContain(c.channels)                               // mono or stereo
+      expect([22050, 44100, 48000]).toContain(c.rate)
+      expect(c.bits).toBe(16)                                            // plain 16-bit PCM, playable everywhere
+      expect(c.start).toBeLessThan(0.01); expect(c.end).toBeLessThan(0.01)   // faded in and out: no clicks
+      expect(c.peak).toBeLessThan(0.95)                                  // headroom, no clipping
+      expect(c.kb).toBeLessThan(600)                                     // small enough to preload when the replay opens
     }
-    expect(goal.seconds).toBeGreaterThanOrEqual(1.5); expect(goal.seconds).toBeLessThanOrEqual(2.5)
+    expect(goal.seconds).toBeGreaterThanOrEqual(2.5); expect(goal.seconds).toBeLessThanOrEqual(3.0)
     expect(chance.seconds).toBeLessThan(goal.seconds); expect(murmur.seconds).toBeLessThan(chance.seconds)
   })
 })
