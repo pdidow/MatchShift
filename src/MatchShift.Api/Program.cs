@@ -39,11 +39,17 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseCors();
 app.UseDefaultFiles();
-app.UseStaticFiles();
+// Fingerprinted build assets are cached for good; index.html and stable-named files (crowd audio) are re-checked on every
+// load, so a redeploy is picked up straight away (see StaticCachePolicy).
+var staticFiles = new StaticFileOptions
+{
+    OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = StaticCachePolicy.For(ctx.Context.Request.Path.Value ?? ""),
+};
+app.UseStaticFiles(staticFiles);
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", synthetic = true }));
 app.MapMatchShiftApi();
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", staticFiles);
 
 app.Run();
 

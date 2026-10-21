@@ -5,7 +5,7 @@ import chanceWav from '../../public/audio/crowd-chance.wav?inline'
 import murmurWav from '../../public/audio/crowd-murmur.wav?inline'
 import { describe, expect, it } from 'vitest'
 import {
-  CROWD_LEVEL, CROWD_SOUNDS, CrowdSoundPlayer, DESCRIPTION_DUCK, NARRATION_DUCK, crowdSoundAllowed, crowdSoundStep, duckFactor,
+  CROWD_LEVEL, CROWD_SOUNDS, CrowdSoundPlayer, crowdClipUrl, DESCRIPTION_DUCK, NARRATION_DUCK, crowdSoundAllowed, crowdSoundStep, duckFactor,
 } from './crowdAudio'
 import type { AudioLike, GainLike, SourceLike } from './crowdAudio'
 import { SpeechQueue } from '../a11y/speech'
@@ -189,7 +189,19 @@ describe('cheap, isolated and safe', () => {
     expect(audioSource).not.toMatch(/azure|foundry|\/api\/|fetch\(/i)
     const block = viewSource.slice(viewSource.indexOf('// ---------------------------------------------------------------- crowd sound'), viewSource.indexOf('const toggleCrowdSound'))
     expect(block.match(/fetch\(/g)).toHaveLength(1)
-    expect(block).toContain('fetch(`${import.meta.env.BASE_URL}audio/${file}`)')
+    expect(block).toContain('fetch(crowdClipUrl(import.meta.env.BASE_URL, file))')
+  })
+
+  it('loads each clip from a content-versioned URL, so a replaced clip is never served from an old browser cache', async () => {
+    const sha = async (dataUrl: string) => {
+      const bytes = Uint8Array.from(atob(dataUrl.split(',')[1]), c => c.charCodeAt(0))
+      return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('').slice(0, 12)
+    }
+    expect(crowdClipUrl('/', 'crowd-goal.wav')).toBe(`/audio/crowd-goal.wav?v=${await sha(goalWav)}`)
+    expect(crowdClipUrl('/', 'crowd-chance.wav')).toBe(`/audio/crowd-chance.wav?v=${await sha(chanceWav)}`)
+    expect(crowdClipUrl('/MatchShift/', 'crowd-murmur.wav')).toBe(`/MatchShift/audio/crowd-murmur.wav?v=${await sha(murmurWav)}`)
+    expect(crowdClipUrl('/', 'crowd-goal.wav', { 'crowd-goal.wav': 'aaa' })).not.toBe(crowdClipUrl('/', 'crowd-goal.wav', { 'crowd-goal.wav': 'bbb' }))
+    expect(crowdClipUrl('/', 'crowd-goal.wav', {})).toBe('/audio/crowd-goal.wav')        // no version known: plain URL still works
   })
 
   it('the clips are short, small browser-ready WAVs (mono or stereo) that start and end in silence', () => {

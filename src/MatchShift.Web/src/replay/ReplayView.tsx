@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { autoCrowdTier, loadCrowdChoice, readCrowdCapabilities, resolveCrowdTier, saveCrowdChoice } from './crowd'
 import type { CrowdCapabilities, CrowdChoice, CrowdTier } from './crowd'
-import { CrowdSoundPlayer, browserAudioContext, crowdSoundAllowed, crowdSoundStep, duckFactor, loadCrowdSound, saveCrowdSound } from './crowdAudio'
+import { CrowdSoundPlayer, browserAudioContext, crowdClipUrl, crowdSoundAllowed, crowdSoundStep, duckFactor, loadCrowdSound, saveCrowdSound } from './crowdAudio'
 import { replayCuePriority, replayNarrationPolicy } from '../a11y/narrationPolicy'
 import type { InsightCard, Lang, Team } from '../api'
 import { api } from '../api'
@@ -116,7 +116,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   const crowdPlayer = useRef<CrowdSoundPlayer | null>(null)
   crowdPlayer.current ??= new CrowdSoundPlayer({
     makeContext: browserAudioContext,
-    load: file => fetch(`${import.meta.env.BASE_URL}audio/${file}`).then(res => { if (!res.ok) throw new Error(file); return res.arrayBuffer() }),
+    load: file => fetch(crowdClipUrl(import.meta.env.BASE_URL, file)).then(res => { if (!res.ok) throw new Error(file); return res.arrayBuffer() }),
   })
   const soundAllowed = crowdSoundAllowed(crowdTier !== 'off', crowdSound)
   const crowdEvents = useMemo(() => timeline?.placed.flatMap(p => p.clip.events.map(e => ({ label: e.label, at: p.offset + e.time }))) ?? [], [timeline])

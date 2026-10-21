@@ -73,6 +73,19 @@ export interface SourceLike { buffer: unknown; connect(n: unknown): unknown; sta
 
 export const CROWD_CLIP_FILES: Record<CrowdClip, string> = { goal: 'crowd-goal.wav', chance: 'crowd-chance.wav', murmur: 'crowd-murmur.wav' }
 
+/** Content hashes of the clips, injected at build time (vite.config.ts). */
+declare const __CROWD_AUDIO_VERSIONS__: Record<string, string> | undefined
+
+/**
+ * Where a clip is loaded from: its stable file name plus a content-hash version, so a replaced clip always gets a new
+ * URL and a browser can never play a cached older copy.
+ */
+export function crowdClipUrl(base: string, file: string, versions: Record<string, string> | undefined =
+  typeof __CROWD_AUDIO_VERSIONS__ === 'undefined' ? undefined : __CROWD_AUDIO_VERSIONS__) {
+  const v = versions?.[file]
+  return `${base}audio/${file}${v ? `?v=${v}` : ''}`
+}
+
 /**
  * Plays crowd clips through one small graph: two reusable voice gains (so a new clip can cross-fade over the last) into
  * one master gain that carries the level and the narration duck. Clips are fetched and decoded once, before any replay
