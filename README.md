@@ -139,7 +139,7 @@ off manually (**Crowd: On/Off**, remembered on this device).
   then LOW → OFF, never back up, with a polite notice ("Crowd reduced…" / "Crowd disabled to maintain replay
   performance."). A crowd you switched on yourself is only reduced if the replay becomes hard to use.
 - **Cosmetic only:** the crowd never touches evidence. Supporting and context events, flags, counts and the timeline are
-  unchanged, and tests guard this. It is visual only: no sound.
+  unchanged, and tests guard this. Its optional sound (below) is atmosphere only and never information.
 - **Spectators read as people:** stadium-scale low-poly figures, not character models.
   - NORMAL: a torso wider at the shoulders and a round head on a short neck gap (32 triangles). A second, cheering
     pose has both arms raised in a V (44 triangles).
@@ -149,19 +149,38 @@ off manually (**Crowd: On/Off**, remembered on this device).
   - NORMAL: 2,216 spectators, 4 crowd draw calls at rest (about 71k triangles) and 8 at a reaction peak (about 85k).
   - LOW: 987 spectators, 4 draw calls, about 24k triangles.
 - **Stays clear of the play:** seats start 4 m back from each stand front, behind the sideline and behind-goal cameras.
-- **Reactions (NORMAL) change the crowd's silhouette.** Each spectator has a seeded rank, and each stand keeps its
-  spectators in a neutral mesh and a cheering mesh in opposite rank order.
-  - A reaction only changes how many instances each mesh draws. Nothing is allocated and no spectator is updated on
-    the CPU.
-  - A goal switches about half the crowd to the arms-up pose (about 2.2 s); the next ranks stand up and the rest lean
-    slightly.
-  - A shot switches about 15-18%; interceptions, high recoveries and turnovers only make some stand. Passes and carries
-    get nothing.
-  - The four stands differ slightly, deterministically. No allegiance is implied.
-  - Reactions follow the replay clock, so pause holds them, seeking away ends them and a restart replays them.
-  - **LOW reacts more simply:** each stand rises as one block - about 0.45 m for a goal and a little for shots, nothing
-    for turnovers. It has no cheering pose.
+- **Reactions are a short wave, not one block.** Each stand's spectators are split into seeded reaction cohorts:
+  loose patches, mostly by position along the stand, reacting in a shuffled order. NORMAL has 8 cohorts per stand;
+  LOW has 3.
+  - Later cohorts start later (a goal spreads its onsets over about 0.35 s) and settle sooner, so the crowd rises and
+    settles in waves. The four stands also start 0-0.23 s apart.
+  - Every spectator's own phase is computed on the GPU from the replay time and its cohort, so pause, seek, restart
+    and clip changes follow the replay clock exactly. There are no timers.
+  - **Goal (NORMAL):** about half the crowd raise their arms, 10-25% stand and the rest lean slightly. The reaction is
+    over by about 2.5 s.
+  - **Shot:** a few cohorts, roughly 15-20% raise their arms, for about 1.1 s.
+  - **Interceptions, high recoveries and turnovers:** one or two groups half-stand for about 0.6 s.
+  - **Passes and carries:** no reaction.
+  - Cheering cohorts always form a fixed, pre-sorted group. Each stand keeps a neutral and a cheering mesh, so a
+    reaction only changes two instance counts. Nothing is allocated and no spectator is updated on the CPU.
+  - The four stands also differ slightly in strength and cheering share, deterministically. No allegiance is implied.
+  - **LOW reacts more simply:** three cohorts rise (about 0.45 m for a goal, less for shots, nothing for turnovers),
+    with no cheering pose.
   - Nothing moves with Reduced motion, on OFF, or after the guard has switched the crowd off.
+- **Optional crowd sound (Crowd sound: On/Off, remembered; default On).** Decorative atmosphere only: it never carries
+  information that is not on screen and in the narration.
+  - Clips: a goal roar with applause (2.4 s), a smaller "ooh" for shots (1.25 s, at 45-60%), a faint stir when the
+    ball is won high up the pitch (0.8 s, at 18-20%). Passes, carries and anything else are silent.
+  - The clips are original to MatchShift, rendered offline from seeded noise by `tools/crowd-audio/generate_crowd_audio.py`:
+    no recordings, broadcast audio, chants or music, and nothing that could pass for a referee's whistle.
+  - Each clip is loaded and decoded once when the replay opens. A clip plays when the replay clock crosses its event,
+    once per pass. Pause, a seek of any size, a restart or a clip change fade the current clip out; skipped events
+    never play.
+  - Narration always wins. Crowd sound plays through Web Audio, never speech, so it cannot delay, interrupt or cancel
+    narration. While narration speaks it drops to 20% of its level, and to 60% while audio description is on but quiet.
+    Even a goal sits well below speech.
+  - Nothing plays while the crowd itself is off; the sound preference is kept for when it comes back. Reduced motion
+    does not mute it.
 
 Performance and evidence come first; the crowd only adds atmosphere.
 

@@ -125,7 +125,10 @@ Closing the replay:
 - never resumes earlier match narration;
 - resumes the match only if it was playing before (and is still the same match), at the same speed.
 
-The crowd is visual only and never speaks or plays sound.
+The optional crowd sound (Crowd sound: On/Off in the replay controls) is atmosphere only and never information: every
+event it follows is on screen and, with audio description on, narrated. It never uses speech, so it cannot delay,
+interrupt or cancel narration. It drops to 20% of its level while narration speaks and to 60% while audio description
+is on but quiet. Reduced motion does not mute it; turning the crowd off silences it.
 
 - **Controls:** Mute, Pause/Resume (only while speaking), Repeat last (only once something has been spoken),
   Match status (in Audio match mode) and Transcript.
@@ -282,7 +285,9 @@ The accessibility unit tests are in `src/a11y/a11y.test.ts`. They cover:
     half-time and full-time grace, bounded queue, and a four-goal match at 10×;
   - pause and full time;
   - Evidence Replay focus: pause, cancel, replay clock, seek, restart, speed, close and restore;
-  - all six languages, and a check that the crowd is silent.
+  - all six languages, and checks that crowd visuals make no sound.
+- Crowd sound (`src/replay/crowdAudio.test.ts`): which events sound and how loud, once per pass, seek, restart and pause,
+  narration ducking, never touching speech, the On/Off controls in six languages, and the clip files themselves.
 - Description helpers: detail levels, simplified text, WHY? and what-changed narration, match status, recap
   scheduling, team-frame spatial language and the SHOW ME summary.
 

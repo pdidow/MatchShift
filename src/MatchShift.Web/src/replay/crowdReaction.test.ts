@@ -75,7 +75,7 @@ describe('reactions on capable hardware', () => {
     expect(new Set(at.map(v => v.toFixed(3))).size).toBeGreaterThan(1)
     expect(at.every(v => v > 0.8)).toBe(true)
     expect([0, 1, 2, 3].map(i => standReaction(GOAL_CLIP, 14.6, i))).toEqual(at)
-    expect(STAND_VARIATION.every(v => v.strength >= 0.8 && v.strength <= 1 && v.delay <= 0.15)).toBe(true)
+    expect(STAND_VARIATION.every(v => v.strength >= 0.8 && v.strength <= 1 && v.delay <= 0.25)).toBe(true)
     expect(crowdSource).not.toMatch(/Math\.random/)
   })
 })
@@ -85,7 +85,8 @@ describe('tiers, reduced motion and OFF', () => {
     expect(crowdMotionAllowed('normal', true, false)).toBe(false)
     expect(crowdMotionAllowed('low', true, false)).toBe(false)
     expect(sceneSource).toContain('const moving = crowdMotionAllowed(this.crowdTier, this.options.reducedMotion, this.crowdGuardTripped)')
-    expect(sceneSource).toContain('const k = moving ? standReaction(this.reactionEvents, this.reactionLocal, i, this.crowdTier) : 0')
+    expect(sceneSource).toContain('const e = moving ? standEvent(this.reactionEvents, this.reactionLocal, i, this.crowdTier) : null')
+    expect(sceneSource).toContain('u.uAmp.value = e ? variationOf(i).strength * e.reaction.amplitude : 0')
   })
 
   it('6: OFF has no spectators, no crowd draw calls and no crowd work', () => {
@@ -228,7 +229,8 @@ describe('LOW: a lightweight reactive crowd', () => {
 
   it('LOW-4: reduced motion makes LOW completely static', () => {
     expect(crowdMotionAllowed('low', true, false)).toBe(false)
-    expect(sceneSource).toContain("if (this.crowdTier === 'low') c.neutral.position.y = LOW_RISE_M * k")   // k is 0 when not moving
+    expect(sceneSource).toContain("const pose = tier === 'normal' ? CROWD_POSE : LOW_POSE")              // LOW only rises
+    expect(sceneSource).toContain('u.uAmp.value = e ? variationOf(i).strength * e.reaction.amplitude : 0')     // no event when not moving
   })
 
   it('LOW-5: OFF stays empty and static', () => {

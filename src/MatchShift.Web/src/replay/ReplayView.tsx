@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { autoCrowdTier, loadCrowdChoice, readCrowdCapabilities, resolveCrowdTier, saveCrowdChoice } from './crowd'
 import type { CrowdCapabilities, CrowdChoice, CrowdTier } from './crowd'
+import { CrowdSoundPlayer, browserAudioContext, crowdSoundAllowed, crowdSoundStep, duckFactor, loadCrowdSound, saveCrowdSound } from './crowdAudio'
 import { replayCuePriority, replayNarrationPolicy } from '../a11y/narrationPolicy'
 import type { InsightCard, Lang, Team } from '../api'
 import { api } from '../api'
@@ -108,6 +109,39 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   useEffect(() => { sceneRef.current?.setMotion({ reducedMotion, steady: prefs.reduceFlashing }) }, [reducedMotion, prefs.reduceFlashing, seq])
 
   const timeline = useMemo(() => (seq ? layout(seq) : null), [seq])
+
+  // ---------------------------------------------------------------- crowd sound (optional atmosphere, never information)
+  // Plays only while the crowd is shown and the viewer wants it; follows the replay clock; ducks under any narration.
+  const [crowdSound, setCrowdSound] = useState(loadCrowdSound)
+  const crowdPlayer = useRef<CrowdSoundPlayer | null>(null)
+  crowdPlayer.current ??= new CrowdSoundPlayer({
+    makeContext: browserAudioContext,
+    load: file => fetch(`${import.meta.env.BASE_URL}audio/${file}`).then(res => { if (!res.ok) throw new Error(file); return res.arrayBuffer() }),
+  })
+  const soundAllowed = crowdSoundAllowed(crowdTier !== 'off', crowdSound)
+  const crowdEvents = useMemo(() => timeline?.placed.flatMap(p => p.clip.events.map(e => ({ label: e.label, at: p.offset + e.time }))) ?? [], [timeline])
+  useEffect(() => {
+    if (soundAllowed && seq) void crowdPlayer.current?.prepare()
+    else crowdPlayer.current?.stop()
+  }, [soundAllowed, seq])
+  const lastCrowdSound = useRef({ time: -1, clip: -1, jumps: 0 })
+  useEffect(() => {
+    if (!tick) return
+    const prev = lastCrowdSound.current
+    lastCrowdSound.current = { time: tick.time, clip: tick.clipIndex, jumps: tick.jumps }
+    const step = crowdSoundStep(prev, { time: tick.time, clip: tick.clipIndex, playing: tick.playing, introActive: tick.introActive, jumps: tick.jumps }, crowdEvents)
+    if (step.stop) crowdPlayer.current?.stop()
+    if (step.play && soundAllowed) crowdPlayer.current?.play(step.play.clip, step.play.gain)
+  }, [tick]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Narration is primary: while it speaks the crowd drops to a fifth of its level. Crowd audio never calls speech itself.
+  useEffect(() => speech.subscribe(state => crowdPlayer.current?.setDuck(duckFactor(state.speaking, audioDescription))), [speech, audioDescription])
+  useEffect(() => () => crowdPlayer.current?.stop(), [])
+  const toggleCrowdSound = () => {
+    const next = !crowdSound
+    setCrowdSound(next)
+    saveCrowdSound(next)
+    if (!next) crowdPlayer.current?.stop()
+  }
 
   const toggleCrowd = () => {
     const next: CrowdChoice = crowdTier === 'off' ? 'on' : 'off'
@@ -345,6 +379,10 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
             <div className="replay-group" role="group" aria-label={r.crowd}>
               <button className={`chip ${crowdTier !== 'off' ? 'active' : ''}`} aria-pressed={crowdTier !== 'off'} onClick={toggleCrowd}
                 disabled={!crowdEnv.current.caps.webgl}>{r.crowd}: {crowdTier !== 'off' ? r.crowdOn : r.crowdOff}</button>
+              {/* Kept as a preference while the crowd is off (nothing plays then); restored when the crowd comes back. */}
+              <button className={`chip ${soundAllowed ? 'active' : ''}`} aria-pressed={crowdSound} onClick={toggleCrowdSound}
+                disabled={crowdTier === 'off'} title={crowdTier === 'off' ? r.crowdSoundNeedsCrowd : undefined}>
+                {r.crowdSound}: {crowdSound ? r.crowdOn : r.crowdOff}</button>
             </div>
             <div className="replay-group" role="group" aria-label={r.camera}>
               {PRESETS.map(p => (

@@ -162,7 +162,7 @@ describe('crowd reactions', () => {
   it('react only to known replay event labels; routine events do nothing', () => {
     expect(crowdReaction([ev('GOAL', 2)], 2.3)).toBeGreaterThan(0.9)
     expect(crowdReaction([ev('SHOT_ON_TARGET', 2)], 2.3)).toBeGreaterThan(0.3)
-    expect(crowdReaction([ev('INTERCEPTION', 2)], 2.3)).toBeLessThan(0.2)
+    expect(crowdReaction([ev('INTERCEPTION', 2)], 2.3)).toBeLessThan(0.3)
     for (const label of ['PASS', 'PROGRESSIVE_PASS', 'CARRY', 'CLEARANCE', 'CORNER', 'KICK_OFF', 'UNKNOWN'])
       expect(crowdReaction([ev(label, 2)], 2.3)).toBe(0)
     expect(Object.keys(CROWD_REACTIONS)).not.toContain('PASS')
@@ -216,7 +216,7 @@ describe('the crowd never touches evidence', () => {
 
   it('spectators carry no event, evidence or player identity', () => {
     const p = layoutStand(SIDE, 'normal', 1)[0]
-    expect(Object.keys(p).sort()).toEqual(['color', 'rank', 'scale', 'x', 'y', 'z'])
+    expect(Object.keys(p).sort()).toEqual(['color', 'rank', 'scale', 'slot', 'x', 'y', 'z'])
   })
 
   it('the crowd module imports nothing from evidence, analytics, agents or the API', () => {

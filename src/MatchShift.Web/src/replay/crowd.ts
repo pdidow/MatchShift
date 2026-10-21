@@ -77,8 +77,11 @@ export function readCrowdCapabilities(renderer?: { isWebGL2?: boolean; maxTextur
 /** A stand as built by the scene, in its own local frame: x = depth from the front edge, z = along its length. */
 export interface StandShape { length: number; depth: number; height: number }
 
-/** One seat. `rank` (0..1, seeded) decides who reacts first: the lowest ranks cheer, the next ones stand. */
-export interface Spectator { x: number; y: number; z: number; scale: number; color: number; rank: number }
+/**
+ * One seat. `rank` (0..1, seeded) decides how strongly a spectator reacts: the lowest ranks cheer, the next ones stand,
+ * the rest barely move. `slot` is the spectator's reaction cohort: slot 0 reacts first and holds longest.
+ */
+export interface Spectator { x: number; y: number; z: number; scale: number; color: number; rank: number; slot: number }
 
 /** Spectators keep this far back from a stand's front edge so low cameras (sideline, behind goal) sit in front of them. */
 export const FRONT_CLEARANCE = 4
@@ -108,11 +111,20 @@ export function seeded(seed: number) {
   }
 }
 
-/** Deterministic seats for one stand at a tier. Off → none. */
+/** Reaction cohorts per stand: NORMAL spreads a reaction over 8 groups, LOW over 3. */
+export const COHORTS: Record<Exclude<CrowdTier, 'off'>, number> = { normal: 8, low: 3 }
+
+/**
+ * Deterministic seats for one stand at a tier. Off → none. Cohorts are loose patches: mostly by position along the stand,
+ * partly random (seeded), with the order in which those patches react shuffled per stand - not a sweeping line.
+ */
 export function layoutStand(stand: StandShape, tier: CrowdTier, seed: number): Spectator[] {
   if (tier === 'off') return []
   const rand = seeded(seed)
-  const ranks = seeded(seed ^ 0x5bd1e995)            // a separate stream, so ranks never change the seating layout
+  const ranks = seeded(seed ^ 0x5bd1e995)            // separate streams, so ranks and cohorts never change the seating
+  const groups = seeded(seed ^ 0x2545f491)
+  const n = COHORTS[tier]
+  const order = shuffled(n, seeded(seed ^ 0x68e31da4))
   const occupancy = OCCUPANCY[tier]
   const out: Spectator[] = []
   for (let x = FRONT_CLEARANCE; x <= stand.depth - 1; x += ROW_SPACING) {
@@ -125,96 +137,99 @@ export function layoutStand(stand: StandShape, tier: CrowdTier, seed: number): S
         scale: 0.94 + rand() * 0.12,               // narrow, safe range
         color: Math.floor(rand() * CROWD_PALETTE.length),
         rank: ranks(),
+        slot: 0.65 * (z / stand.length + 0.5) + 0.35 * groups(),    // a cohort key for now; replaced below
       })
     }
   }
+  // Equal-sized cohorts: sort by key, cut into n groups, then map each group to its (shuffled) reaction slot.
+  const byKey = out.map((s, i) => [s.slot, i] as const).sort((a, b) => a[0] - b[0])
+  byKey.forEach(([, i], k) => { out[i].slot = order[Math.min(n - 1, Math.floor((k * n) / byKey.length))] })
   return out
+}
+
+/** A seeded permutation of 0..n-1 (Fisher-Yates). */
+function shuffled(n: number, rand: () => number) {
+  const a = Array.from({ length: n }, (_, i) => i)
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] }
+  return a
 }
 
 // ---------------------------------------------------------------- reactions
 
 /**
- * Event labels that move the crowd: how strongly the crowd stands (0..1), what fraction of spectators switch to the
- * arms-up cheering pose at the peak, and for how long (replay seconds). A goal is the strongest (more than half cheer);
- * a shot or chance is medium (a few cheer); an interception, high recovery or turnover only makes some stand. Passes,
- * carries and routine movement are ignored.
+ * How the crowd responds to an event label: strength (0..1), how long the first cohort's response lasts (replay seconds),
+ * how many cohorts take part, how far apart their onsets are spread (seconds, first to last), and whether the
+ * participating spectators raise their arms. Later cohorts start later and settle sooner, so a goal rises and settles in
+ * waves. Everything else (passes, carries, routine movement) is ignored.
  */
-export const CROWD_REACTIONS: Record<string, { amplitude: number; duration: number; cheer?: number }> = {
-  GOAL: { amplitude: 1, duration: 2.2, cheer: 0.55 },
-  SHOT_ON_TARGET: { amplitude: 0.55, duration: 1.2, cheer: 0.18 },
-  SHOT_OFF_TARGET: { amplitude: 0.5, duration: 1.1, cheer: 0.15 },
-  SHOT_BLOCKED: { amplitude: 0.45, duration: 1, cheer: 0.12 },
-  HIGH_PRESS_INTERCEPTION: { amplitude: 0.25, duration: 0.7 },
-  HIGH_PRESSURE_RECOVERY: { amplitude: 0.22, duration: 0.7 },
-  INTERCEPTION: { amplitude: 0.2, duration: 0.6 },
-  TURNOVER: { amplitude: 0.2, duration: 0.6 },
+export interface CohortReaction { amplitude: number; duration: number; cohorts: number; spread: number; cheer: boolean }
+
+/** NORMAL: goal = every cohort, arms up; shot = a few cohorts ("ooh"); turnovers = one or two groups half-stand. */
+export const CROWD_REACTIONS: Record<string, CohortReaction> = {
+  GOAL: { amplitude: 1, duration: 2.2, cohorts: 8, spread: 0.35, cheer: true },
+  SHOT_ON_TARGET: { amplitude: 0.6, duration: 1.2, cohorts: 3, spread: 0.18, cheer: true },
+  SHOT_OFF_TARGET: { amplitude: 0.55, duration: 1.1, cohorts: 2, spread: 0.12, cheer: true },
+  SHOT_BLOCKED: { amplitude: 0.5, duration: 1, cohorts: 2, spread: 0.12, cheer: true },
+  HIGH_PRESS_INTERCEPTION: { amplitude: 0.3, duration: 0.7, cohorts: 2, spread: 0.1, cheer: false },
+  HIGH_PRESSURE_RECOVERY: { amplitude: 0.28, duration: 0.7, cohorts: 2, spread: 0.1, cheer: false },
+  INTERCEPTION: { amplitude: 0.25, duration: 0.6, cohorts: 1, spread: 0, cheer: false },
+  TURNOVER: { amplitude: 0.25, duration: 0.6, cohorts: 1, spread: 0, cheer: false },
 }
 
+/** LOW: three cohorts and a simple rise (no arms); a goal ripples through all three, a shot moves one; turnovers nothing. */
+export const LOW_REACTIONS: Record<string, CohortReaction> = {
+  GOAL: { amplitude: 1, duration: 2.2, cohorts: 3, spread: 0.3, cheer: false },
+  SHOT_ON_TARGET: { amplitude: 0.4, duration: 1.2, cohorts: 1, spread: 0, cheer: false },
+  SHOT_OFF_TARGET: { amplitude: 0.35, duration: 1.1, cohorts: 1, spread: 0, cheer: false },
+  SHOT_BLOCKED: { amplitude: 0.3, duration: 1, cohorts: 1, spread: 0, cheer: false },
+}
+
+/** Each later cohort holds this much shorter (the last one by the whole fraction), so settling is staggered too. */
+export const HOLD_DROP = 0.4
+
+/** A cheering cohort raises its arms this long after its own onset and lowers them at this fraction of its duration. */
+export const CHEER_WINDOW = { start: 0.1, end: 0.75 } as const
+
 /**
- * The stand-up pose at full reaction (k = 1), in metres, applied in the vertex shader: the body stretches upward from the
- * feet, rises a little and leans towards the pitch. Secondary to the cheering pose (raised arms), so it stays modest.
+ * The pose at full reaction (k = 1), in metres, applied per spectator in the vertex shader: NORMAL stands up (the body
+ * stretches upward from the feet), rises a little and leans towards the pitch; LOW only rises.
  */
 export const CROWD_POSE = { stretch: 0.3, lift: 0.08, lean: 0.12 } as const
+export const LOW_POSE = { stretch: 0, lift: 0.45, lean: 0 } as const
+/** LOW's rise at full reaction, in metres. */
+export const LOW_RISE_M = LOW_POSE.lift
 
 /** Spectators ranked just above the cheering ones stand fully (a band this wide); the rest only lean. */
 export const STAND_BAND = { full: 0.12, fade: 0.3, rest: 0.3 } as const
 
 /**
- * Small fixed differences between the four stands so they do not move as one block: strength and a timing offset in
- * replay seconds. Deterministic; says nothing about which stand supports which team.
+ * Small fixed differences between the four stands so they do not move as one: strength, onset delay (replay seconds) and
+ * the share of spectators who cheer. Deterministic; says nothing about which stand supports which team.
  */
 export const STAND_VARIATION = [
-  { strength: 1, delay: 0 },
-  { strength: 0.92, delay: 0.06 },
-  { strength: 0.85, delay: 0.12 },
-  { strength: 0.95, delay: 0.03 },
+  { strength: 1, delay: 0, cheer: 0.55 },
+  { strength: 0.92, delay: 0.08, cheer: 0.5 },
+  { strength: 0.85, delay: 0.15, cheer: 0.58 },
+  { strength: 0.95, delay: 0.23, cheer: 0.52 },
 ] as const
 
-/**
- * LOW reactions: the cheapest form - each stand's instanced mesh rises as one block (one transform per stand, no shader
- * change, no per-spectator work). Restrained: a goal clearly, a shot slightly, turnovers and routine play not at all.
- */
-export const LOW_REACTIONS: Record<string, { amplitude: number; duration: number }> = {
-  GOAL: { amplitude: 1, duration: 2.2 },
-  SHOT_ON_TARGET: { amplitude: 0.4, duration: 1.2 },
-  SHOT_OFF_TARGET: { amplitude: 0.35, duration: 1.1 },
-  SHOT_BLOCKED: { amplitude: 0.3, duration: 1 },
-}
-
-/** LOW's block rise at full reaction, in metres (NORMAL's head rise is CROWD_POSE.stretch + CROWD_POSE.lift). */
-export const LOW_RISE_M = 0.45
+export const variationOf = (stand: number) => STAND_VARIATION[stand % STAND_VARIATION.length]
 
 /** Reactions run when wanted and affordable: any visible tier, no reduced motion, guard not tripped. OFF never reacts. */
 export const crowdMotionAllowed = (tier: CrowdTier, reducedMotion: boolean, guardTripped: boolean) =>
   tier !== 'off' && !reducedMotion && !guardTripped
 
-/**
- * Group-level reaction (0..1) at clip-local replay time t, from events already in the timeline: a quick rise, a hold,
- * then an ease back down. Pure: reads labels and times only, so pause, seek, restart and clip changes follow the replay
- * clock exactly (a seek away from an event ends its reaction; replaying it reacts again).
- */
-export function crowdReaction(events: readonly { label: string; time: number }[], t: number,
-  table: Record<string, { amplitude: number; duration: number }> = CROWD_REACTIONS): number {
-  let best = 0
-  for (const e of events) {
-    const r = table[e.label]
-    if (r) best = Math.max(best, r.amplitude * envelope(r.duration, t - e.time))
-  }
-  return best
+const tableOf = (tier: CrowdTier) => (tier === 'low' ? LOW_REACTIONS : CROWD_REACTIONS)
+
+/** When a cohort slot starts and how long its response lasts, for one reaction; null if the slot does not take part. */
+export function cohortTiming(r: CohortReaction, slot: number): { onset: number; duration: number } | null {
+  if (slot >= r.cohorts) return null
+  const last = Math.max(1, r.cohorts - 1)
+  return { onset: r.cohorts > 1 ? (slot * r.spread) / last : 0, duration: r.duration * (1 - (HOLD_DROP * slot) / last) }
 }
 
-/** Fraction of spectators in the cheering pose (0..1) at clip-local replay time t. Pure, like crowdReaction. */
-export function crowdCheer(events: readonly { label: string; time: number }[], t: number): number {
-  let best = 0
-  for (const e of events) {
-    const r = CROWD_REACTIONS[e.label]
-    if (r?.cheer) best = Math.max(best, r.cheer * envelope(r.duration, t - e.time))
-  }
-  return best
-}
-
-/** A quick rise, a hold, then an ease back down; 0 before the event and after its duration. */
-function envelope(duration: number, age: number) {
+/** A quick rise, a hold, then an ease back down; 0 before the start and after the duration. */
+export function envelope(duration: number, age: number) {
   if (age < 0 || age > duration) return 0
   const rise = Math.min(0.25, duration * 0.25)
   const hold = duration * 0.45
@@ -223,21 +238,91 @@ function envelope(duration: number, age: number) {
 
 const smooth = (x: number) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c) }
 
-/** One stand's cheering fraction: NORMAL only (LOW has no cheering pose; OFF nothing), with the stand's fixed variation. */
-export const standCheer = (events: readonly { label: string; time: number }[], t: number, stand: number, tier: CrowdTier = 'normal') => {
-  if (tier !== 'normal') return 0
-  const v = STAND_VARIATION[stand % STAND_VARIATION.length]
-  return v.strength * crowdCheer(events, t - v.delay)
+/**
+ * The reaction driving one stand at clip-local replay time t (the stand's onset delay applied): the strongest event whose
+ * response is still running in any cohort, and its age. Pure: reads labels and times only, so pause, seek, restart and
+ * clip changes follow the replay clock exactly.
+ */
+export function standEvent(events: readonly { label: string; time: number }[], t: number, stand: number, tier: CrowdTier):
+  { label: string; reaction: CohortReaction; age: number } | null {
+  if (tier === 'off') return null
+  const table = tableOf(tier)
+  const age0 = t - variationOf(stand).delay
+  let best: { label: string; reaction: CohortReaction; age: number } | null = null
+  for (const e of events) {
+    const r = table[e.label]
+    if (!r) continue
+    const age = age0 - e.time
+    if (age < 0 || age > r.duration + r.spread) continue
+    if (!best || r.amplitude > best.reaction.amplitude) best = { label: e.label, reaction: r, age }
+  }
+  return best
 }
 
-/** How many of a stand's n spectators show the cheering pose at fraction f (the n lowest ranks). */
-export const cheeringCount = (n: number, f: number) => Math.max(0, Math.min(n, Math.floor(n * f)))
+/** How strongly one spectator reacts (0..1) to a reaction at its age: its cohort's envelope, scaled by its rank band. */
+export function spectatorReaction(seat: Pick<Spectator, 'rank' | 'slot'>, r: CohortReaction, age: number, stand: number): number {
+  const timing = cohortTiming(r, seat.slot)
+  if (!timing) return 0
+  const v = variationOf(stand)
+  const band = 1 - (1 - STAND_BAND.rest) * smoothBetween(v.cheer + STAND_BAND.full, v.cheer + STAND_BAND.fade, seat.rank)
+  return v.strength * r.amplitude * envelope(timing.duration, age - timing.onset) * band
+}
 
-/** One stand's reaction (0..1) at a tier, with its fixed strength and timing offset. LOW uses its smaller table; OFF is 0. */
+const smoothBetween = (a: number, b: number, x: number) => smooth((x - a) / (b - a))
+
+/** Whether one cohort slot has its arms up at this age (NORMAL cheering reactions only). */
+export function cohortCheering(r: CohortReaction, slot: number, age: number): boolean {
+  const timing = cohortTiming(r, slot)
+  if (!r.cheer || !timing) return false
+  return age >= timing.onset + CHEER_WINDOW.start && age <= timing.onset + CHEER_WINDOW.end * timing.duration
+}
+
+/**
+ * How many cohort slots are cheering, counted from slot 0. Earlier slots start sooner AND stop later, so the cheering slots
+ * are always 0..m-1 - which lets the scene show them with one instance count (no per-spectator updates).
+ */
+export function cheeringSlots(r: CohortReaction, age: number): number {
+  let m = 0
+  while (m < r.cohorts && cohortCheering(r, m, age)) m++
+  return m
+}
+
+/** Whether one spectator shows the cheering pose: a cheering slot and a rank inside the stand's cheering share. */
+export const spectatorCheering = (seat: Pick<Spectator, 'rank' | 'slot'>, r: CohortReaction, age: number, stand: number) =>
+  seat.rank < variationOf(stand).cheer && seat.slot < cheeringSlots(r, age)
+
+/**
+ * Expected share of a stand cheering (0..1) at clip-local replay time t: cheering slots out of all slots, times the stand's
+ * cheering share. NORMAL only (LOW has no cheering pose). A summary for tests and debugging; the scene counts real seats.
+ */
+export function standCheer(events: readonly { label: string; time: number }[], t: number, stand: number, tier: CrowdTier = 'normal') {
+  if (tier !== 'normal') return 0
+  const e = standEvent(events, t, stand, tier)
+  return e ? (cheeringSlots(e.reaction, e.age) / COHORTS.normal) * variationOf(stand).cheer : 0
+}
+
+/** The same for an unvaried stand (no onset delay; the first stand's cheering share). */
+export const crowdCheer = (events: readonly { label: string; time: number }[], t: number) => standCheer(events, t, 0)
+
+/** How many of a stand's spectators cheer when the first m cohort slots cheer, from its seats (the scene precomputes this). */
+export const cheeringCount = (seats: readonly Pick<Spectator, 'rank' | 'slot'>[], m: number, stand: number) =>
+  seats.filter(x => x.rank < variationOf(stand).cheer && x.slot < m).length
+
+/** Group-level reaction (0..1) at clip-local replay time t: the first cohort's envelope. A summary for tests and debugging. */
+export function crowdReaction(events: readonly { label: string; time: number }[], t: number,
+  table: Record<string, CohortReaction> = CROWD_REACTIONS): number {
+  let best = 0
+  for (const e of events) {
+    const r = table[e.label]
+    if (r) best = Math.max(best, r.amplitude * envelope(r.duration, t - e.time))
+  }
+  return best
+}
+
+/** One stand's group-level reaction (0..1): its strongest event, first cohort, with the stand's variation. */
 export const standReaction = (events: readonly { label: string; time: number }[], t: number, stand: number, tier: CrowdTier = 'normal') => {
-  if (tier === 'off') return 0
-  const v = STAND_VARIATION[stand % STAND_VARIATION.length]
-  return v.strength * crowdReaction(events, t - v.delay, tier === 'low' ? LOW_REACTIONS : CROWD_REACTIONS)
+  const e = standEvent(events, t, stand, tier)
+  return e ? variationOf(stand).strength * e.reaction.amplitude * envelope(e.reaction.duration, e.age) : 0
 }
 
 // ---------------------------------------------------------------- performance guard

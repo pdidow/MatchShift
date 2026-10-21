@@ -8,9 +8,9 @@ import { REPLAY_MODEL_SCALE } from './modelScale'
 import { ballAt, cameraPose, layout, locate, samplePlayer, toWorld, PITCH_LENGTH, PITCH_WIDTH } from './timeline'
 import type { Placed, PlayerState } from './timeline'
 import type { CameraPreset, ReplayClip, ReplayEvent, ReplayOverlay, ReplayPlayer, ReplaySequence } from './types'
-import { CROWD_PALETTE, CROWD_POSE, CrowdFrameGuard, LOW_RISE_M, STAND_BAND, cheeringCount, crowdMotionAllowed, crowdStepDown, layoutStand, standCheer, standReaction } from './crowd'
+import { COHORTS, CROWD_PALETTE, CROWD_POSE, CrowdFrameGuard, HOLD_DROP, LOW_POSE, STAND_BAND, cheeringSlots, cohortTiming, crowdMotionAllowed, crowdStepDown, envelope, layoutStand, spectatorCheering, spectatorReaction, standEvent, standReaction, variationOf } from './crowd'
 import { cheeringSpectator, lowSpectator, neutralSpectator, triangles } from './crowdGeometry'
-import type { CrowdTier, Spectator, StandShape } from './crowd'
+import type { CohortReaction, CrowdTier, Spectator, StandShape } from './crowd'
 
 export interface SceneColors { home: string; away: string; homeKeeper: string; awayKeeper: string; accent: string }
 
@@ -32,6 +32,8 @@ export interface ReplayTick {
   preset: CameraPreset
   userCamera: boolean
   introActive: boolean
+  /** Increases on every seek and restart, so listeners can tell a jump from playback however small the time change is. */
+  jumps: number
 }
 
 interface PlayerRig {
@@ -81,6 +83,7 @@ export class ReplayScene {
   private overlayObjects: { overlay: ReplayOverlay; object: THREE.Object3D; material?: THREE.Material & { opacity: number } }[] = []
   private passLines: { event: ReplayEvent; line: THREE.Line; head: THREE.Mesh }[] = []
   private listeners: ((tick: ReplayTick) => void)[] = []
+  private jumps = 0
   private lastNotify = 0
   private readonly onControlStart = () => { this.userCamera = true; this.intro = this.introDuration }
 
@@ -158,9 +161,9 @@ export class ReplayScene {
   play() { if (this.time >= this.total - 1e-3) this.time = 0; this.playing = true; this.notify(true) }
   pause() { this.playing = false; this.notify(true) }
   toggle() { if (this.playing) this.pause(); else this.play() }
-  restart() { this.time = 0; this.playing = true; this.applyTime(true); this.notify(true) }
+  restart() { this.time = 0; this.playing = true; this.jumps++; this.applyTime(true); this.notify(true) }
   setSpeed(speed: number) { this.speed = speed; this.notify(true) }
-  seek(t: number) { this.time = Math.min(Math.max(0, t), this.total); this.cutPending = true; this.applyTime(true); this.notify(true) }
+  seek(t: number) { this.time = Math.min(Math.max(0, t), this.total); this.cutPending = true; this.jumps++; this.applyTime(true); this.notify(true) }
 
   /** Update motion/flash options live (shape coding is fixed when players are built). */
   setMotion(options: Pick<SceneOptions, 'reducedMotion' | 'steady'>) {
@@ -203,14 +206,25 @@ export class ReplayScene {
     this.stands.forEach((stand, i) => {
       const seats = layoutStand(stand.shape, tier, 7001 + i)
       if (seats.length === 0) return
-      const uniforms = { uCrowdReaction: { value: 0 }, uCrowdCheer: { value: 0 } }
-      // Highest rank first in the neutral mesh, lowest first in the cheering mesh: showing the first n - c neutral and the
-      // first c cheering instances shows every spectator exactly once, whatever c is. Nothing is allocated per reaction.
-      const byRank = [...seats].sort((a, b) => a.rank - b.rank)
-      const neutral = this.spectatorMesh(neutralBase, [...byRank].reverse(), uniforms, palette, stand.group)
-      const cheering = cheeringBase ? this.spectatorMesh(cheeringBase, byRank, uniforms, palette, stand.group) : null
+      const v = variationOf(i)
+      const pose = tier === 'normal' ? CROWD_POSE : LOW_POSE
+      const uniforms: CrowdUniforms = {
+        uAge: { value: 0 }, uAmp: { value: 0 }, uDur: { value: 1 }, uSpread: { value: 0 }, uCohorts: { value: 0 },
+        uCheerShare: { value: v.cheer }, uPose: { value: new THREE.Vector3(pose.stretch, pose.lift, pose.lean) },
+      }
+      // One fixed order per stand: the spectators who may cheer (rank inside the stand's cheering share), by cohort slot,
+      // then everyone else. The cheering slots are always 0..m-1, so the cheering spectators are always the first c of this
+      // order: the cheering mesh draws the first c, the neutral mesh (reverse order) the other n - c. Each spectator is
+      // drawn exactly once and a reaction changes only two counts - nothing is allocated or updated per spectator.
+      const candidates = seats.filter(x => x.rank < v.cheer).sort((a, b) => a.slot - b.slot || a.rank - b.rank)
+      const order = [...candidates, ...seats.filter(x => x.rank >= v.cheer)]
+      const cheeringUpTo = new Array<number>(COHORTS[tier] + 1).fill(0)
+      for (const x of candidates) cheeringUpTo[x.slot + 1]++
+      for (let k = 1; k < cheeringUpTo.length; k++) cheeringUpTo[k] += cheeringUpTo[k - 1]
+      const neutral = this.spectatorMesh(neutralBase, [...order].reverse(), uniforms, palette, stand.group)
+      const cheering = cheeringBase ? this.spectatorMesh(cheeringBase, order, uniforms, palette, stand.group) : null
       if (cheering) { cheering.count = 0; cheering.visible = false }
-      this.crowdStands.push({ neutral, cheering, uniforms, n: seats.length })
+      this.crowdStands.push({ neutral, cheering, uniforms, n: seats.length, cheeringUpTo, seats, event: null })
     })
     neutralBase.dispose()
     cheeringBase?.dispose()
@@ -219,6 +233,7 @@ export class ReplayScene {
   private spectatorMesh(base: THREE.BufferGeometry, seats: Spectator[], uniforms: CrowdUniforms, palette: THREE.Color[], parent: THREE.Group) {
     const geometry = base.clone()
     geometry.setAttribute('aRank', new THREE.InstancedBufferAttribute(Float32Array.from(seats, s => s.rank), 1))
+    geometry.setAttribute('aSlot', new THREE.InstancedBufferAttribute(Float32Array.from(seats, s => s.slot), 1))
     const mesh = new THREE.InstancedMesh(geometry, crowdMaterial(uniforms), seats.length)
     const matrix = new THREE.Matrix4()
     const quat = new THREE.Quaternion()
@@ -249,17 +264,41 @@ export class ReplayScene {
     return () => { this.crowdChangeListeners = this.crowdChangeListeners.filter(l => l !== listener) }
   }
 
-  /** Read-only figures for measuring the crowd's cost. */
+  /** Read-only figures for measuring the crowd's cost and reaction (?replayDebug=1). Counts are computed only when asked. */
   crowdStats() {
+    const stands = this.crowdStands.map((c, i) => {
+      const e = c.event
+      let standing = 0
+      if (e) for (const seat of c.seats) if (!spectatorCheering(seat, e.reaction, e.age, i) && spectatorReaction(seat, e.reaction, e.age, i) > 0.5) standing++
+      const slots = e ? Array.from({ length: e.reaction.cohorts }, (_, k) => k) : []
+      const timing = e ? slots.map(k => cohortTiming(e.reaction, k)!) : []
+      return {
+        event: e?.label ?? null,
+        phase: e ? Math.round(e.age * 100) / 100 : null,
+        cohorts: COHORTS[this.crowdTier as 'low' | 'normal'] ?? 0,
+        reacting: e ? slots.length : 0,
+        active: e ? timing.filter(x => envelope(x.duration, e.age - x.onset) > 0).length : 0,
+        settling: e ? timing.filter(x => e.age - x.onset > 0.45 * x.duration && e.age - x.onset <= x.duration).length : 0,
+        earliestOnset: e ? Math.round((variationOf(i).delay + timing[0].onset) * 1000) : null,
+        latestOnset: e ? Math.round((variationOf(i).delay + timing[timing.length - 1].onset) * 1000) : null,
+        cheering: c.cheering?.visible ? c.cheering.count : 0,
+        standing,
+      }
+    })
+    const cheering = stands.reduce((n, x) => n + x.cheering, 0)
+    const standing = stands.reduce((n, x) => n + x.standing, 0)
+    const spectators = this.crowdStands.reduce((n, c) => n + c.n, 0)
     return {
       tier: this.crowdTier,
-      spectators: this.crowdStands.reduce((n, c) => n + c.n, 0),
-      cheering: this.crowdStands.reduce((n, c) => n + (c.cheering?.visible ? c.cheering.count : 0), 0),
-      neutral: this.crowdStands.reduce((n, c) => n + (c.neutral.visible ? c.neutral.count : 0), 0),
+      spectators,
+      cheering,
+      standing,
+      neutral: spectators - cheering - standing,
+      stands,
       crowdDrawCalls: this.crowdMeshes.filter(m => m.visible && m.count > 0).length,
       crowdTriangles: this.crowdMeshes.reduce((n, m) => n + (m.visible ? m.count * triangles(m.geometry) : 0), 0),
-      reaction: this.crowdStands.map(c => Math.round(c.uniforms.uCrowdReaction.value * 1000) / 1000),
-      cheer: this.crowdStands.map(c => Math.round(c.uniforms.uCrowdCheer.value * 1000) / 1000),
+      reaction: this.crowdStands.map((_, i) => Math.round(standReaction(this.reactionEvents, this.reactionLocal, i, this.crowdTier) * 1000) / 1000),
+      cheer: this.crowdStands.map(c => Math.round(((c.cheering?.visible ? c.cheering.count : 0) / c.n) * 1000) / 1000),
       replayTime: this.time,
       frameDrawCalls: this.renderer.info.render.calls,
       triangles: this.renderer.info.render.triangles,
@@ -515,18 +554,21 @@ export class ReplayScene {
       for (const l of this.crowdChangeListeners) l(next)
       return
     }
-    // Group-level reaction from the replay clock: one number per stand. NORMAL hands it to the GPU (stand-up pose); LOW moves
-    // the stand's mesh as one block (one transform). Reduced motion and a tripped guard skip the calculation: everyone stays seated.
-    // NORMAL also switches a seeded fraction of spectators to the cheering pose: only two instance counts change.
+    // Reactions from the replay clock: per stand, the driving event and its age go to the GPU, which works out every
+    // spectator's own cohort phase (onset, rise, hold, staggered settle). NORMAL also shows the cheering cohorts by changing
+    // two instance counts. Reduced motion and a tripped guard skip all of it: everyone stays seated and neutral.
     const moving = crowdMotionAllowed(this.crowdTier, this.options.reducedMotion, this.crowdGuardTripped)
     for (let i = 0; i < this.crowdStands.length; i++) {
       const c = this.crowdStands[i]
-      const k = moving ? standReaction(this.reactionEvents, this.reactionLocal, i, this.crowdTier) : 0
-      const f = moving ? standCheer(this.reactionEvents, this.reactionLocal, i, this.crowdTier) : 0
-      c.uniforms.uCrowdReaction.value = k
-      c.uniforms.uCrowdCheer.value = f
-      if (this.crowdTier === 'low') c.neutral.position.y = LOW_RISE_M * k
-      const cheering = c.cheering ? cheeringCount(c.n, f) : 0
+      const e = moving ? standEvent(this.reactionEvents, this.reactionLocal, i, this.crowdTier) : null
+      c.event = e
+      const u = c.uniforms
+      u.uAge.value = e ? e.age : 0
+      u.uAmp.value = e ? variationOf(i).strength * e.reaction.amplitude : 0
+      u.uDur.value = e ? e.reaction.duration : 1
+      u.uSpread.value = e ? e.reaction.spread : 0
+      u.uCohorts.value = e ? e.reaction.cohorts : 0
+      const cheering = c.cheering && e ? c.cheeringUpTo[Math.min(cheeringSlots(e.reaction, e.age), c.cheeringUpTo.length - 1)] : 0
       c.neutral.count = c.n - cheering
       c.neutral.visible = c.neutral.count > 0
       if (c.cheering) { c.cheering.count = cheering; c.cheering.visible = cheering > 0 }
@@ -675,7 +717,7 @@ export class ReplayScene {
     const { placed, local } = locate(this.placed, this.time)
     const tick: ReplayTick = {
       time: this.time, duration: this.total, playing: this.playing, clipIndex: placed.index, local,
-      preset: this.preset, userCamera: this.userCamera, introActive: this.intro < this.introDuration,
+      preset: this.preset, userCamera: this.userCamera, introActive: this.intro < this.introDuration, jumps: this.jumps,
     }
     for (const l of this.listeners) l(tick)
   }
@@ -906,30 +948,64 @@ function buildStadium(): { group: THREE.Group; stands: { group: THREE.Group; sha
   return { group, stands }
 }
 
-interface CrowdUniforms { uCrowdReaction: { value: number }; uCrowdCheer: { value: number } }
-interface CrowdStand { neutral: THREE.InstancedMesh; cheering: THREE.InstancedMesh | null; uniforms: CrowdUniforms; n: number }
+interface CrowdUniforms {
+  uAge: { value: number }; uAmp: { value: number }; uDur: { value: number }; uSpread: { value: number }; uCohorts: { value: number }
+  uCheerShare: { value: number }; uPose: { value: THREE.Vector3 }
+}
+interface CrowdStand {
+  neutral: THREE.InstancedMesh; cheering: THREE.InstancedMesh | null; uniforms: CrowdUniforms; n: number
+  /** cheeringUpTo[m] = how many of the stand's spectators cheer when slots 0..m-1 cheer. */
+  cheeringUpTo: number[]
+  seats: Spectator[]
+  event: { label: string; reaction: CohortReaction; age: number } | null
+}
 
 /**
- * Spectator material (cheap Lambert). The vertex shader adds the stand-up pose from two numbers per stand: the reaction
- * strength and the cheering fraction. Spectators ranked just above the cheering ones stand fully, the rest only lean
- * slightly. Heads get a skin tone (varied by rank) so figures read as people. No textures, no shadows, no emissive.
+ * Spectator material (cheap Lambert). The vertex shader computes each spectator's own reaction from its cohort slot and
+ * rank plus a few numbers per stand (the driving event's age, strength, duration, onset spread and cohort count) - the same
+ * arithmetic as cohortTiming/envelope/spectatorReaction in crowd.ts. So cohorts start at different times and settle at
+ * different times with no per-spectator CPU work. Heads and raised arms get a skin tone. No textures, shadows or emissive.
  */
 function crowdMaterial(uniforms: CrowdUniforms): THREE.MeshLambertMaterial {
   const material = new THREE.MeshLambertMaterial({ color: '#ffffff' })
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms)
-    shader.vertexShader = 'uniform float uCrowdReaction;\nuniform float uCrowdCheer;\nattribute float aRank;\nattribute float aHead;\n' + shader.vertexShader
+    shader.vertexShader = `uniform float uAge;
+uniform float uAmp;
+uniform float uDur;
+uniform float uSpread;
+uniform float uCohorts;
+uniform float uCheerShare;
+uniform vec3 uPose;
+attribute float aRank;
+attribute float aSlot;
+attribute float aHead;
+float crowdEnvelope(float d, float a) {
+  if (a < 0.0 || a > d) return 0.0;
+  float rise = min(0.25, d * 0.25);
+  float hold = d * 0.45;
+  if (a < rise) return a / rise;
+  if (a < hold) return 1.0;
+  float x = clamp((a - hold) / (d - hold), 0.0, 1.0);
+  return 1.0 - x * x * (3.0 - 2.0 * x);
+}
+` + shader.vertexShader
       .replace('#include <color_vertex>', `#include <color_vertex>
       #if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
         vColor.xyz = mix(vColor.xyz, mix(vec3(0.86, 0.70, 0.58), vec3(0.42, 0.30, 0.22), fract(aRank * 13.7)), aHead);
       #endif`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-      float crowdStand = uCrowdReaction * (1.0 - ${(1 - STAND_BAND.rest).toFixed(3)} * smoothstep(uCrowdCheer + ${STAND_BAND.full.toFixed(3)}, uCrowdCheer + ${STAND_BAND.fade.toFixed(3)}, aRank));
+      float crowdLast = max(1.0, uCohorts - 1.0);
+      float crowdTakesPart = step(aSlot + 0.5, uCohorts);
+      float crowdOnset = uCohorts > 1.0 ? aSlot * uSpread / crowdLast : 0.0;
+      float crowdDur = uDur * (1.0 - ${HOLD_DROP.toFixed(3)} * aSlot / crowdLast);
+      float crowdBand = 1.0 - ${(1 - STAND_BAND.rest).toFixed(3)} * smoothstep(uCheerShare + ${STAND_BAND.full.toFixed(3)}, uCheerShare + ${STAND_BAND.fade.toFixed(3)}, aRank);
+      float crowdStand = uAmp * crowdTakesPart * crowdEnvelope(crowdDur, uAge - crowdOnset) * crowdBand;
       float crowdH = max(transformed.y, 0.0);
-      transformed.y = crowdH * (1.0 + ${CROWD_POSE.stretch.toFixed(3)} * crowdStand) + ${CROWD_POSE.lift.toFixed(3)} * crowdStand;
-      transformed.x -= ${CROWD_POSE.lean.toFixed(3)} * crowdStand * crowdH;`)
+      transformed.y = crowdH * (1.0 + uPose.x * crowdStand) + uPose.y * crowdStand;
+      transformed.x -= uPose.z * crowdStand * crowdH;`)
   }
-  material.customProgramCacheKey = () => 'matchshift-crowd-v2'
+  material.customProgramCacheKey = () => 'matchshift-crowd-v3'
   return material
 }
 

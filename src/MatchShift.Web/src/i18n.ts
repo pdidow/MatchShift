@@ -77,7 +77,7 @@ const strings = {
     modes: { TeachMe: 'Teach me football', WhatMatters: 'Just what matters', Analyst: 'Tactical analyst', MyTeam: 'My club / player', Studio: 'Studio mode' } as Record<ViewerMode, string>,
     chaosStates: { CONTROLLED: 'Controlled', BALANCED: 'Balanced', CHAOTIC: 'Chaotic' },
     replay: {
-      crowd: "Crowd", crowdOn: "On", crowdOff: "Off", crowdAutoOff: "Crowd disabled to maintain replay performance.", crowdAutoLow: "Crowd reduced to maintain replay performance.",
+      crowd: "Crowd", crowdOn: "On", crowdOff: "Off", crowdAutoOff: "Crowd disabled to maintain replay performance.", crowdAutoLow: "Crowd reduced to maintain replay performance.", crowdSound: "Crowd sound", crowdSoundNeedsCrowd: "Turn the crowd on to hear it",
       notice: '3D reconstruction of synthetic events. Positions at events come from the event data; positions between events are interpolated; players not involved in nearby events are estimated from their formation role. Ball height is not recorded - arcs are visual only.',
       button: 'Evidence replay', title: 'Evidence Replay · 3D reconstruction', loading: 'Reconstructing the sequence…', error: 'Replay unavailable',
       tactical: 'Tactical', sideline: 'Sideline', behindGoal: 'Behind goal', player: 'Player', resetCamera: 'Reset camera', freeCamera: 'Free camera',
@@ -170,7 +170,7 @@ const strings = {
     modes: { TeachMe: 'Découvrir le football', WhatMatters: "L'essentiel", Analyst: 'Analyste tactique', MyTeam: 'Mon club / joueur', Studio: 'Mode studio' } as Record<ViewerMode, string>,
     chaosStates: { CONTROLLED: 'Maîtrisé', BALANCED: 'Équilibré', CHAOTIC: 'Chaotique' },
     replay: {
-      crowd: "Public", crowdOn: "Activé", crowdOff: "Désactivé", crowdAutoOff: "Public désactivé pour préserver la fluidité du replay.", crowdAutoLow: "Public allégé pour préserver la fluidité du replay.",
+      crowd: "Public", crowdOn: "Activé", crowdOff: "Désactivé", crowdAutoOff: "Public désactivé pour préserver la fluidité du replay.", crowdAutoLow: "Public allégé pour préserver la fluidité du replay.", crowdSound: "Son du public", crowdSoundNeedsCrowd: "Activez le public pour l’entendre",
       notice: 'Reconstruction 3D d’événements synthétiques. Les positions au moment des événements proviennent des données ; entre deux événements elles sont interpolées ; les joueurs non impliqués sont estimés à partir de leur poste. La hauteur du ballon n’est pas enregistrée : les trajectoires courbes sont purement visuelles.',
       button: 'Replay des preuves', title: 'Replay des preuves · reconstruction 3D', loading: 'Reconstruction de la séquence…', error: 'Replay indisponible',
       tactical: 'Tactique', sideline: 'Bord de terrain', behindGoal: 'Derrière le but', player: 'Joueur', resetCamera: 'Réinitialiser la caméra', freeCamera: 'Caméra libre',
@@ -263,7 +263,7 @@ const strings = {
     modes: { TeachMe: 'Aprende fútbol', WhatMatters: 'Solo lo importante', Analyst: 'Analista táctico', MyTeam: 'Mi club / jugador', Studio: 'Modo estudio' } as Record<ViewerMode, string>,
     chaosStates: { CONTROLLED: 'Controlado', BALANCED: 'Equilibrado', CHAOTIC: 'Caótico' },
     replay: {
-      crowd: "Público", crowdOn: "Activado", crowdOff: "Desactivado", crowdAutoOff: "Público desactivado para mantener la fluidez de la repetición.", crowdAutoLow: "Público reducido para mantener la fluidez de la repetición.",
+      crowd: "Público", crowdOn: "Activado", crowdOff: "Desactivado", crowdAutoOff: "Público desactivado para mantener la fluidez de la repetición.", crowdAutoLow: "Público reducido para mantener la fluidez de la repetición.", crowdSound: "Sonido del público", crowdSoundNeedsCrowd: "Activa el público para oírlo",
       notice: 'Reconstrucción 3D de eventos sintéticos. Las posiciones en cada evento proceden de los datos; entre eventos se interpolan; los jugadores no implicados se estiman según su posición en el sistema. La altura del balón no se registra: las parábolas son solo visuales.',
       button: 'Repetición de la evidencia', title: 'Repetición de la evidencia · reconstrucción 3D', loading: 'Reconstruyendo la jugada…', error: 'Repetición no disponible',
       tactical: 'Táctica', sideline: 'Banda', behindGoal: 'Tras la portería', player: 'Jugador', resetCamera: 'Restablecer cámara', freeCamera: 'Cámara libre',
