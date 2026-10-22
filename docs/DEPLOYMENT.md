@@ -26,7 +26,7 @@ Browser ──HTTPS──▶ Azure App Service (Free F1, Windows, .NET 10)
 |---|---|
 | `LIVE_FOUNDRY` | Agent Framework agents called the Foundry model. `/api/agents/status` reports the *configured* mode; only an execution trace whose agent stages show `MICROSOFT_AGENT_FRAMEWORK`, model calls and token counts proves a live call. Failed calls show `FALLBACK`/`FAILED` stages, an HTTP status in `attemptFailures`, and outcome `FALLBACK_UNVERIFIED`, never "verified". |
 | `OFFLINE_TEMPLATE` | Same workflow graph, deterministic templates, no model calls (`AgentWorkflow__Mode=OfflineTemplate`). |
-| `RECORDED_DEMO` | Static GitHub Pages build replaying recorded traces; never live. |
+| `RECORDED_DEMO` | Static Pages build or hosted `?demo=judge` replaying recorded real traces; no live workflow or fallback to Foundry. |
 
 ## Required Azure role
 
@@ -81,16 +81,7 @@ Central US (Windows). The web app therefore runs in Central US and calls the Eas
 
 ## Hosted judge demonstration
 
-1. Open the site; choose **Northbridge v Westhaven · Flagship**; seek to about 66'. (The first request after idle
-   cold-starts the Free tier: allow a few seconds.)
-2. Select the **Westhaven switch their attack down the right** card, then open **Agents**. The panel shows
-   `LIVE · Microsoft Foundry`, `gpt-4.1-mini`, `Entra ID (ManagedIdentity)` and the stages running live; a run takes
-   10–20 s and makes about four model calls.
-3. Point out: both narrators in the same superstep with the measured overlap and timeline bars; the handoffs; the
-   deterministic findings; the verifier decision; "authoritative facts unchanged"; the published, agent-verified text.
-4. Back on the card: the agent-verified block under the deterministic fact; then **WHY?**, **SHOW ME** and
-   **3D replay**, which still come from deterministic evidence.
-5. `/api/agents/status` shows mode, model, credential type, package versions and the run budget.
+Open [the judge path](https://matchshift-pd.azurewebsites.net/?demo=judge) and follow the eight-step guide. Select flagship insight `MS-FLAGSHIP-001-I015`, then **How was this verified? → Agents**. The page shows **RECORDED DEMO** and the actual **APPROVED WITH CHANGES** result of a previously recorded real four-agent Foundry workflow, including historical timings and validation. Viewing it makes no live workflow or model call. An insight without a recording shows “No recorded workflow is available for this insight.” and does not fall back to live Foundry. Normal hosted mode outside `?demo=judge` remains live-capable; `/api/agents/status` reports that server configuration, not the mode of the recorded judge client. See [JUDGING.md](JUDGING.md) for the full path.
 
 Live workflow executions on the public site are capped at 10 per hour, 30 per rolling day and 4 per client per hour. Beyond that, requests get an `OFFLINE_TEMPLATE` execution with "Live AI analysis is temporarily unavailable; deterministic match evidence remains available." and no Foundry call (see [AGENTS.md](AGENTS.md#cost-controls)). `/api/agents/status` shows `liveAgents` and the run counts.
 

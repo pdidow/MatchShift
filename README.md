@@ -1,6 +1,12 @@
 # MatchShift
 
-**Football intelligence that explains itself.**
+**Football intelligence you can question, verify, and replay.**
+
+MatchShift turns synthetic, football-realistic match events into insights about meaningful changes in play. Deterministic C# analytics decide what happened and attach the evidence; Microsoft Agent Framework agents on Microsoft Foundry interpret, adapt and verify those grounded facts. **AI does not decide what happened in the match. The match data does.** Viewers follow **WHY? → SHOW ME → Evidence Replay** to inspect the reasoning, source events and a visual reconstruction.
+
+[Hosted app](https://matchshift-pd.azurewebsites.net/) · [Judge demo](https://matchshift-pd.azurewebsites.net/?demo=judge) · [Source repository](https://github.com/pdidow/MatchShift)
+
+The Azure App Service-hosted app is live-capable. `?demo=judge` uses previously recorded real Agent Framework / Foundry workflows; viewing that path starts no live Foundry run, and insights without recordings never fall back to live execution. Local use needs no cloud credentials.
 
 > ### ⚠️ ALL football data in MatchShift is synthetic.
 > Every club, player, match, event, score, lineup, substitution and tactical pattern is fictional and
@@ -9,11 +15,7 @@
 
 Built for the Microsoft + Premier League **"Inside the Game" Developer Hackathon**.
 
-**Submission status:** the local demo is working; submission requirements remain open. See the
-[rules audit and release checklist](docs/COMPLIANCE.md) and [judge testing instructions](docs/JUDGING.md).
-Local development uses offline templates or an explicitly labelled mock, with no Azure account or secrets.
-Microsoft Foundry remains the configurable production provider. See [provider setup](docs/FOUNDRY.md)
-and [completed upgrades and measured limits](docs/UPGRADE_STATUS.md). Mock results do not prove live AI execution.
+See the [judge walkthrough](docs/JUDGING.md), [local and optional live setup](docs/FOUNDRY.md), and [evaluation results](docs/EVALUATION.md).
 
 MatchShift watches a stream of football-realistic synthetic events and, live, answers:
 
@@ -23,47 +25,39 @@ MatchShift watches a stream of football-realistic synthetic events and, live, an
 | **What changed?** | 12 shift detectors + key-moment detection with thresholds, sample minimums, persistence and cooldowns |
 | **Why does it matter?** | Importance model, highlight ranking, recap story beats |
 | **What evidence supports it?** | Every insight carries structured evidence: windows, before/after values, thresholds, sample sizes, z-scores, supporting event IDs |
-| **How should this viewer hear it?** | Five viewer modes × six languages (EN/FR/ES/DE/IT/PT), offline templates, mock or Foundry editorial selection |
+| **How should this viewer hear it?** | Five viewer modes × six languages (EN/FR/ES/DE/IT/PT); grounded agent narration or offline templates |
 | **What story is emerging?** | Live narrative cards, highlight timeline, half-time and full-time recaps in four styles |
 
 ![MatchShift - WHY? panel for the 63rd-minute attack-channel shift](docs/img/why.png)
 
-| SHOW ME - only the attacks behind the insight | Agents - every step traced and verified | Teach me football, in French |
-|---|---|---|
-| ![SHOW ME](docs/img/show-me.png) | ![Agents](docs/img/agents.png) | ![Teach me - FR](docs/img/teach-me-fr.png) |
-
 ## 60-Second Judge Demo
 
-Open MatchShift and choose **Guided demo · 60 s** in the top bar, or open `/?demo=judge`. The guide is a small panel
-over the real product: it uses the real match state, the real insight and the real agent workflow, and every step is
-an ordinary button you could press yourself. Close it at any time with ✕ to keep using MatchShift normally.
+Open the [judge demo](https://matchshift-pd.azurewebsites.net/?demo=judge), or choose **Guided demo · 60 s** in the top bar. This path uses the real synthetic match events and previously recorded real agent results, with no live Foundry run. The eight-step guide overlays ordinary product controls; close it at any time.
 
-1. **Built for every viewer.** The guide outlines the real Language menu and Accessibility button and names the six
+1. **Intro.** Meet MatchShift and the flagship match.
+2. **Built for every viewer.** The guide outlines the real Language menu and Accessibility button and names the six
    languages (English, Français, Español, Deutsch, Italiano, Português). It also lists the Accessibility Center's
    options: spoken insights, audio match mode, replay audio description, captions, high contrast, colour vision,
    reduced motion and flashing, text size, simplified insights and keyboard navigation. *Open Accessibility Center*
    opens the real panel. The guide never changes a language or a setting itself.
-2. **Jump to the flagship moment.** The flagship match pauses at 64:00. The selected insight: at 63' Westhaven
+3. **Jump to the flagship moment.** The flagship match pauses at 64:00. The selected insight: at 63' Westhaven
    switch their attack down the right after a substitution (31% → 90%), detected by deterministic C# analytics.
-3. **WHY?** shows the exact metric, windows, threshold, sample and confidence, computed from match events.
-4. **SHOW ME** draws the 30 supporting source events on the pitch. One more attack, the only recent one that did not
+4. **WHY?** shows the exact metric, windows, threshold, sample and confidence, computed from match events.
+5. **SHOW ME** draws the 30 supporting source events on the pitch. One more attack, the only recent one that did not
    use the right channel, is drawn grey for comparison and labelled as context, not counted as evidence.
-5. **EVIDENCE REPLAY** reconstructs those events in 3D, before and after the shift, labelled observed, interpolated or
-   estimated.
-6. **Agents** shows the Microsoft Agent Framework workflow:
+6. **EVIDENCE REPLAY** visualizes selected evidence in 3D, before and after the shift, with event-data, interpolated and estimated positions distinguished. The flagship clip shows 5 of 30 supporting events; its context event is not in the clip.
+7. **Agents** shows the recorded Microsoft Agent Framework workflow:
    - Tactical Analyst first;
    - then Audience Narrative and Accessibility Narrator in parallel;
    - then the Verification Agent.
 
-   Code validates before and after the AI. Status chips show the execution mode, model and credential, taken from the
-   runtime, never hard-coded.
-7. **Can we trust it?** The verdict (VERIFIED / VERIFIED WITH CHANGES / REJECTED) and the Microsoft Foundry
-   Evaluations proof. 28/28 published outputs passed groundedness, relevance and coherence. Injected defects caught:
+   Code validates before and after the AI. I015 displays **RECORDED DEMO** and its real **APPROVED WITH CHANGES** result.
+8. **Trust / Verification.** The workflow verdict (APPROVED / APPROVED WITH CHANGES / REJECTED) and Microsoft Foundry Evaluations proof. The latest EN/FR/ES run evaluated 39 rows, including 28 published outputs and 11 injected defects. Published-output averages: groundedness 4.89/5, relevance 4.93/5, coherence 4.11/5. Injected defects caught:
    - deterministic validator 11/11;
    - Verification Agent 11/11;
    - Foundry groundedness 5/11.
 
-Offline or recorded runs are labelled OFFLINE TEMPLATE or RECORDED DEMO and are never shown as verified.
+**RECORDED DEMO** replays the real result of a prior verified workflow. **OFFLINE TEMPLATE** makes no model call and is not AI-verified. Normal hosted use remains live-capable.
 Insight used: `MS-FLAGSHIP-001-I015`.
 
 ## Languages
@@ -77,19 +71,12 @@ language. The language list lives in one place on each side (`src/MatchShift.Web
 
 ## The core principle
 
-**The LLM never calculates match statistics.** Deterministic C# computes every count, window, share,
-index and detection and attaches evidence before wording. A replay gate withholds inconsistent claims.
-Foundry can choose evidence-bound editorial treatments and recap order; deterministic renderers retain
-control of factual wording and translations. An independent skeptical review can request one revision.
-Live cards update asynchronously and share accepted wording with WHY? and Agents. All three modes remain
-inspectable; mock mode is clearly labelled and is not a real AI service.
+**AI does not decide what happened in the match. The match data does.** Deterministic C# computes each count, window, share, index and detection, then freezes a grounded `InsightContext`. The Tactical Analyst interprets it; Audience Narrative and Accessibility Narrator adapt it in parallel. Code validates grounding, the Verification Agent reviews the candidate, and final deterministic validation decides what can be published. Outcomes are APPROVED, APPROVED WITH CHANGES or REJECTED. The older optional editorial/recap provider is documented separately in [FOUNDRY.md](docs/FOUNDRY.md).
 
 ```
-synthetic events ──► MatchState ──► window metrics ──► detectors ──► Insight (semantic + evidence)
-                                     Pressure / Control / Chaos            │
-                                                                            ▼
-                             viewer profile ──► Storytelling / Personalization ──► Verification ──► UI
-                                                (templates or Microsoft Foundry)
+synthetic events → deterministic analytics → grounded InsightContext → Tactical Analyst
+  → Audience Narrative + Accessibility Narrator (parallel) → deterministic grounding validation
+  → Verification Agent → final deterministic validation → APPROVED / APPROVED WITH CHANGES / REJECTED
 ```
 
 ## What is in the box
@@ -105,7 +92,7 @@ synthetic events ──► MatchState ──► window metrics ──► detecto
   TURNOVER_SPIKE, POST_SUBSTITUTION_CHANGE, COUNTER_ATTACK_THREAT, PASSING_STYLE_SHIFT and moments (GOAL, BIG_CHANCE,
   DANGEROUS_TURNOVER) - **measured** against labelled scenarios (see [detection](docs/MATCH_SHIFT_DETECTION.md)).
 - **WHY?** and **SHOW ME** - every card opens its evidence table, and draws exactly the events behind it on the pitch.
-- **3D REPLAY** - every insight can be replayed as an interactive Three.js reconstruction of the sequence that caused it
+- **Evidence Replay** - insights can show a selected Three.js clip from their evidence
   (BEFORE / AFTER clips for tactical shifts), with tactical overlays and four camera views. See below.
 - **Microsoft Agent Framework multi-agent workflow** - four code-first agents on Microsoft Foundry (Tactical Analyst →
   concurrent Audience Narrative + Accessibility Narrator → Verification Agent) in a `WorkflowBuilder` graph with shared
@@ -113,19 +100,15 @@ synthetic events ──► MatchState ──► window metrics ──► detecto
   topology + trace in the Agents tab. See [agents](docs/AGENTS.md).
 - **Player focus and passing** - analyst passing totals, long-ball-share shift detection, player summaries with
   event IDs and timelines, and player-related insights ranked first.
-- **Broadcast demonstration** - `/broadcast` composites original synthetic event animation with a timed overlay;
-  `/overlay` is a transparent browser source. Independent session IDs keep viewer controls separate.
+- **Broadcast Preview** - `/broadcast` previews broadcast-style graphics over synthetic event animation; `/overlay` is the cleaner transparent graphics output. Neither route transmits video. Independent session IDs keep viewer controls separate.
 - **Broadcast UI** - React + TypeScript: live pitch, insight feed, momentum and pressure charts, highlight
   scrubber, playback at 1x/2x/5x/10x with seeking, recaps, language and viewer-mode switching.
-- **Microsoft stack** - Microsoft Foundry (keyless via managed identity), Azure Container Apps, Application
-  Insights (OpenTelemetry), Fabric-ready exports (JSONL / CSV / Parquet), GitHub Actions, `azd up`.
+- **Microsoft stack** - Azure App Service hosts the app; Microsoft Agent Framework uses Microsoft Foundry `gpt-4.1-mini` through managed identity. Foundry Evaluations measures output quality. Application Insights (OpenTelemetry) and Fabric-ready exports (JSONL / CSV / Parquet) are also present. Container Apps definitions are an alternative deployment option, not the current host.
 
 ## Evidence Replay (3D reconstruction)
 
 Every insight card, the WHY? panel, the SHOW ME bar and the highlight timeline offer **EVIDENCE REPLAY**: an
-interactive, broadcast-style reconstruction of the exact sequence behind the insight, rendered with Three.js
-inside the app. It is a tactical visualisation, not a game engine - its job is to show *why* MatchShift
-raised the insight.
+interactive visualization of selected evidence clips, rendered with Three.js inside the app. For I015, the insight has **30 supporting events and 1 context event**, but the current clip shows **5 of the 30 supporting events** and no context event. Context is not evidence. Replay animation does not create new evidence: player positions come from event data, are interpolated between observations, or are estimated from formation and event context. Illustrative positions are not tracking data. Camera changes alter presentation only.
 
 Evidence Replay includes an optional lightweight stadium crowd. Spectators are a decorative layer and can be switched
 off manually (**Crowd: On/Off**, remembered on this device).
@@ -234,8 +217,7 @@ players and ball. All models and textures are generated locally, with no externa
 **Playback:** play/pause, restart, previous/next event, a scrubber with event markers (evidence events highlighted,
 clip boundaries marked), 0.5× / 1× / 1.5× / 2×. Keyboard: space, ←/→, 1-4, Esc.
 
-**Why it helps explainability:** WHY? shows the numbers, SHOW ME shows the evidence events in 2D, and 3D REPLAY shows
-those same events unfolding in space and time - with every reconstructed position labelled as such.
+**Why it helps explainability:** WHY? shows the numbers, SHOW ME shows supporting events in 2D, and Evidence Replay visualizes a selected clip in space and time, with reconstructed positions labelled as such.
 
 **Try it:** run the app, seek past 35', open the **Key moment** card "Westhaven lose it in their own half - Northbridge
 shoot" (35') and press **3D REPLAY**: Westhaven play out from the back, Northbridge's press intercepts, and they score
@@ -248,7 +230,7 @@ session): `/?session=<id>&replay=MS-FLAGSHIP-001-I005` (optional `&replayAt=7&re
 
 ## Accessibility (optional, user-controlled)
 
-The default MatchShift experience is the full broadcast one. **Accessibility adaptations are opt-in**: open
+The default MatchShift experience is the standard match view. **Accessibility adaptations are opt-in**: open
 **Accessibility** in the top bar to pick a preset (Low vision, Audio-first, Reduced motion) or switch on individual options:
 
 - **Speech and audio:** spoken insights at three detail levels, an audio match mode, spoken recaps, 3D replay audio
@@ -295,7 +277,8 @@ Press **Play**. 1x = 30 match-seconds per real second (a full match in 3 minutes
 ## Tests and evaluation
 
 ```bash
-dotnet test                                               # 300 xUnit tests (core, data, analytics, agents + workflow, API)
+dotnet build                                              # build the .NET solution
+dotnet test                                               # .NET regression suite
 dotnet run --project tools/MatchShift.Cli -- evaluate --matches 120   # detector precision/recall vs ground truth
 dotnet run --project tools/MatchShift.Cli -- robustness   # flagship script re-simulated with 20 other seeds
 dotnet run --project tools/MatchShift.Cli -- analyze      # live insights for the flagship match
@@ -303,6 +286,8 @@ dotnet run --project tools/MatchShift.Cli -- narrate --lang fr --mode TeachMe --
 dotnet run --project tools/MatchShift.Cli -- export --matches 50   # Fabric-ready dataset
 dotnet run --project tools/MatchShift.Cli -- foundry-eval  # Foundry Evaluations: prints cost estimate; --confirm true runs it
 ```
+
+Web regression checks, from `src/MatchShift.Web`: `npm test` and `npx tsc -b --noEmit`. `npm run build` performs type-checking and creates the production bundle.
 
 AI output quality is checked in three layers:
 - deterministic validation;

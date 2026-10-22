@@ -14,7 +14,7 @@ This is a feature mapping, not a declaration of eligibility or submission comple
 | **Expand datasets for AI and analytics** | Seeded simulator, seven labelled scenario families with ground truth kept outside the event stream, batch generation, detector evaluation (precision / recall / false alarms), Fabric-ready JSONL/CSV/Parquet export | [SYNTHETIC_DATA.md](SYNTHETIC_DATA.md), `DetectorEvaluator`, `matchshift export` |
 | **Deliver multilingual insights** | Semantic insights rendered via English, French, Spanish, German, Italian and Portuguese lexicons with culture-correct numbers; tests prove facts carry identical numbers in every language; Foundry can select evidence-bound editorial treatments | [NARRATIVES.md](NARRATIVES.md), `NarrativeTests` |
 | **Deliver personalized studio, streaming and fan experiences** | Teach me football, Just what matters, Tactical analyst, My club / my player, Studio mode; broadcast-style UI with talking points and on-air lines | `ViewerMode`, `NarrativeFilter`, React UI |
-| **Use Microsoft technologies meaningfully** | Configurable production Microsoft Foundry provider for editorial agents and recap ordering, with credential-free mock/template modes; Container Apps + ACR + Application Insights deployment definitions; Fabric-compatible exports and manual ingestion instructions; GitHub Actions workflow and Copilot guidance. Live cloud operation and Copilot usage are not established by these files alone. | [MICROSOFT_INTEGRATION.md](MICROSOFT_INTEGRATION.md) |
+| **Use Microsoft technologies meaningfully** | Azure App Service hosts the app; Microsoft Agent Framework orchestrates four agents on Microsoft Foundry `gpt-4.1-mini` via managed identity; Foundry Evaluations measures output quality. Offline templates need no credentials. Container Apps/ACR definitions are an alternative deployment, not the current host; Fabric-compatible exports are not a live Fabric integration. | [MICROSOFT_INTEGRATION.md](MICROSOFT_INTEGRATION.md), [EVALUATION.md](EVALUATION.md) |
 
 ## What makes it different
 
@@ -23,8 +23,7 @@ This is a feature mapping, not a declaration of eligibility or submission comple
 - **Evidence constrains AI wording.** Exact claim bindings and canonical rendering retain team/player attribution,
   values, windows and references. A deterministic replay gate withholds inconsistent evidence.
   This establishes consistency with implemented analytics, not proof of tactical causation.
-- **Offline fallback.** Template narratives in six languages keep the local demo usable without AI quota
-  or network access. Judges still need a reachable deployment or accessible test build.
+- **Offline fallback.** Template narratives in six languages keep local use available without AI quota or network access. The hosted `?demo=judge` path replays previously recorded real workflows without starting live runs.
 
 ## Responsible use
 

@@ -1,5 +1,7 @@
 # Explainability
 
+The current four-agent workflow is described in [AGENTS.md](AGENTS.md). Older pipeline names in historical test references below are not stages of the current Agents page.
+
 Every insight answers **WHY?** and **SHOW ME** from data that existed before any words were written.
 
 ## The evidence model
@@ -32,8 +34,7 @@ Rendered narratives keep three separate fields:
 | INFERENCE | "Their attacking play has shifted decisively towards the right flank." | what the pattern means |
 | POSSIBLE EXPLANATION | "The change follows Tavian Brooks's introduction, which may point to a deliberate adjustment - but the data cannot confirm intent." | allow-listed interpretation code, always hedged |
 
-The Football Reasoning agent only allows interpretation codes registered for that insight type; the
-Verification agent rejects text that asserts intent ("deliberately", "the manager decided"…).
+The grounded `InsightContext` constrains interpretation. The current Tactical Analyst labels inference and possible explanation; deterministic grounding validation and the Verification Agent check generated claims against the match data, including unsupported assertions of intent.
 
 ## WHY?
 
@@ -44,9 +45,9 @@ and a table of every evidence item - including statistical strength (z-score) an
 ## SHOW ME
 
 `GET /api/demo/insights/{id}/events` returns the visual layers and the events in absolute pitch coordinates.
-The pitch draws only those events: one arrow per attack for channel shifts (each arriving in the shaded flank),
+The pitch draws supporting events plus separately marked context where useful: one arrow per attack for channel shifts (each arriving in the shaded flank),
 the losing action plus the punishing move for a dangerous turnover, shots sized by outcome, high recoveries as
-points. De-emphasised layers (e.g. attacks on other flanks) are drawn muted for context.
+points. De-emphasised layers (e.g. attacks on other flanks) are drawn muted for context and are **not counted as supporting evidence**. The flagship I015 has 30 supporting events and 1 context event. Its Evidence Replay clip shows 5 of the 30 supporting events, with no context event; animation does not create new evidence.
 
 ## Evidence integrity, tested
 

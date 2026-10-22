@@ -1,5 +1,7 @@
 # Demo video: target 1 minute 55 seconds
 
+> **HISTORICAL / ARCHIVED video outline.** This storyboard predates the current recorded judge path and Broadcast Preview label. Follow [JUDGING.md](JUDGING.md) for the current eight-step demo and mode safety; do not treat the live-run rehearsal below as judge instructions.
+
 The submitted video must be **strictly shorter than two minutes**, including titles and credits.
 Publish a publicly viewable URL on YouTube, Vimeo, Facebook Video or Youku and put it on the project page.
 Show the functioning desktop web app. Use original or authorized voice/music/images; no real match footage

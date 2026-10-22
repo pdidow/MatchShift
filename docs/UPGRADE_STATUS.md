@@ -1,5 +1,7 @@
 # Completed upgrades 1–6
 
+> **HISTORICAL / ARCHIVED (October 2026).** This records an earlier development milestone, before the current Azure App Service deployment and four-agent judge path. It is retained for project history; use [README.md](../README.md), [AGENTS.md](AGENTS.md) and [DEPLOYMENT.md](DEPLOYMENT.md) for current behavior.
+
 Implemented and validated October 15–16, 2026. Scope is the six recommendations in
 [CLAIMS_AND_UPGRADES.md](CLAIMS_AND_UPGRADES.md), with #1 revised by the owner to require configurable
 Foundry plus credential-free local development. No Azure subscription, billing information, secret,

@@ -1,5 +1,7 @@
 # Hackathon compliance audit
 
+> **HISTORICAL / ARCHIVED (October 15–16, 2026).** This rules audit describes an earlier local build. Its technical status, deployment and repository-availability statements are not current. See [README.md](../README.md), [JUDGING.md](JUDGING.md) and [DEPLOYMENT.md](DEPLOYMENT.md) for the current app. Eligibility, rights and submission requirements still require the entrant's own review.
+
 Audited 2026-10-15 against the Official Rules supplied by the entrant and
 [Microsoft's published copy](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md).
 Baseline reviewed: `1bf6488`; the historical audit below is retained for traceability.

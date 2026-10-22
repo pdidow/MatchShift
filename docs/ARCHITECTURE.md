@@ -4,14 +4,15 @@
 
 ## Principles
 
-1. **Deterministic numbers, generative words.** C# computes every statistic and detection; language models
-   (optional) only rephrase verified facts.
+1. **Deterministic facts, grounded AI interpretation.** C# computes every statistic and detection; language models interpret, adapt and verify those frozen facts without deciding match events.
 2. **Evidence before narrative.** An `Insight` is created with its evidence and supporting event IDs; text is
    rendered afterwards, per viewer, from that record.
 3. **Live and honest.** The analyzer ingests events one at a time and evaluates at minute ticks using only events
    it has already seen. Replaying to minute *N* yields exactly the insights a live viewer had at *N* (tested).
 4. **Runs offline.** Template narratives in six languages make the whole product work without keys or network.
    Cloud services strengthen it; they never block it.
+
+**AI does not decide what happened in the match. The match data does.**
 
 ## Components
 
@@ -36,10 +37,16 @@ flowchart LR
     end
 
     subgraph Agents
-        INS --> EA[Event Analyst]
-        EA --> PD[Pattern Detection] --> FR[Football Reasoning] --> ST[Storytelling] --> PE[Personalization] --> VA[Verification]
-        ST -.optional.-> FOUNDRY[(Microsoft Foundry)]
-        VA -->|rejected| TPL[Template provider]
+        INS --> CTX[Grounded InsightContext]
+        CTX --> TA[Tactical Analyst Agent]
+        TA --> AN[Audience Narrative Agent]
+        TA --> AC[Accessibility Narrator Agent]
+        AN --> DV[Deterministic grounding validation]
+        AC --> DV
+        DV --> VA[Verification Agent]
+        VA --> FV[Final deterministic validation]
+        FV --> DEC[APPROVED / APPROVED WITH CHANGES / REJECTED]
+        TA -.live mode.-> FOUNDRY[(Microsoft Foundry)]
     end
 
     subgraph Api
@@ -47,8 +54,7 @@ flowchart LR
         SSE[/SSE stream + REST/]
     end
 
-    VA --> SSE
-    TPL --> SSE
+    DEC --> SSE
     SSE --> WEB[React broadcast UI]
     RB -->|/insights/id/replay| R3D[3D tactical replay<br/>Three.js, lazy-loaded]
     WEB -->|3D REPLAY| R3D
@@ -116,6 +122,6 @@ full viewer profile within the session epoch and startup provider/prompt configu
 [AGENTS.md](AGENTS.md) for typed handoffs, limits, evidence gating and recovery.
 
 `GET /api/demo/overlay?session=<UUID>&lang=en` returns the versioned overlay contract or no active overlay.
-`/overlay` is a transparent browser source; `/broadcast` also renders original synthetic event animation.
+`/overlay` is a transparent graphics output; `/broadcast` is Broadcast Preview, rendering the original synthetic event animation with broadcast-style graphics. Neither transmits video.
 Match seconds drive expiry; disconnected overlays clear and reconnect using the current snapshot.
 This is demonstration timing, not synchronization to a professional video transport.

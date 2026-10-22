@@ -1,32 +1,16 @@
-# React + TypeScript + Vite
+# MatchShift web client
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React, TypeScript and Vite render the match, insights, WHY?, SHOW ME, Evidence Replay, Agents and Broadcast Preview. The production build is served by `MatchShift.Api` from `../MatchShift.Api/wwwroot`; the separate Pages build uses a `/MatchShift/` base path.
 
-Currently, two official plugins are available:
+Requires Node 22.12+ and npm. In this directory:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci
+npm run dev          # local UI; proxies /api to localhost:5002
+npm test             # Vitest web regression suite
+npx tsc -b --noEmit  # type-check
+npm run build        # production bundle into MatchShift.Api/wwwroot
+npm run build:pages  # static Pages bundle into dist
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Run the API locally with `dotnet run --project src/MatchShift.Api --launch-profile http` from the repository root. No secrets are needed for local offline templates or `?demo=judge`; the latter uses previously recorded real workflows and never starts a live Foundry run. Optional live backend setup is documented in [FOUNDRY.md](../../docs/FOUNDRY.md).

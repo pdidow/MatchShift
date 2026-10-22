@@ -1,59 +1,19 @@
 # MatchShift
 
-**Football intelligence that explains itself.**
+**Football intelligence you can question, verify, and replay.**
 
-MatchShift is an explainable football companion that turns synthetic match events into tactical
-observations, personalized stories and match recaps. Its deterministic analytics detect changes in
-attacking pressure, territory, attacking channels, possession, tempo, long-ball share and match control, alongside goals,
-big chances and dangerous turnovers.
+MatchShift turns synthetic, football-realistic events from fictional clubs and players into grounded insights about meaningful changes in a match. The [Azure-hosted app](https://matchshift-pd.azurewebsites.net/) lets viewers inspect **WHY?** an insight was flagged, **SHOW ME** its supporting events, and use **Evidence Replay** to visualize selected evidence. The [judge demo](https://matchshift-pd.azurewebsites.net/?demo=judge) replays previously recorded real workflows without starting a live Foundry run.
 
-All clubs, players and events are fictional. The demo replays generated events through an incremental
-analysis pipeline, showing only the events available at each point in the match.
+## Evidence before narrative
 
-## Evidence behind the story
+**AI does not decide what happened in the match. The match data does.** Deterministic C# analytics compute match state, statistics and insight detections, then freeze a grounded `InsightContext`. Microsoft Agent Framework orchestrates a Tactical Analyst Agent, parallel Audience Narrative and Accessibility Narrator Agents, deterministic grounding validation, a Verification Agent, and final deterministic validation. Live agent execution uses a Microsoft Foundry `gpt-4.1-mini` deployment via the App Service's managed identity. Publication outcomes are **APPROVED**, **APPROVED WITH CHANGES**, or **REJECTED**. Offline templates use no model and are not AI-verified.
 
-Each insight carries structured evidence. **WHY?** shows the statistics, comparison windows, sample sizes
-and thresholds behind an observation. **SHOW ME** draws the referenced events on a synthetic pitch.
+The flagship 63' Westhaven attack-channel insight shows a change from **31% to 90%** right-side attacks. **WHY?** gives comparison windows, threshold, sample and confidence. **SHOW ME** distinguishes **30 supporting events** from **1 context event**, which is not evidence. Evidence Replay shows a selected clip of **5 of those 30 supporting events**. Event positions, interpolation and formation-based estimates are labelled; illustrative positioning is not tracking data, and replay animation creates no new evidence. Camera, crowd and audio change presentation only.
 
-The narrative model separates observed facts, inferences and possible explanations. A flank shift can be
-measured; the coach's intent cannot be established from those events alone.
+## Viewers and outputs
 
-In the flagship match, Westhaven's right-side attack share rises from **31% earlier in the match to 90%
-in the 50'-62' window**. The viewer can inspect the comparison and visualize the supporting attacks.
+Viewer modes include teaching, concise, tactical, club/player and studio perspectives. The interface and narration support English, French, Spanish, German, Italian and European Portuguese. Accessibility Center offers spoken insights, timeline-aware narration, audio description, captions, contrast and motion settings. Highlights and half-time/full-time recaps assemble the match story.
 
-## Different experiences from the same evidence
+**Broadcast Preview** (`/broadcast`) presents timed, broadcast-style graphics over synthetic event animation. The transparent `/overlay` route supplies the clean graphics output. Neither route streams or transmits live video; this is a broadcast-oriented prototype, not a production video integration.
 
-- **Teach Me Football:** plain-language observations with short explanations of football concepts.
-- **Just Tell Me What Matters:** a filtered feed of the highest-importance developments.
-- **Tactical Analyst:** more insights, before/after metrics, evidence and event visualizations.
-- **My Club / My Player:** club-aware filtering, player-related insight ranking, and a full observed-event player summary with a timeline and evidence IDs.
-- **Studio:** concise talking points and on-air wording.
-
-Narratives are available in English, French, Spanish, German, Italian and Portuguese. Highlights and halftime/fulltime recaps help
-turn individual moments into a match story.
-
-## Deterministic analysis with optional AI narration
-
-The .NET analytics engine computes statistics and identifies patterns. A deterministic replay gate
-withholds inconsistent evidence before narration. Microsoft Foundry is the configurable production AI
-provider: an Interpreter proposes an editorial treatment, a Skeptic reviews its evidence binding, and
-an Editor finalizes it after at most one repair. Models choose supported treatments and recap section
-order; deterministic code retains control of facts, wording and translations. This intentionally
-constrains AI output rather than claiming free-form tactical reasoning.
-
-Live cards, WHY? and Agents share the same asynchronously reviewed narrative. Playback stays responsive
-while verified templates are available immediately. Invalid output, outages and timeouts preserve those
-templates; corrupted underlying evidence is withheld. Modes are explicit: offline templates, a local
-mock of the production protocol, or real Foundry. The mock requires no account, billing or secrets and
-is visibly labelled. Live Foundry deployment and model quality have not yet been demonstrated.
-
-## Built for second-screen and studio exploration
-
-The React and TypeScript interface combines live event visualization, playback controls, insights, charts
-and evidence drilldowns. Separate viewing sessions isolate playback controls. A versioned, timed
-overlay contract drives a transparent `/overlay` route and `/broadcast` synthetic compositing demo. The repository includes a Foundry provider, Azure Container Apps deployment
-definitions, Azure Monitor instrumentation, GitHub Actions CI and Fabric-compatible dataset exports.
-
-MatchShift is a second-screen and broadcast-oriented prototype: it helps viewers understand what changed
-and explore why that change may matter. It does not yet claim production broadcast integration, continuous
-player tracking, unrestricted model reasoning, or a demonstrated advantage in live model quality.
+The current host is **Azure App Service**. The repository also contains alternative Azure Container Apps deployment definitions and Fabric-compatible data exports; neither is the current hosted path. Microsoft Foundry Evaluations tested the latest committed set of 39 EN/FR/ES rows; [evaluation details](EVALUATION.md) distinguish those results from six-language product support.

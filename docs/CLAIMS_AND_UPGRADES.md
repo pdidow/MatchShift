@@ -1,5 +1,7 @@
 # MatchShift: claims compared with the implementation
 
+> **HISTORICAL / ARCHIVED (October 2026).** This pre-upgrade audit describes an earlier development state. Its recommendations and status claims are not current product documentation. See [README.md](../README.md), [AGENTS.md](AGENTS.md) and [DEPLOYMENT.md](DEPLOYMENT.md) for the implemented product.
+
 Reviewed October 15, 2026 against the supplied project description and the current working tree.
 Historical baseline: the tables below describe the pre-upgrade audit. Recommendations 1?6 have now
 been implemented locally; see [UPGRADE_STATUS.md](UPGRADE_STATUS.md) for current behavior and validation.
@@ -15,7 +17,7 @@ advanced passing analysis and production broadcast readiness need qualification.
 
 | Supplied claim | What exists | Accurate wording / recommended action |
 |---|---|---|
-| "Football intelligence that explains itself" | Structured insight evidence, WHY? and SHOW ME, with observation, inference and explanation fields | Keep the tagline. Explain that evidence makes an observation inspectable; it does not prove every tactical explanation. |
+| Earlier tagline (superseded) | Structured insight evidence, WHY? and SHOW ME, with observation, inference and explanation fields | Current tagline: “Football intelligence you can question, verify, and replay.” Evidence makes an observation inspectable; it does not prove every tactical explanation. |
 | "AI-powered football companion" | Foundry provider code and mocked tests exist. The running local API was checked and reports `template`, `aiAvailable=false`. | Currently: "An explainable football companion with optional Microsoft Foundry narration." Use an unqualified AI-powered claim after demonstrating successful model output in the submitted build. |
 | "Analyzes synthetic match events in real time" | `DemoSession` feeds pre-generated synthetic events incrementally into the analyzer. SSE updates the UI. | "Analyzes synthetic events as they are replayed through a live pipeline." This is simulated live play, not a live football feed or demonstrated external event-ingestion service. |
 | Detects changes in pressure | Pressure increase/decrease and shot-pressure detectors exist | Supported. Identify the Pressure Index as MatchShift-derived, based on attacking activity; it is not direct measurement of player proximity or an official statistic. |

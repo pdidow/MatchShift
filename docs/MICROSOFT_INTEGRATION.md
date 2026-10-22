@@ -1,7 +1,8 @@
 # Microsoft integration
 
-MatchShift runs fully offline; each Microsoft service below *strengthens* the product without becoming a
-dependency of the demo.
+MatchShift can run locally with offline templates and no credentials. The current hosted app runs on Azure App Service; its normal mode is live-capable, while `?demo=judge` replays recorded real workflows without live Foundry calls.
+
+**AI does not decide what happened in the match. The match data does.** Deterministic C# analytics produce a grounded `InsightContext`. Microsoft Agent Framework runs Tactical Analyst, then Audience Narrative and Accessibility Narrator in parallel, followed by deterministic grounding validation, Verification Agent, and final deterministic validation. Outcomes are APPROVED, APPROVED WITH CHANGES or REJECTED.
 
 | Technology | Role in MatchShift | Where |
 |---|---|---|
@@ -10,11 +11,11 @@ dependency of the demo.
 | **Microsoft Foundry Evaluations** | Cloud evaluation of the agents' published output with `builtin.groundedness`, `builtin.relevance` and `builtin.coherence`; a real run is stored in the Foundry project, reported separately from deterministic validation and the Verification Agent | `tools/MatchShift.Evaluation`, [EVALUATION.md](EVALUATION.md) |
 | **Azure App Service (Free F1)** | Hosts the deployed app (API + React build); system-assigned managed identity calls Foundry with the Foundry User role | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | **Azure Container Apps** | Alternative, paid container deployment (not used for the hosted demo) | `infra/main.bicep`, `Dockerfile` |
-| **Azure Container Registry** | Image registry, pulled via managed identity (AcrPull) | `infra/main.bicep` |
+| **Azure Container Registry** | Registry for the alternative Container Apps deployment, not the current host | `infra/main.bicep` |
 | **Application Insights / Azure Monitor** | OpenTelemetry traces, requests and custom `MatchShift` metrics | `src/MatchShift.Api/Telemetry.cs` |
 | **Microsoft Fabric** | Compatible export files and manual Lakehouse ingestion instructions; no automated/live Fabric connection | `matchshift export`, below |
 | **GitHub** | CI (build, test, detector evaluation, UI build, container build), Copilot guidance | `.github/` |
-| **Azure Developer CLI** | `azd up` provisions and deploys | `azure.yaml` |
+| **Azure Developer CLI** | `azd up` provisions the alternative Container Apps deployment | `azure.yaml` |
 
 ## Microsoft Foundry
 
@@ -22,20 +23,13 @@ See [FOUNDRY.md](FOUNDRY.md) for complete template/mock/Foundry settings, endpoi
 authentication, timeouts, fallback and validation commands. No subscription, billing or secrets are
 needed locally. Mock mode runs the same handoff protocol without model calls and is labelled accordingly.
 
-The Foundry workflow uses separate Interpreter, Skeptic and Editor requests. It returns typed selections;
-strict application checks retain factual wording and reject unsupported references. Live snapshots use
-a bounded background queue and share accepted results with WHY? and Agents. Recaps use complete verified
-sections. `/api/meta` distinguishes the configured mode; inspect each narrative's `source` and
-`verificationNote` to distinguish accepted Foundry output, mock output and template fallback.
+The primary four-agent workflow uses the Foundry `gpt-4.1-mini` deployment and publishes only after code and Verification Agent checks. The older Interpreter/Skeptic/Editor editorial-selection path is **legacy and optional**, not the current Agents-page workflow. `/api/agents/status` reports configured server mode; inspect an individual execution to distinguish a live run, a previously recorded real run and an offline template. The hosted judge URL uses RECORDED DEMO even though the server remains live-capable.
 
-For keyless access, pass `foundryResourceId` to the Bicep deployment: it grants the container app's managed
-identity **Cognitive Services OpenAI User** on the Foundry account (`infra/foundry-access.bicep`).
+The current App Service uses its system-assigned managed identity with the **Foundry User** role on the Foundry project for keyless live agent calls; see [DEPLOYMENT.md](DEPLOYMENT.md). The separate Bicep/Container Apps path is an alternative and must not be mistaken for the deployed App Service configuration.
 
 ## Azure deployment
 
-These are deployment definitions, not evidence of a completed cloud deployment. Validate provisioning,
-image deployment, managed identity permissions and model availability in the target subscription before
-claiming the Azure category or supplying a hosted judging URL.
+The App Service deployment is described in [DEPLOYMENT.md](DEPLOYMENT.md). The following `azd` instructions concern an **alternative Container Apps experiment**, not the current hosted application; its definitions alone do not establish a working second deployment.
 
 ```bash
 azd auth login

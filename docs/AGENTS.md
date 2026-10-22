@@ -117,7 +117,7 @@ restart. This is a single-instance limiter: it does not coordinate several scale
 |---|---|---|
 | `LIVE_FOUNDRY` | `FOUNDRY_PROJECT_ENDPOINT` and `AZURE_AI_MODEL_DEPLOYMENT_NAME` configured (`AgentWorkflow:Mode=Auto` or `LiveFoundry`) | Agent Framework workflow + Foundry agents. |
 | `OFFLINE_TEMPLATE` | Not configured, or `AgentWorkflow:Mode=OfflineTemplate` (tests force this) | The same Agent Framework graph; every agent stage uses deterministic templates; no model call; outcome `DETERMINISTIC_ONLY`; nothing labelled verified. |
-| `RECORDED_DEMO` | Static GitHub Pages demo | Replays `public/demo/agent-recordings.json`, recorded from real backend runs with `MatchShift.Cli agent-workflow --recording`. Always relabelled RECORDED_DEMO with `recordedFrom`; never shown as live. |
+| `RECORDED_DEMO` | Static GitHub Pages build or hosted `?demo=judge` | Replays `public/demo/agent-recordings.json`, recorded from real backend runs with `MatchShift.Cli agent-workflow --recording`. Always relabelled RECORDED_DEMO with `recordedFrom`; never shown as live. Missing recordings do not fall back to Foundry. |
 
 ## Observability
 

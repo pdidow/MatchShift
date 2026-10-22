@@ -362,7 +362,7 @@ the default is restored.
 - **3D for screen readers:** the WebGL canvas itself is not accessible to screen readers. The event list, audio
   description and captions are the accessible equivalent.
 - **Text size zoom** relies on CSS `zoom`, which is supported in current Chromium, Firefox (126+) and Safari.
-- **Broadcast view:** the transparent OBS overlay (`/broadcast`) is a broadcast graphic and has no Accessibility
+- **Broadcast Preview:** `/broadcast` previews broadcast-style graphics; the cleaner transparent graphics output is `/overlay`. These are output surfaces and have no Accessibility
   Center.
 - **Sound cues** need a user interaction before browsers allow audio. The first cue may be silent until you have
   clicked or pressed a key on the page.
