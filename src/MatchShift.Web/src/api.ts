@@ -1,5 +1,6 @@
 import type { ReplaySequence } from './replay/types'
 import { createDemoClient } from './demo/client'
+import { usesRecordedDemo } from './demo/mode'
 import { AgentRefusal } from './agentRefusal'
 
 export const isStaticDemo = import.meta.env.MODE === 'pages'
@@ -433,6 +434,7 @@ const serverApi = {
   streamUrl: (p: Profile) => `/api/demo/stream?${profileQuery(p)}`,
 }
 
-const demo = isStaticDemo ? createDemoClient(sessionId) : undefined
+// The judge path must never contact a live playback or workflow endpoint, including when the match is played.
+const demo = usesRecordedDemo(location.search, isStaticDemo) ? createDemoClient(sessionId) : undefined
 export const api = demo ?? serverApi
 export const subscribeDemo = demo?.subscribe

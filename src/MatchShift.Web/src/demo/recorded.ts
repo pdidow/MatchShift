@@ -4,7 +4,7 @@ import type { AgentRuntimeStatus, WorkflowExecution } from '../api'
 export type AgentRecordings = { recordedAt: string; note: string; executions: Record<string, WorkflowExecution> }
 
 /**
- * The static demo cannot call the backend, so it can only replay recordings. Whatever mode a recording was made in,
+ * The recorded demo cannot call the backend, so it can only replay recordings. Whatever mode a recording was made in,
  * it is presented as RECORDED_DEMO and never as live; its original mode is kept in recordedFrom.
  */
 export function asRecorded(x: WorkflowExecution, recordedAt: string): WorkflowExecution {
@@ -29,9 +29,9 @@ export function recordedStatus(recordings: AgentRecordings | null): AgentRuntime
       modelDeployment: sample?.modelDeployment,
       orchestrator: sample?.orchestrator ?? 'Microsoft Agent Framework Workflows (recorded)',
       packages: {},
-      configurationNote: 'Static demo: no backend and no credentials, so nothing runs live here. Traces are replays of earlier backend runs.',
+      configurationNote: 'Recorded demo: saved real workflow results only. Nothing runs live in this mode.',
     },
-    warmUp: 'not applicable (static demo)',
+    warmUp: 'not applicable (recorded demo)',
     agents: [],
   }
 }

@@ -124,8 +124,7 @@ export function ModeBadge({ x, status, s }: { x: WorkflowExecution | null; statu
   const e = s.explain
   // Model and credential only for a live run (runtimeChips never returns them otherwise).
   const tech = mode === 'LIVE_FOUNDRY' ? runtimeChips(status, x, chipLabels(s)).filter(c => ['af', 'model', 'cred'].includes(c.key)).map(c => c.label) : []
-  const note = mode === 'LIVE_FOUNDRY' ? e.mode.live : mode === 'OFFLINE_TEMPLATE' ? e.mode.offline
-    : x?.recordedFrom ? s.agentsUi.recorded.replace('{from}', x.recordedFrom) : e.mode.recorded
+  const note = mode === 'LIVE_FOUNDRY' ? e.mode.live : mode === 'OFFLINE_TEMPLATE' ? e.mode.offline : e.mode.recorded
   return (
     <div className={`ex-mode ex-mode-${mode}`} role="group" aria-label={e.tech.mode}>
       <span className="ex-mode-badge">{MODE_BADGE[mode]}</span>
@@ -376,10 +375,10 @@ function TechnicalDetails({ x, status, s, accessible, onAccessible }: {
           {status.runtime.projectEndpointHost && <> · {status.runtime.projectEndpointHost}</>}
           {status.runtime.credential && <> · Entra ID ({status.runtime.credential})</>}
           {Object.keys(status.runtime.packages).length > 0 && <> · {Object.entries(status.runtime.packages).filter(([k]) => k.startsWith('Microsoft.Agents')).map(([k, v]) => `${k} ${v}`).join(', ')}</>}
-          {status.runtime.configurationNote && <><br />{status.runtime.provider === 'recorded' ? u.staticNote : status.runtime.configurationNote}</>}
+          {status.runtime.configurationNote && <><br />{status.runtime.provider === 'recorded' ? e.mode.recorded : status.runtime.configurationNote}</>}
         </p>
       )}
-      {x.recordedFrom && <p className="wf-banner">{u.recorded.replace('{from}', x.recordedFrom)}</p>}
+      {x.recordedFrom && <p className="wf-banner">{e.mode.recorded} ({x.recordedFrom})</p>}
       {x.executionMode !== 'RECORDED_DEMO' && <label className="wf-toggle">
         <input type="checkbox" checked={accessible} onChange={ev => onAccessible(ev.target.checked)} />
         {u.toggle}

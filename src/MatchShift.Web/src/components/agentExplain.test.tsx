@@ -276,7 +276,7 @@ describe('execution mode', () => {
     expect(offline).not.toContain('Managed identity')
     const recorded = page(asRecorded(approved(), '2026-10-19'), { status: runtime('LIVE_FOUNDRY') })
     expect(recorded).toContain('RECORDED DEMO')
-    expect(recorded).toContain('Nothing is executing live')
+    expect(recorded).toContain('Nothing is running live')
     expect(recorded).not.toContain('LIVE MICROSOFT FOUNDRY')
     expect(recorded).not.toContain('ex-mode-tech')
   })

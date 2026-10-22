@@ -123,7 +123,7 @@ export function createDemoClient(sessionId: string) {
     agentTrace: async (id: string, _p: Profile, _run = true): Promise<WorkflowExecution | null> => {
       const recordings = await agentRecordings()
       const x = recordings?.executions[id]
-      if (!x) throw new AgentRefusal('This static demo has no recorded agent workflow for this insight. Run the backend to execute the workflow live.')
+      if (!x) throw new AgentRefusal('No recorded workflow is available for this insight.')
       return asRecorded(x, recordings.recordedAt)
     },
     agentStatus: async () => recordedStatus(await agentRecordings()),
