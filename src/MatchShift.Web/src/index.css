@@ -339,7 +339,12 @@ table.evidence tr.primary td { color: var(--ink); font-weight: 600; }
 .broadcast-body, .broadcast-body #root { background: transparent; margin: 0; }
 .broadcast-view { min-height: 100vh; position: relative; }
 .broadcast-view.preview { background: #102c26; color: white; padding: 4vh 5vw; }
-.broadcast-score { padding: 16px; font-size: 24px; }
+.broadcast-intro { max-width: 760px; margin-bottom: 16px; }
+.broadcast-intro h1 { margin: 0 0 4px; font-size: clamp(18px, 2vw, 24px); }
+.broadcast-intro p { margin: 3px 0; font-size: 13px; line-height: 1.4; color: #c9ddd5; }
+.broadcast-intro a { color: #8cf5cd; }
+.broadcast-score { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 12px 0; font-size: clamp(16px, 2vw, 24px); }
+@media (max-width: 480px) { .broadcast-view.preview { padding: 20px 16px; } .broadcast-score { font-size: 16px; } }
 .broadcast-overlay { position: fixed; bottom: 5vh; left: 5vw; right: 5vw; border-left: 6px solid #69f0c0; background: rgba(12, 24, 30, .94); color: white; padding: 18px 24px; border-radius: 4px; box-shadow: 0 8px 32px #0005; }
 .broadcast-overlay p { margin: 8px 0 0; font-size: clamp(18px, 2.5vw, 34px); line-height: 1.3; }
 .broadcast-overlay small { color: #b9d3cb; }

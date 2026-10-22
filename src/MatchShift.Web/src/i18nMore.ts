@@ -144,7 +144,7 @@ export const de: BaseStrings = {
   },
   sources: { mock: 'Simulation - kein Modellaufruf', foundry: 'Microsoft Foundry - geprüfte Auswahl', template: 'Deterministischer MatchShift-Text' },
   connecting: 'Verbindung zur MatchShift-API wird hergestellt…',
-  broadcast: 'Sendung',
+  broadcast: 'Sendevorschau',
   modes: { TeachMe: 'Fußball erklärt', WhatMatters: 'Nur das Wichtigste', Analyst: 'Taktik-Analyst', MyTeam: 'Mein Verein / Spieler', Studio: 'Studio-Modus' },
   chaosStates: { CONTROLLED: 'Kontrolliert', BALANCED: 'Ausgeglichen', CHAOTIC: 'Chaotisch' },
   replay: {
@@ -309,7 +309,7 @@ export const it: BaseStrings = {
   },
   sources: { mock: 'Simulazione - nessuna chiamata al modello', foundry: 'Microsoft Foundry - selezione verificata', template: 'Testo deterministico di MatchShift' },
   connecting: "Connessione all'API di MatchShift…",
-  broadcast: 'Trasmissione',
+  broadcast: 'Anteprima trasmissione',
   modes: { TeachMe: 'Impara il calcio', WhatMatters: "Solo l'essenziale", Analyst: 'Analista tattico', MyTeam: 'La mia squadra / il mio giocatore', Studio: 'Modalità studio' },
   chaosStates: { CONTROLLED: 'Controllata', BALANCED: 'Equilibrata', CHAOTIC: 'Caotica' },
   replay: {
@@ -474,7 +474,7 @@ export const pt: BaseStrings = {
   },
   sources: { mock: 'Simulação - sem chamada ao modelo', foundry: 'Microsoft Foundry - seleção verificada', template: 'Texto determinístico da MatchShift' },
   connecting: 'A ligar à API da MatchShift…',
-  broadcast: 'Transmissão',
+  broadcast: 'Pré-visualização da transmissão',
   modes: { TeachMe: 'Aprender futebol', WhatMatters: 'Só o essencial', Analyst: 'Analista tático', MyTeam: 'O meu clube / jogador', Studio: 'Modo estúdio' },
   chaosStates: { CONTROLLED: 'Controlado', BALANCED: 'Equilibrado', CHAOTIC: 'Caótico' },
   replay: {

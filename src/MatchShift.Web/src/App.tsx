@@ -24,6 +24,7 @@ import type { GuideStep } from './guide/guide'
 import { FLAGSHIP, GUIDE_START, GUIDE_STEPS, findFlagship, wantsGuideFromUrl } from './guide/guide'
 import { evidenceLegend, splitEvidence } from './evidence'
 import { isLang } from './languages'
+import { broadcastHref } from './broadcastRoute'
 import { capDetail, insightCueClass, matchNarrationPolicy, matchTimelineLive } from './a11y/narrationPolicy'
 import { ReplayAudioFocus } from './a11y/audioFocus'
 import type { CueClass } from './a11y/speech'
@@ -506,7 +507,7 @@ export default function App() {
                 )}
               </>
             )}
-            <a className="broadcast-link" href={`${import.meta.env.BASE_URL}broadcast?session=${sessionId}&lang=${profile.language}`} target="_blank" rel="noreferrer">{s.broadcast}</a>
+            <a className="broadcast-link" href={broadcastHref('broadcast', import.meta.env.BASE_URL, location.search, sessionId, profile.language)} target="_blank" rel="noreferrer">{s.broadcast}</a>
           </div>
         </div>
       </header>

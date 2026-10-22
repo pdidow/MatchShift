@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react'
-import { api, subscribeDemo, type Snapshot, type Lang } from '../api'
+import { api, sessionId, subscribeDemo, type Snapshot, type Lang } from '../api'
 import { isLang } from '../languages'
+import { t } from '../i18n'
+import { broadcastCopy } from '../broadcastCopy'
+import { broadcastHref, broadcastRoute } from '../broadcastRoute'
 import { Pitch } from './Pitch'
 
 export function BroadcastView() {
   const [snap, setSnap] = useState<Snapshot | null>(null)
-  const preview = location.pathname.endsWith('/broadcast')
+  const preview = broadcastRoute(location.pathname, import.meta.env.BASE_URL) === 'broadcast'
+  const requested = new URLSearchParams(location.search).get('lang')
+  const lang: Lang = isLang(requested) ? requested : 'en'
     useEffect(() => {
         document.body.classList.add('broadcast-body')
 
-        const requested = new URLSearchParams(location.search).get('lang')
-        const profile = { mode: 'Studio' as const, language: (isLang(requested) ? requested : 'en') as Lang }
+        const profile = { mode: 'Studio' as const, language: lang }
 
         // Static GitHub Pages demo
         if (subscribeDemo) {
@@ -67,10 +71,15 @@ export function BroadcastView() {
 
             document.body.classList.remove('broadcast-body')
         }
-    }, [])
+    }, [lang])
   return <main className={`broadcast-view ${preview ? 'preview' : ''}`}>
+    {preview && <header className="broadcast-intro">
+      <h1>{t(lang).broadcast}</h1>
+      <p>{broadcastCopy[lang].description}</p>
+      <p>{broadcastCopy[lang].note} <a href={broadcastHref('overlay', import.meta.env.BASE_URL, location.search, sessionId, lang)} target="_blank" rel="noreferrer">{broadcastCopy[lang].overlay}</a></p>
+    </header>}
     {preview && snap && <>
-      <div className="broadcast-score">{snap.home.shortName} {snap.score.home} – {snap.score.away} {snap.away.shortName} · {snap.clock.label} · Synthetic demonstration</div>
+      <div className="broadcast-score"><span>{snap.home.shortName} {snap.score.home} – {snap.score.away} {snap.away.shortName}</span><span>{snap.clock.label} · Synthetic demonstration</span></div>
       <Pitch home={snap.home} away={snap.away} trail={snap.recentEvents} focus={null} ariaLabel="Original synthetic event visualization" />
     </>}
     {snap?.overlay && <aside className="broadcast-overlay" key={`${snap.epoch}:${snap.overlay.insightId}`}>
