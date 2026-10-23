@@ -60,6 +60,8 @@ Open the [judge demo](https://matchshift-pd.azurewebsites.net/?demo=judge), or c
 **RECORDED DEMO** replays the real result of a prior verified workflow. **OFFLINE TEMPLATE** makes no model call and is not AI-verified. Normal hosted use remains live-capable.
 Insight used: `MS-FLAGSHIP-001-I015`.
 
+The submission video's [English captions and transcript](docs/video/) and [audio and voice credits](docs/VIDEO_CREDITS.md) are available in the repository.
+
 ## Languages
 
 MatchShift currently supports English, French, Spanish, German, Italian and Portuguese (European Portuguese, pt-PT)

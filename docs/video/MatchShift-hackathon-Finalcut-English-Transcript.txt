@@ -1,0 +1,83 @@
+MatchShift Finalcut — full English sidecar-caption transcript
+Source narration: Kokoro V7/V9 edit notes and source text; timestamps follow Finalcut placements.
+V11 burns in English translation only during French speech. The sidecar SRT captions all meaningful speech in English. Music and incidental UI sounds are not captioned.
+
+00:00:06.880–00:00:10.280 | English
+Spoken: Westhaven have shifted their attack decisively to the right.
+English caption: Westhaven have shifted their attack / decisively to the right.
+
+00:00:10.280–00:00:14.680 | English
+Spoken: Right-side attacks have increased from thirty-one percent to ninety percent.
+English caption: Right-side attacks have increased / from 31% to 90%.
+
+00:00:15.150–00:00:18.280 | English
+Spoken: MatchShift doesn't just tell you what changed.
+English caption: MatchShift doesn't just tell you what changed.
+
+00:00:18.280–00:00:20.380 | English
+Spoken: WHY shows the measurements, thresholds
+English caption: WHY shows the measurements, thresholds
+
+00:00:20.380–00:00:22.300 | English
+Spoken: and confidence behind the insight.
+English caption: and confidence behind the insight.
+
+00:00:24.000–00:00:26.900 | English
+Spoken: Show me takes you to the underlying match events,
+English caption: Show me takes you to the underlying match events,
+
+00:00:26.900–00:00:30.280 | English
+Spoken: separating supporting evidence from context.
+English caption: separating supporting evidence from context.
+
+00:00:34.180–00:00:37.850 | English
+Spoken: Delacroix-Bah (Number 6) passes to the left to Pollard (Number 5),
+English caption: Delacroix-Bah, number 6, passes left / to Pollard, number 5,
+
+00:00:37.850–00:00:40.830 | English
+Spoken: in the centre, the penalty area.
+English caption: in the centre of the penalty area.
+
+00:00:42.760–00:00:45.830 | English
+Spoken: Marchetti (Number 10) passes across to Arkwright (Number 7),
+English caption: Marchetti, number 10, passes across / to Arkwright, number 7,
+
+00:00:45.830–00:00:48.710 | English
+Spoken: on the right, the attacking third.
+English caption: on the right of the attacking third.
+
+00:00:51.250–00:00:53.300 | Non-speech
+Spoken: Goal crowd reaction.
+English caption: [crowd cheers]
+
+00:00:55.500–00:00:58.980 | English
+Spoken: The match facts come from deterministic analytics.
+English caption: The match facts come from / deterministic analytics.
+
+00:00:58.980–00:01:02.280 | English
+Spoken: Specialized agents interpret, adapt and verify those grounded facts
+English caption: Specialized agents interpret, adapt / and verify those grounded facts
+
+00:01:02.280–00:01:05.100 | English
+Spoken: before anything is published.
+English caption: before anything is published.
+
+00:01:05.550–00:01:08.720 | English
+Spoken: The same intelligence can adapt to different viewers,
+English caption: The same intelligence can adapt / to different viewers,
+
+00:01:08.720–00:01:12.530 | English
+Spoken: with accessibility built in and support for six languages.
+English caption: with accessibility built in / and support for six languages.
+
+00:01:17.280–00:01:20.900 | French
+Spoken: Westhaven attaque désormais par le côté droit.
+English caption: [French narration] / Westhaven now attack down the right.
+
+00:01:20.900–00:01:25.780 | French
+Spoken: 90 % des attaques de Westhaven sur la période 50'-62' sont passées par le côté droit,
+English caption: 90% of Westhaven's attacks from 50' to 62' / came down the right,
+
+00:01:25.780–00:01:29.930 | French
+Spoken: contre 31 % plus tôt dans le match.
+English caption: compared with 31% earlier in the match.

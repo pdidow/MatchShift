@@ -1,0 +1,89 @@
+﻿1
+00:00:06,880 --> 00:00:10,280
+Westhaven have shifted their attack
+decisively to the right.
+
+2
+00:00:10,280 --> 00:00:14,680
+Right-side attacks have increased
+from 31% to 90%.
+
+3
+00:00:15,150 --> 00:00:18,280
+MatchShift doesn't just tell you what changed.
+
+4
+00:00:18,280 --> 00:00:20,380
+WHY shows the measurements, thresholds
+
+5
+00:00:20,380 --> 00:00:22,300
+and confidence behind the insight.
+
+6
+00:00:24,000 --> 00:00:26,900
+Show me takes you to the underlying match events,
+
+7
+00:00:26,900 --> 00:00:30,280
+separating supporting evidence from context.
+
+8
+00:00:34,180 --> 00:00:37,850
+Delacroix-Bah, number 6, passes left
+to Pollard, number 5,
+
+9
+00:00:37,850 --> 00:00:40,830
+in the centre of the penalty area.
+
+10
+00:00:42,760 --> 00:00:45,830
+Marchetti, number 10, passes across
+to Arkwright, number 7,
+
+11
+00:00:45,830 --> 00:00:48,710
+on the right of the attacking third.
+
+12
+00:00:51,250 --> 00:00:53,300
+[crowd cheers]
+
+13
+00:00:55,500 --> 00:00:58,980
+The match facts come from
+deterministic analytics.
+
+14
+00:00:58,980 --> 00:01:02,280
+Specialized agents interpret, adapt
+and verify those grounded facts
+
+15
+00:01:02,280 --> 00:01:05,100
+before anything is published.
+
+16
+00:01:05,550 --> 00:01:08,720
+The same intelligence can adapt
+to different viewers,
+
+17
+00:01:08,720 --> 00:01:12,530
+with accessibility built in
+and support for six languages.
+
+18
+00:01:17,280 --> 00:01:20,900
+[French narration]
+Westhaven now attack down the right.
+
+19
+00:01:20,900 --> 00:01:25,780
+90% of Westhaven's attacks from 50' to 62'
+came down the right,
+
+20
+00:01:25,780 --> 00:01:29,930
+compared with 31% earlier in the match.
