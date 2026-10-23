@@ -4,12 +4,14 @@ This file records the music, text-to-speech model, and training-data attribution
 
 ## Final submission video
 
-- **File:** `MatchShift-hackathon-v11-captioned.mp4` (kept outside Git)
-- **SHA-256:** `7658EDCCF07B5472C86056FFD568029AC5103EFC9865BC34D8BE36CD428032DD`
+- **File:** `MatchShift-hackathon-v12-ballcam-captioned.mp4` (kept outside Git)
+- **SHA-256:** `420BDCAE4434B1C43280DB4AEF631F2F14E55CD9FF1B5EC409C427EB5C6E45EB`
 - **Duration:** 107.72 seconds
 - **Format:** 1920 × 1080, 25 fps, H.264 video and AAC stereo audio
 
 The video burns in English translation only during its French narration. A full English [SRT](video/MatchShift-hackathon-Finalcut-English.srt) and [timestamped transcript](video/MatchShift-hackathon-Finalcut-English-Transcript.txt) are available separately.
+
+V12 replaces seven seconds of V11 Evidence Replay picture with judge-mode Ball Cam and ball-tracking footage of the same supporting pass. The duration, narration, music, captions, and final credits card are unchanged; V11's AAC audio stream is copied without re-encoding.
 
 ## Music
 
