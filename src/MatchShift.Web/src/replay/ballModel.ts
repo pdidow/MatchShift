@@ -129,8 +129,8 @@ export function createFootball() {
 }
 
 /** Roll about the travel axis, deterministically, so held/paused balls stay still. */
-export function orientFootball(ball: THREE.Mesh, dx: number, dz: number) {
+export function orientFootball(ball: THREE.Mesh, dx: number, dz: number, visualScale = 1) {
   const distance = Math.hypot(dx, dz)
   if (distance < 1e-5) ball.quaternion.identity()
-  else ball.quaternion.setFromAxisAngle(new THREE.Vector3(dz / distance, 0, -dx / distance), distance / BALL_RADIUS)
+  else ball.quaternion.setFromAxisAngle(new THREE.Vector3(dz / distance, 0, -dx / distance), distance / (BALL_RADIUS * visualScale))
 }

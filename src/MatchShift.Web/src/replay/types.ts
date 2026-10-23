@@ -90,4 +90,4 @@ export interface ReplaySequence {
   notice: string
 }
 
-export type CameraPreset = 'tactical' | 'sideline' | 'behindGoal' | 'player'
+export type CameraPreset = 'tactical' | 'sideline' | 'behindGoal' | 'player' | 'ballCam'

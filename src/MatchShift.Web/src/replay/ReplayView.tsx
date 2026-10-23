@@ -10,6 +10,9 @@ import { isTypingTarget, useA11y, useDialog } from '../a11y/A11yContext'
 import { describeReplayEvent } from '../a11y/describe'
 import { a11yStrings, fill, speechLang } from '../a11y/strings'
 import { ReplayScene } from './scene'
+import { BALL_PRESETS, loadBallSettings, saveBallSettings } from './ballVisualization'
+import type { BallVisualizationSettings } from './ballVisualization'
+import { ballStrings } from './ballStrings'
 import type { ReplayTick } from './scene'
 import { currentEvent, formatTime, layout, locate, matchClock, stepEvent } from './timeline'
 import type { CameraPreset, ReplayEvent, ReplaySequence } from './types'
@@ -28,7 +31,7 @@ interface Props {
 }
 
 const SPEEDS = [0.5, 1, 1.5, 2]
-const PRESETS: CameraPreset[] = ['tactical', 'sideline', 'behindGoal', 'player']
+const PRESETS: CameraPreset[] = ['tactical', 'sideline', 'behindGoal', 'player', 'ballCam']
 const INTRO_KEY = 'matchshift.replay.introSeen'
 
 const cssVar = (name: string, fallback: string) =>
@@ -37,6 +40,7 @@ const cssVar = (name: string, fallback: string) =>
 /** Full-screen 3D tactical replay of the sequence behind one MatchShift insight. */
 export default function ReplayView({ insightId, card, home, away, s, lang, onClose }: Props) {
   const r = s.replay
+  const bs = ballStrings(lang)
   const { prefs, update, reducedMotion, speech, say } = useA11y()
   const as = a11yStrings(lang)
   const audioDescription = prefs.replayAudioDescription
@@ -50,6 +54,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState<ReplayTick | null>(null)
   const [speed, setSpeed] = useState(1)
+  const [ballSettings, setBallSettings] = useState<BallVisualizationSettings>(loadBallSettings)
   const [titleClip, setTitleClip] = useState<number | null>(null)
   // Optional decorative crowd: default from device capability, an explicit choice is remembered, a slow device reduces it.
   const crowdChoice = useRef<CrowdChoice | null>(loadCrowdChoice())
@@ -77,6 +82,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
       accent: cssVar('--accent', '#39e6b0'),
     }, { reducedMotion, steady: prefs.reduceFlashing, shapes: prefs.colorVision !== 'default' })
     sceneRef.current = scene
+    scene.setBallVisualization(ballSettings)
     const caps = readCrowdCapabilities(scene.capabilities())
     crowdEnv.current = { auto: autoCrowdTier(caps), caps }
     const initialCrowd = resolveCrowdTier(crowdEnv.current.auto, crowdChoice.current, caps, false)
@@ -110,6 +116,12 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   }, [seq]) // eslint-disable-line react-hooks/exhaustive-deps -- motion options are applied live below
 
   useEffect(() => { sceneRef.current?.setMotion({ reducedMotion, steady: prefs.reduceFlashing }) }, [reducedMotion, prefs.reduceFlashing, seq])
+
+  const changeBallSettings = (settings: BallVisualizationSettings) => {
+    setBallSettings(settings)
+    saveBallSettings(settings)
+    sceneRef.current?.setBallVisualization(settings)
+  }
 
   const timeline = useMemo(() => (seq ? layout(seq) : null), [seq])
   // What the replay shows of the insight's evidence, and where its positions come from (from the sequence, never the animation).
@@ -168,7 +180,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
     return () => window.clearTimeout(id)
   }, [clipIndex, seq])
 
-  // Keyboard: Space play/pause, arrows step events, Home restart, C/1-4 cameras, D audio description,
+  // Keyboard: Space play/pause, arrows step events, Home restart, C/1-5 cameras, D audio description,
   // R repeat description, L event list, Esc closes. Keys never fire while typing or with modifier keys.
   const keyState = useRef<{ timeline: typeof timeline; tick: ReplayTick | null }>({ timeline, tick })
   const actions = useRef({ cycleCamera: () => {}, toggleAd: () => {}, repeat: () => {} })
@@ -191,7 +203,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
       else if (key === 'd') actions.current.toggleAd()
       else if (key === 'r') actions.current.repeat()
       else if (key === 'l') setShowList(v => !v)
-      else if (['1', '2', '3', '4'].includes(key)) scene.setCamera(PRESETS[Number(key) - 1])
+      else if (['1', '2', '3', '4', '5'].includes(key)) scene.setCamera(PRESETS[Number(key) - 1])
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -403,11 +415,39 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
             <div className="replay-group" role="group" aria-label={r.camera}>
               {PRESETS.map(p => (
                 <button key={p} className={`chip ${!tick.userCamera && tick.preset === p ? 'active' : ''}`} aria-pressed={!tick.userCamera && tick.preset === p}
-                  onClick={() => sceneRef.current?.setCamera(p)}>{r[p]}</button>
+                  onClick={() => sceneRef.current?.setCamera(p)}>{p === 'ballCam' ? bs.ballCam : r[p]}</button>
               ))}
               <button className="chip" onClick={() => sceneRef.current?.resetCamera()} disabled={!tick.userCamera}
                 title={r.drag}>{tick.userCamera ? r.resetCamera : r.freeCamera}</button>
             </div>
+            <details className="replay-ball-settings">
+              <summary>{bs.title}</summary>
+              <div className="replay-ball-grid">
+                <label>{bs.preset}<select value={ballSettings.preset} onChange={e => {
+                  const preset = e.target.value as keyof typeof BALL_PRESETS
+                  if (preset in BALL_PRESETS) changeBallSettings({ ...BALL_PRESETS[preset] })
+                }}>
+                  {(['broadcast', 'analysis', 'accessibility', 'clean'] as const).map(p => <option key={p} value={p}>{bs[p]}</option>)}
+                  {ballSettings.preset === 'custom' && <option value="custom">{bs.custom}</option>}
+                </select></label>
+                <label>{bs.highlight}<select value={ballSettings.highlight} onChange={e => changeBallSettings({ ...ballSettings, preset: 'custom', highlight: e.target.value as BallVisualizationSettings['highlight'] })}>
+                  {(['off', 'halo', 'ring', 'glow'] as const).map(v => <option key={v} value={v}>{bs[v]}</option>)}
+                </select></label>
+                <label>{bs.color}<select value={ballSettings.color} onChange={e => changeBallSettings({ ...ballSettings, preset: 'custom', color: e.target.value as BallVisualizationSettings['color'] })}>
+                  {(['auto', 'yellow', 'cyan', 'white', 'red'] as const).map(v => <option key={v} value={v}>{bs[v]}</option>)}
+                </select></label>
+                <label>{bs.size}<select value={ballSettings.size} onChange={e => changeBallSettings({ ...ballSettings, preset: 'custom', size: e.target.value as BallVisualizationSettings['size'] })}>
+                  {(['normal', 'enhanced', 'high'] as const).map(v => <option key={v} value={v}>{bs[v]}</option>)}
+                </select></label>
+                <label>{bs.trail}<select value={ballSettings.trail} onChange={e => changeBallSettings({ ...ballSettings, preset: 'custom', trail: e.target.value as BallVisualizationSettings['trail'] })}>
+                  {(['off', 'short', 'medium', 'long'] as const).map(v => <option key={v} value={v}>{bs[v]}</option>)}
+                </select></label>
+                <label>{bs.pulse}<select value={ballSettings.pulse ? 'on' : 'off'} onChange={e => changeBallSettings({ ...ballSettings, preset: 'custom', pulse: e.target.value === 'on' })}>
+                  <option value="on">{bs.on}</option><option value="off">{bs.off}</option>
+                </select></label>
+                <p>{bs.note}</p>
+              </div>
+            </details>
           </div>
           {crowdReduced && <p className="replay-crowd-note" role="status">{crowdReduced === 'off' ? r.crowdAutoOff : r.crowdAutoLow}</p>}
           <AboutReplay share={share} event={event} role={role} s={s} />

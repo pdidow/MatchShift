@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ballAt, cameraPose, currentEvent, floorIndex, layout, locate, matchClock, samplePlayer, stepEvent, toWorld } from './timeline'
+import { keyEventPulse, keyEventTimes } from './ballEffects'
+import { BALL_PRESETS } from './ballVisualization'
+import { BallTrail } from './BallTrail'
 import type { ReplayClip, ReplaySequence } from './types'
 
 const clip = (key: ReplayClip['key'], duration: number, startSecond = 2058): ReplayClip => ({
@@ -101,6 +104,14 @@ describe('interpolation and provenance', () => {
 })
 
 describe('camera presets', () => {
+  it('places Ball Cam above and behind the ball with context ahead', () => {
+    const ball = { x: 12, z: -4 }
+    const pose = cameraPose('ballCam', ball, 1)
+    expect(pose.position.y).toBeGreaterThan(20)
+    expect(pose.position.x).toBeLessThan(ball.x)
+    expect(pose.target.x).toBeGreaterThan(ball.x)
+    expect(cameraPose('ballCam', ball, -1).position.x).toBeGreaterThan(ball.x)
+  })
   it('puts the behind-goal camera behind the attacked goal', () => {
     expect(cameraPose('behindGoal', { x: 10, z: 0 }, 1).position.x).toBeGreaterThan(52.5)
     expect(cameraPose('behindGoal', { x: 10, z: 0 }, -1).position.x).toBeLessThan(-52.5)
@@ -119,5 +130,35 @@ describe('camera presets', () => {
     const pose = cameraPose('player', { x: 0, z: 0 }, -1, { x: 20, z: 5 })
     expect(pose.position.x).toBeGreaterThan(20)
     expect(pose.target.x).toBeLessThan(20)
+  })
+})
+
+describe('ball visualization evidence boundary', () => {
+  it('clears the trail on seek so no segment crosses the jump', () => {
+    const trail = new BallTrail(BALL_PRESETS.analysis)
+    const c = clip('key', 10)
+    trail.update(c, 1.05, true, false)
+    trail.update(c, 1.2, true, false)
+    expect(trail.line.geometry.drawRange.count).toBeGreaterThan(1)
+    trail.update(c, 3, true, true)
+    expect(trail.line.geometry.drawRange.count).toBeLessThanOrEqual(1)
+    trail.dispose()
+  })
+  it('pulses only for supporting event IDs, never context', () => {
+    const c = clip('key', 10)
+    c.events[1].isEvidence = false
+    c.events[1].isContext = true
+    const s = seq([c])
+    s.evidenceEventIds = ['a']
+    s.contextEventIds = ['b']
+    const times = keyEventTimes(s, c)
+    expect(times).toEqual([1])
+    expect(keyEventPulse(times, 1.2)).toBeGreaterThan(0)
+    expect(keyEventPulse(times, 4.2)).toBe(0)
+  })
+
+  it('keeps Clean free of added effects and Analysis as the default profile', () => {
+    expect(BALL_PRESETS.clean).toMatchObject({ highlight: 'off', trail: 'off', size: 'normal', pulse: false })
+    expect(BALL_PRESETS.analysis).toMatchObject({ highlight: 'halo', trail: 'short', size: 'enhanced', pulse: true })
   })
 })

@@ -2,6 +2,11 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { BALL_RADIUS, createFootball, orientFootball } from './ballModel'
+import { BallTrackingOverlay } from './BallTrackingOverlay'
+import { BallTrail } from './BallTrail'
+import { keyEventPulse, keyEventTimes } from './ballEffects'
+import { BALL_SIZE_SCALE, DEFAULT_BALL_SETTINGS } from './ballVisualization'
+import type { BallVisualizationSettings } from './ballVisualization'
 import { PlayerModelLibrary } from './playerModel'
 import type { Footballer } from './playerModel'
 import { REPLAY_MODEL_SCALE } from './modelScale'
@@ -77,9 +82,11 @@ export class ReplayScene {
   private readonly desiredTarget = new THREE.Vector3()
   private readonly rigs = new Map<string, PlayerRig>()
   private ball!: THREE.Mesh
+  private ballTracking!: BallTrackingOverlay
+  private ballSettings: BallVisualizationSettings = { ...DEFAULT_BALL_SETTINGS }
+  private pulseTimes: number[] = []
   private ballShadow!: THREE.Mesh
-  private trail!: THREE.Line
-  private readonly trailPoints: THREE.Vector3[] = []
+  private trail!: BallTrail
   private overlayObjects: { overlay: ReplayOverlay; object: THREE.Object3D; material?: THREE.Material & { opacity: number } }[] = []
   private passLines: { event: ReplayEvent; line: THREE.Line; head: THREE.Mesh }[] = []
   private listeners: ((tick: ReplayTick) => void)[] = []
@@ -114,7 +121,7 @@ export class ReplayScene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.05
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.shadowMap.type = THREE.PCFShadowMap
 
     this.scene.background = new THREE.Color('#070b14')
     this.scene.fog = new THREE.Fog('#070b14', 150, 320)
@@ -145,6 +152,7 @@ export class ReplayScene {
     this.total = l.total
     this.time = 0
     this.currentClip = -1
+    this.cutPending = true
     this.buildPlayers(seq.players)
     this.introDuration = flyIn && !this.options.reducedMotion ? 1.8 : 0
     this.intro = 0
@@ -158,11 +166,17 @@ export class ReplayScene {
     return () => { this.listeners = this.listeners.filter(l => l !== listener) }
   }
 
-  play() { if (this.time >= this.total - 1e-3) this.time = 0; this.playing = true; this.notify(true) }
+  play() { if (this.time >= this.total - 1e-3) { this.time = 0; this.cutPending = true; this.trail.reset(); this.applyTime(true) } this.playing = true; this.notify(true) }
   pause() { this.playing = false; this.notify(true) }
   toggle() { if (this.playing) this.pause(); else this.play() }
-  restart() { this.time = 0; this.playing = true; this.jumps++; this.applyTime(true); this.notify(true) }
+  restart() { this.time = 0; this.playing = true; this.cutPending = true; this.jumps++; this.applyTime(true); this.notify(true) }
   setSpeed(speed: number) { this.speed = speed; this.notify(true) }
+  setBallVisualization(settings: BallVisualizationSettings) {
+    this.ballSettings = settings
+    this.ballTracking.configure(settings)
+    this.trail.configure(settings)
+    this.applyTime(false)
+  }
   seek(t: number) { this.time = Math.min(Math.max(0, t), this.total); this.cutPending = true; this.jumps++; this.applyTime(true); this.notify(true) }
 
   /** Update motion/flash options live (shape coding is fixed when players are built). */
@@ -334,6 +348,10 @@ export class ReplayScene {
     this.clearClipLayer()
     this.clearPlayers()
     this.playerModels.dispose()
+    this.scene.remove(this.ballTracking.group)
+    this.ballTracking.dispose()
+    this.scene.remove(this.trail.line)
+    this.trail.dispose()
     this.scene.traverse((o) => {
       const mesh = o as THREE.Mesh
       if (mesh.geometry) mesh.geometry.dispose()
@@ -386,16 +404,16 @@ export class ReplayScene {
   private buildBall() {
     this.ball = createFootball()
     this.scene.add(this.ball)
+    this.ballTracking = new BallTrackingOverlay(this.ballSettings)
+    this.scene.add(this.ballTracking.group)
 
     this.ballShadow = new THREE.Mesh(new THREE.CircleGeometry(BALL_RADIUS * 1.25, 20), new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.35, depthWrite: false }))
     this.ballShadow.rotation.x = -Math.PI / 2
     this.ballShadow.position.y = 0.03
     this.scene.add(this.ballShadow)
 
-    const trailGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()])
-    this.trail = new THREE.Line(trailGeometry, new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55 }))
-    this.trail.frustumCulled = false
-    this.scene.add(this.trail)
+    this.trail = new BallTrail(this.ballSettings)
+    this.scene.add(this.trail.line)
   }
 
   // ---------------------------------------------------------------- players
@@ -539,6 +557,7 @@ export class ReplayScene {
     }
     this.updateCrowd(elapsed)
     this.controls.update()
+    this.ballTracking.ringFacing(this.camera)
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -584,7 +603,8 @@ export class ReplayScene {
     if (placed.index !== this.currentClip) {
       this.currentClip = placed.index
       this.buildClipLayer(clip)
-      this.trailPoints.length = 0
+      this.pulseTimes = keyEventTimes(this.seq, clip)
+      this.trail.reset()
       this.cutPending = true
       force = true
     }
@@ -594,22 +614,22 @@ export class ReplayScene {
 
     const ball = ballAt(clip, local, id => states.get(id))
     const bw = toWorld(ball.x, ball.y)
-    this.ball.position.set(bw.x, BALL_RADIUS + ball.z, bw.z)
+    const ballScale = BALL_SIZE_SCALE[this.ballSettings.size]
+    this.ball.position.set(bw.x, BALL_RADIUS * ballScale + ball.z, bw.z)
+    this.ball.scale.setScalar(ballScale)
+    this.ballTracking.group.position.copy(this.ball.position)
+    const eventPulse = this.ballSettings.pulse && !force && !this.options.steady && !this.options.reducedMotion ? keyEventPulse(this.pulseTimes, local) : 0
+    this.ballTracking.update(eventPulse, this.options.steady || this.options.reducedMotion)
     if (ball.segment) {
       const origin = toWorld(ball.segment.x0, ball.segment.y0)
-      orientFootball(this.ball, bw.x - origin.x, bw.z - origin.z)
+      orientFootball(this.ball, bw.x - origin.x, bw.z - origin.z, ballScale)
     } else this.ball.quaternion.identity()
     this.ballShadow.position.set(bw.x, 0.03, bw.z)
     const shadowScale = 1 + ball.z * 0.15
     this.ballShadow.scale.set(shadowScale, shadowScale, shadowScale)
 
-    // Ball trail: recent positions while the ball travels.
-    if (force) this.trailPoints.length = 0
-    if (ball.segment && ball.segment.motion !== 'Held') this.trailPoints.push(this.ball.position.clone())
-    else if (this.trailPoints.length > 0) this.trailPoints.shift()
-    while (this.trailPoints.length > 40) this.trailPoints.shift()
-    const pts = this.trailPoints.length >= 2 ? this.trailPoints : [this.ball.position, this.ball.position]
-    this.trail.geometry.setFromPoints(pts)
+    // Time-bounded history sampled only from the replay's already-reached ball segments.
+    this.trail.update(clip, local, this.playing, force)
 
     // Current actor and receiver.
     const active = [...clip.events].reverse().find(e => e.time <= local + 1e-6 && local - Math.max(e.time, e.endTime) < 1.2)
@@ -697,6 +717,11 @@ export class ReplayScene {
       }
       return
     }
+    if (this.preset === 'ballCam' && this.cutPending) {
+      this.snapCamera()
+      this.cutPending = false
+      return
+    }
     if (this.intro < this.introDuration) {
       // Fly-in: ease from the high establishing shot to the selected preset.
       const k = easeInOut(Math.min(1, this.intro / this.introDuration))
@@ -704,9 +729,10 @@ export class ReplayScene {
       this.controls.target.lerpVectors(new THREE.Vector3(0, 0, 0), this.desiredTarget, k)
       return
     }
-    const a = 1 - Math.exp(-dt * 2.6)
-    this.camera.position.lerp(this.desiredPos, a)
-    this.controls.target.lerp(this.desiredTarget, a)
+    const positionEase = 1 - Math.exp(-dt * (this.preset === 'ballCam' ? 4.1 : 2.6))
+    const targetEase = 1 - Math.exp(-dt * (this.preset === 'ballCam' ? 5 : 2.6))
+    this.camera.position.lerp(this.desiredPos, positionEase)
+    this.controls.target.lerp(this.desiredTarget, targetEase)
   }
 
   private notify(force: boolean) {

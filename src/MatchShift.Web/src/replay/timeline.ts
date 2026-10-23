@@ -117,9 +117,15 @@ export interface CameraPose { position: Vec3; target: Vec3 }
  * - sideline: low TV-style camera on the near touchline following the ball.
  * - behindGoal: behind the goal the attacking team is attacking, looking back up the pitch.
  * - player: behind the focus player relative to the attack direction.
+ * - ballCam: elevated, stable tracking shot with nearby action in frame.
  */
 export function cameraPose(preset: CameraPreset, ball: { x: number; z: number }, attackDirection: 1 | -1, focus?: { x: number; z: number }): CameraPose {
   switch (preset) {
+    case 'ballCam':
+      return {
+        position: { x: ball.x - attackDirection * 22, y: 24, z: ball.z + 25 },
+        target: { x: ball.x + attackDirection * 3, y: 1.2, z: ball.z },
+      }
     case 'sideline':
       return { position: { x: ball.x * 0.85, y: 13, z: 47 }, target: { x: ball.x, y: 0, z: ball.z * 0.4 } }
     case 'behindGoal':
