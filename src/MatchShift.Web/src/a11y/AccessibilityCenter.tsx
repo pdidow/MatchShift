@@ -22,6 +22,7 @@ export function AccessibilityCenter({ lang, onClose, onKeyboardHelp }: Props) {
   useDialog(ref, onClose)
   const preset = matchingPreset(prefs)
   const titleId = useId()
+  const voices = speech.compatibleVoices(speechLang(lang))
 
   // Render helpers (plain functions, not components, so inputs keep focus across re-renders).
   const toggle = (k: BoolKey) => {
@@ -107,13 +108,28 @@ export function AccessibilityCenter({ lang, onClose, onKeyboardHelp }: Props) {
             {toggle('describeVisuals')}
             {slider('speechRate', 0.5, 2, 0.1, (v) => `${formatNumber(v, lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}×`)}
             {slider('speechVolume', 0, 1, 0.1, (v) => formatPercent(v, lang))}
+            {voices.length > 1 && <div className="a11y-row">
+              <label htmlFor="a11y-voice" className="a11y-label"><span>{s.voiceChoice[0]}</span></label>
+              <select id="a11y-voice" value={prefs.voicePreferences[lang] ?? ''} onChange={e => {
+                const voicePreferences = { ...prefs.voicePreferences, [lang]: e.target.value }
+                speech.setPreferredVoices(voicePreferences)
+                update({ voicePreferences })
+              }}>
+                <option value="">{s.voiceChoice[1]}</option>
+                {voices.map(v => <option key={`${v.lang}:${v.name}`} value={v.name}>{v.name}</option>)}
+              </select>
+            </div>}
             {toggle('soundCues')}
             <div className="a11y-row">
-              <button type="button" onClick={() => speech.say({ text: s.testPhrase, kind: 'test', lang: speechLang(lang), priority: 1 }, { allowRepeat: true })}>
+              <button type="button" onClick={() => {
+                speech.stopAll()
+                speech.say({ text: s.testPhrase, kind: 'test', lang: speechLang(lang), priority: 1 }, { allowRepeat: true })
+              }}>
                 {s.testVoice}
               </button>
               {!speechState.supported && <small className="a11y-warn">{s.speech.unsupported}</small>}
               {speechState.missingVoice && <small className="a11y-warn">{s.speech.noVoice}</small>}
+              {speechState.error && <small className="a11y-warn">{s.speech.failed}</small>}
             </div>
           </section>
 

@@ -27,8 +27,9 @@ class Synth implements SynthLike {
   cancelled = 0
   voices: VoiceLike[]
   listeners = new Set<() => void>()
+  autoStart = true
   constructor(voices: VoiceLike[]) { this.voices = voices }
-  speak(u: UtteranceLike) { this.spoken.push(u); this.current = u }
+  speak(u: UtteranceLike) { this.spoken.push(u); this.current = u; if (this.autoStart) u.onstart?.() }
   cancel() { this.cancelled++; this.current = null }
   pause() {}
   resume() {}
@@ -36,6 +37,7 @@ class Synth implements SynthLike {
   addEventListener(_: 'voiceschanged', l: () => void) { this.listeners.add(l) }
   removeEventListener(_: 'voiceschanged', l: () => void) { this.listeners.delete(l) }
   end() { const u = this.current; this.current = null; u?.onend?.() }
+  fail(error: string) { const u = this.current; this.current = null; u?.onerror?.({ error }) }
   loadVoices(voices: VoiceLike[]) { this.voices = voices; for (const l of this.listeners) l() }
 }
 
@@ -66,6 +68,18 @@ describe('voice selection', () => {
   it('never picks an English voice for French or Spanish when a matching voice exists', () => {
     expect(chooseVoice(windowsChrome, 'fr-FR')?.lang).toBe('fr-FR')
     expect(chooseVoice(windowsChrome, 'es-ES')?.lang.startsWith('es')).toBe(true)
+  })
+
+  it('honours a viewer-selected French voice without crossing languages', () => {
+    const voices = [v('Hortense', 'fr-FR'), v('Julie', 'fr-FR'), v('English', 'en-GB')]
+    expect(chooseVoice(voices, 'fr-FR', [], 'Julie')?.name).toBe('Julie')
+    expect(chooseVoice(voices, 'en-GB', [], 'Julie')?.name).toBe('English')
+    const synth = new Synth(voices)
+    const q = queueOn(synth)
+    q.setPreferredVoices({ fr: 'Julie' })
+    q.setLanguage('fr')
+    q.say({ text: 'Bonjour', kind: 'test', lang: 'fr' })
+    expect(synth.spoken[0].voice?.name).toBe('Julie')
   })
 
   it('returns no explicit voice (never a different language) when the device has none for that language', () => {
@@ -123,6 +137,35 @@ describe('speech queue language handling', () => {
     expect(q.getState().missingVoice).toBe('es-ES')
     synth.loadVoices(windowsChrome)
     expect(q.getState().missingVoice).toBeNull()
+  })
+
+  it('retries a voice that fails to start using another voice of the same locale', () => {
+    const synth = new Synth([v('Hortense', 'fr-FR'), v('Julie', 'fr-FR'), v('English', 'en-GB')])
+    synth.autoStart = false
+    const q = queueOn(synth)
+    q.setLanguage('fr')
+    q.say({ text: 'Bonjour', kind: 'insight', lang: 'fr' })
+    expect(q.getState().transcript.at(-1)?.spoken).toBe(false)
+    synth.autoStart = true
+    synth.fail('voice-unavailable')
+    synth.spoken[0].onend?.() // A late callback from the failed voice must not stop the replacement.
+    expect(synth.spoken.map(u => u.voice?.name)).toEqual(['Hortense', 'Julie'])
+    expect(synth.spoken.at(-1)?.lang).toBe('fr-FR')
+    expect(q.getState().speaking).toBe(true)
+    expect(q.getState().transcript.at(-1)?.spoken).toBe(true)
+    expect(q.getState().error).toBeNull()
+  })
+
+  it('reports a failed engine instead of marking silent speech as spoken', () => {
+    const synth = new Synth([v('French', 'fr-FR')])
+    synth.autoStart = false
+    const q = queueOn(synth)
+    q.setLanguage('fr')
+    q.say({ text: 'Bonjour', kind: 'insight', lang: 'fr' })
+    synth.fail('synthesis-failed')
+    expect(q.getState().transcript.at(-1)?.spoken).toBe(false)
+    expect(q.getState().error).toBe('synthesis-failed')
+    expect(q.canRepeat).toBe(false)
   })
 
   it('switching language uses the new locale for the next utterance', () => {

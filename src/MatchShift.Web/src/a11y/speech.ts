@@ -97,6 +97,8 @@ export interface SpeechState {
   transcript: TranscriptEntry[]
   /** Language for which no installed voice was found (speech falls back to text). */
   missingVoice: string | null
+  /** Browser speech engine failed after a compatible voice was selected. */
+  error: string | null
 }
 
 // Minimal structural types so tests can provide a fake synthesiser.
@@ -107,8 +109,9 @@ export interface UtteranceLike {
   rate: number
   volume: number
   voice: VoiceLike | null
+  onstart?: (() => void) | null
   onend: (() => void) | null
-  onerror: (() => void) | null
+  onerror: ((event?: { error?: string }) => void) | null
 }
 export interface SynthLike {
   speak(u: UtteranceLike): void
@@ -128,14 +131,15 @@ const localeOf = (lang: string) => lang.toLowerCase().replace('_', '-')
  * default first, then a local voice), else null. The queue must not speak without a compatible voice: browsers can
  * ignore utterance.lang and fall back to an English default. Voices are the viewer's browser/OS voices.
  */
-export function chooseVoice(voices: VoiceLike[], lang: string): VoiceLike | null {
-  const exact = voices.filter(v => localeOf(v.lang) === localeOf(lang))
-  const same = exact.length > 0 ? exact : voices.filter(v => baseOf(v.lang) === baseOf(lang))
+export function chooseVoice(voices: VoiceLike[], lang: string, excluded: readonly string[] = [], preferredName?: string): VoiceLike | null {
+  const usable = voices.filter(v => !excluded.includes(`${localeOf(v.lang)}:${v.name}`))
+  const exact = usable.filter(v => localeOf(v.lang) === localeOf(lang))
+  const same = exact.length > 0 ? exact : usable.filter(v => baseOf(v.lang) === baseOf(lang))
   if (same.length === 0) return null
-  return same.find(v => v.default) ?? same.find(v => (v as { localService?: boolean }).localService) ?? same[0]
+  return same.find(v => v.name === preferredName) ?? same.find(v => v.default) ?? same.find(v => (v as { localService?: boolean }).localService) ?? same[0]
 }
 
-interface Queued extends SpeechMessage { priority: Priority; source: SpeechSource; createdAt: number; entry: TranscriptEntry; merged?: TranscriptEntry[] }
+interface Queued extends SpeechMessage { priority: Priority; source: SpeechSource; createdAt: number; entry: TranscriptEntry; merged?: TranscriptEntry[]; attemptedVoices?: string[] }
 
 const DEFAULT_TTL: Record<Priority, number> = { 0: 15_000, 1: 40_000, 2: 120_000 }
 const MAX_TRANSCRIPT = 200
@@ -167,7 +171,7 @@ export class SpeechQueue {
     this.synth = options?.synth !== undefined ? options.synth : browserSynth
     this.makeUtterance = options?.makeUtterance ?? ((text) => new SpeechSynthesisUtterance(text) as unknown as UtteranceLike)
     this.now = options?.now ?? (() => Date.now())
-    this.state = { supported: !!this.synth, speaking: false, paused: false, muted: false, current: null, transcript: [], missingVoice: null }
+    this.state = { supported: !!this.synth, speaking: false, paused: false, muted: false, current: null, transcript: [], missingVoice: null, error: null }
     // Voices often load after the page (getVoices() can be empty at first). One listener refreshes the cached list and
     // clears a "missing voice" notice that was only due to voices not having loaded yet.
     this.synth?.addEventListener?.('voiceschanged', this.onVoicesChanged)
@@ -175,11 +179,22 @@ export class SpeechQueue {
 
   private voices: VoiceLike[] = []
   private language: string | null = null
+  private preferredVoices: Record<string, string> = {}
 
   private readonly onVoicesChanged = () => {
     this.voices = this.synth?.getVoices() ?? []
     if (this.state.missingVoice && chooseVoice(this.voices, this.state.missingVoice)) this.update({ missingVoice: null })
+    else this.update({})
     this.pump() // Late voices may speak only cues that are still relevant to the current timeline.
+  }
+
+  /** Browser-local voice preference; only compatible voices can ever be selected. */
+  setPreferredVoices(voices: Record<string, string>) { this.preferredVoices = voices }
+
+  compatibleVoices(lang: string): VoiceLike[] {
+    this.voices = this.synth?.getVoices() ?? []
+    const exact = this.voices.filter(v => localeOf(v.lang) === localeOf(lang))
+    return exact.length ? exact : this.voices.filter(v => baseOf(v.lang) === baseOf(lang))
   }
 
   /** Detach from the browser synthesiser (tests, or if the queue is ever replaced). */
@@ -202,6 +217,7 @@ export class SpeechQueue {
     if (this.currentItem && baseOf(this.currentItem.lang) !== base) this.cancelCurrent()
     this.lastSpoken = null
     if (this.state.missingVoice && baseOf(this.state.missingVoice) !== base) this.update({ missingVoice: null })
+    if (this.state.error) this.update({ error: null })
   }
 
   subscribe(listener: (s: SpeechState) => void) {
@@ -402,7 +418,7 @@ export class SpeechQueue {
     }
     if (bestIndex < 0) return
     const item = this.queue[bestIndex]
-    const voice = this.voiceFor(item.lang)
+    const voice = this.voiceFor(item.lang, item.attemptedVoices)
     if (!voice) { this.update({ missingVoice: item.lang }); return }
     if (this.state.missingVoice) this.update({ missingVoice: null })
     this.queue.splice(bestIndex, 1)
@@ -412,28 +428,56 @@ export class SpeechQueue {
     u.volume = this.volume
     u.voice = voice
     const token = ++this.token
+    let started = false
+    const markSpoken = () => {
+      if (token !== this.token || started) return
+      started = true
+      item.entry.spoken = true
+      for (const e of item.merged ?? []) e.spoken = true
+      this.lastSpoken = item
+      this.emit()
+    }
     const done = () => {
       if (token !== this.token) return
+      if (!started) markSpoken() // Some engines omit onstart but still report successful completion.
+      this.token++
       this.currentItem = null
       this.update({ speaking: false, current: null })
       this.pump()
     }
+    const failed = (event?: { error?: string }) => {
+      if (token !== this.token) return
+      this.token++
+      const code = event?.error ?? 'synthesis-failed'
+      this.currentItem = null
+      // Firefox and Windows can expose a voice that its engine cannot actually start. Try another voice of the SAME
+      // language; never fall back to an English default for French (or another selected language).
+      if (!started && ['voice-unavailable', 'language-unavailable', 'synthesis-failed'].includes(code)) {
+        item.attemptedVoices = [...(item.attemptedVoices ?? []), `${localeOf(voice.lang)}:${voice.name}`]
+        if (this.voiceFor(item.lang, item.attemptedVoices) && this.isRelevant(item)) {
+          this.queue.unshift(item)
+          this.update({ speaking: false, current: null })
+          this.pump()
+          return
+        }
+      }
+      this.update({ speaking: false, current: null, error: code })
+      this.pump()
+    }
+    u.onstart = markSpoken
     u.onend = done
-    u.onerror = done
+    u.onerror = failed
     this.currentItem = item
-    this.lastSpoken = item
-    item.entry.spoken = true
-    for (const e of item.merged ?? []) e.spoken = true
-    this.update({ speaking: true, current: item.entry })
-    this.synth.speak(u)
+    this.update({ speaking: true, current: item.entry, error: null })
+    try { this.synth.speak(u) } catch { failed({ error: 'synthesis-failed' }) }
   }
 
   /**
    * Refresh at dispatch as well as voiceschanged: some browsers change the list without delivering that event.
    */
-  private voiceFor(lang: string): VoiceLike | null {
+  private voiceFor(lang: string, excluded: readonly string[] = []): VoiceLike | null {
     this.voices = this.synth?.getVoices() ?? []
-    return chooseVoice(this.voices, lang)
+    return chooseVoice(this.voices, lang, excluded, this.preferredVoices[baseOf(lang)])
   }
 
   private pushTranscript(entry: TranscriptEntry) {

@@ -17,7 +17,7 @@ class Synth implements SynthLike {
   cancelled = 0
   private readonly voices: VoiceLike[]
   constructor(voices: VoiceLike[] = [{ name: 'English', lang: 'en-GB' }]) { this.voices = voices }
-  speak(u: UtteranceLike) { this.spoken.push(u); this.current = u }
+  speak(u: UtteranceLike) { this.spoken.push(u); this.current = u; u.onstart?.() }
   cancel() { this.cancelled++; this.current = null }
   pause() {}
   resume() {}

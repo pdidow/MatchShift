@@ -1,6 +1,7 @@
 // Accessibility preferences. Everything is OFF by default: the full MatchShift experience is unchanged
 // unless a user opts in. The only input taken from the system is prefers-reduced-motion, and only while
 // the user has not made an explicit choice ("system").
+import { LANGUAGES, type Lang } from '../languages'
 
 export type SpeechDetail = 'major' | 'important' | 'detailed'
 export type PeriodicRecap = 'off' | '5' | '10' | 'halftime' | 'shifts'
@@ -18,6 +19,8 @@ export interface A11yPrefs {
   describeVisuals: boolean
   speechRate: number
   speechVolume: number
+  /** Optional browser-local voice choice for each MatchShift language. */
+  voicePreferences: Partial<Record<Lang, string>>
   transcript: boolean
   soundCues: boolean
   highContrast: boolean
@@ -39,6 +42,7 @@ export const DEFAULT_PREFS: A11yPrefs = {
   describeVisuals: false,
   speechRate: 1,
   speechVolume: 1,
+  voicePreferences: {},
   transcript: false,
   soundCues: false,
   highContrast: false,
@@ -60,14 +64,14 @@ export const PRESETS: Record<Exclude<PresetId, 'custom'>, Partial<A11yPrefs>> = 
 
 export function applyPreset(id: Exclude<PresetId, 'custom'>, current: A11yPrefs): A11yPrefs {
   // Keep comfort settings that are not part of any preset (speech rate and volume).
-  return { ...DEFAULT_PREFS, speechRate: current.speechRate, speechVolume: current.speechVolume, ...PRESETS[id] }
+  return { ...DEFAULT_PREFS, speechRate: current.speechRate, speechVolume: current.speechVolume, voicePreferences: current.voicePreferences, ...PRESETS[id] }
 }
 
 /** Which preset the current prefs match exactly, or "custom". */
 export function matchingPreset(p: A11yPrefs): PresetId {
   for (const id of Object.keys(PRESETS) as Exclude<PresetId, 'custom'>[]) {
     const expected = applyPreset(id, p)
-    if ((Object.keys(DEFAULT_PREFS) as (keyof A11yPrefs)[]).every(k => k === 'audioPersona' || expected[k] === p[k])) return id
+    if ((Object.keys(DEFAULT_PREFS) as (keyof A11yPrefs)[]).every(k => k === 'audioPersona' || k === 'voicePreferences' || expected[k] === p[k])) return id
   }
   return 'custom'
 }
@@ -102,6 +106,8 @@ function sanitize(p: A11yPrefs): A11yPrefs {
     reducedMotion: oneOf(p.reducedMotion, ['system', 'on', 'off'] as const, 'system'),
     speechRate: clamp(Number(p.speechRate) || 1, 0.5, 2),
     speechVolume: Number.isFinite(Number(p.speechVolume)) ? clamp(Number(p.speechVolume), 0, 1) : 1,
+    voicePreferences: Object.fromEntries(Object.entries(p.voicePreferences ?? {}).filter(([code, name]) =>
+      LANGUAGES.some(language => language.code === code) && typeof name === 'string' && name.length <= 128)) as Partial<Record<Lang, string>>,
   }
 }
 

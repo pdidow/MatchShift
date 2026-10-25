@@ -69,7 +69,7 @@ class FakeSynth implements SynthLike {
   current: UtteranceLike | null = null
   cancelled = 0
   voices: VoiceLike[] = [{ lang: 'en-GB', name: 'English', default: true }, { lang: 'fr-FR', name: 'Français' }]
-  speak(u: UtteranceLike) { this.spoken.push(u); this.current = u }
+  speak(u: UtteranceLike) { this.spoken.push(u); this.current = u; u.onstart?.() }
   cancel() { this.cancelled++; this.current = null }
   pause() {}
   resume() {}

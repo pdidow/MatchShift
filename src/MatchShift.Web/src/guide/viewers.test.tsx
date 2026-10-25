@@ -83,7 +83,7 @@ describe('one guide, every entry point', () => {
 describe('Built for every viewer', () => {
   it('4, 5: highlights the real Language menu and the real Accessibility button only during this step', () => {
     expect(appSource).toContain("<label className={`control-label ${guide === 'viewers' ? 'guide-target' : ''}`}>{s.language}")
-    expect(appSource).toContain("<A11yButton lang={profile.language} onOpen={() => setCenterOpen(true)} highlight={guide === 'viewers'} />")
+    expect(appSource).toContain("<A11yButton lang={displayedLanguage} onOpen={() => setCenterOpen(true)} highlight={guide === 'viewers'} />")
     expect(appSource).toMatch(/<select value=\{profile\.language\} onChange=/)          // still the real, usable dropdown
   })
 

@@ -64,18 +64,22 @@ export default function App() {
   const [detail, setDetail] = useState<MatchDetail | null>(null)
   const [profile, setProfile] = useState<Profile>(loadProfile)
   const [received, setSnap] = useState<Snapshot | null>(null)
-  // Never render or narrate an old-language server/demo snapshot under the new language's labels and voice.
-  const snap = received?.profile.language === profile.language ? received : null
+  // Keep the existing match view mounted while its translated snapshot arrives. Swap the data and UI labels together;
+  // narration is held until the snapshot matches the newly selected language.
+  const snap = received
+  const snapshotReady = !snap || snap.profile.language === profile.language
+  const displayedLanguage = snap?.profile.language ?? profile.language
+  const displayedProfile = displayedLanguage === profile.language ? profile : { ...profile, language: displayedLanguage }
   const currentLanguage = useRef(profile.language)
   const currentSnapshot = useRef(snap)
-  currentSnapshot.current = snap
+  currentSnapshot.current = snapshotReady ? snap : null
   const [connected, setConnected] = useState(false)
   const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(window.location.search).get('tab') as Tab) ?? 'live')
   const [selected, setSelected] = useState<string | null>(() => new URLSearchParams(window.location.search).get('select'))
   const [why, setWhy] = useState<InsightCard | null>(null)
   const [focus, setFocus] = useState<{ events: InsightEvents; caption: string; teamId?: string; insightId?: string } | null>(null)
   const [replayId, setReplayId] = useState<string | null>(null)
-  const s = t(profile.language)
+  const s = t(displayedLanguage)
 
   // Optional accessibility layer (everything off by default).
   const a11y = useA11y()
@@ -83,13 +87,14 @@ export default function App() {
   // Ask the agent workflow for accessible (spoken / nonvisual) output only when this viewer uses those features.
   const wantsAccessible = speechEnabled(prefs) || prefs.describeVisuals || prefs.simplified
   const streamProfile = useMemo<Profile>(() => ({ ...profile, accessible: wantsAccessible }), [profile, wantsAccessible])
-  const as = a11yStrings(profile.language)
-  const voiceLang = speechLang(profile.language)
+  const as = a11yStrings(displayedLanguage)
+  const voiceLang = speechLang(displayedLanguage)
   // Switching language drops and stops queued narration in the old language, so it never keeps playing.
   useLayoutEffect(() => {
     currentLanguage.current = profile.language
-    setLanguage(voiceLang)
-  }, [setLanguage, profile.language, voiceLang])
+    setLanguage(speechLang(profile.language))
+    document.documentElement.lang = speechLang(displayedLanguage)
+  }, [setLanguage, profile.language, displayedLanguage])
   const [centerOpen, setCenterOpen] = useState(false)
   const [keysOpen, setKeysOpen] = useState(false)
   const [description, setDescription] = useState<string | null>(null)
@@ -202,7 +207,8 @@ export default function App() {
     })
     return () => cancelAnimationFrame(frame)
   }, [focus])
-  useEffect(() => { setWhy(null); setFocus(null) }, [profile])
+  useEffect(() => { setWhy(null); setFocus(null) }, [profile.mode, profile.focusTeamId, profile.focusPlayerId])
+  useEffect(() => { setDescription(null) }, [displayedLanguage])
 
   const flagship = snap ? findFlagship(snap.matchId, snap.insights) : undefined
   const scrollToCard = (id: string) => window.setTimeout(() =>
@@ -308,7 +314,7 @@ export default function App() {
   // Deep links: ?why=<insightId> opens the evidence, ?show=<insightId> draws it on the pitch.
   const [deepLinkDone, setDeepLinkDone] = useState(false)
   useEffect(() => {
-    if (!snap || deepLinkDone) return
+    if (!snap || !snapshotReady || deepLinkDone) return
     const params = new URLSearchParams(window.location.search)
     const whyId = params.get('why')
     const showId = params.get('show')
@@ -333,8 +339,8 @@ export default function App() {
   // the match has already moved past is dropped instead of being spoken late. Speech never slows the match down. A
   // finished match no longer moves, so its final cues (the goal on the whistle, full time) may still speak.
   useEffect(() => {
-    if (snap) a11y.speech.setTimeline('match', snap.clock.second, matchTimelineLive(snap))
-  }, [snap?.clock.second, snap?.isPlaying, snap?.finished, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (snap && snapshotReady) a11y.speech.setTimeline('match', snap.clock.second, matchTimelineLive(snap))
+  }, [snap?.clock.second, snap?.isPlaying, snap?.finished, snap?.epoch, snapshotReady]) // eslint-disable-line react-hooks/exhaustive-deps
   const policy = matchNarrationPolicy(snap?.speed ?? 2)
 
   // ---------------------------------------------------------------- accessibility: new insights
@@ -342,7 +348,7 @@ export default function App() {
   // insights are marked as seen so nothing is read out as a backlog.
   const seenInsights = useRef<{ key: string; ids: Set<string> } | null>(null)
   useEffect(() => {
-    if (!snap) return
+    if (!snap || !snapshotReady) return
     const key = `${snap.matchId}:${snap.epoch}`
     if (seenInsights.current?.key !== key) {
       seenInsights.current = { key, ids: new Set(snap.insights.map(i => i.id)) }
@@ -357,7 +363,7 @@ export default function App() {
     // A burst (fast playback) is trimmed to the most important few; the queue discards anything that goes stale.
     const ranked = [...fresh].sort((a, b) => priorityOf(b) - priorityOf(a) || b.importance - a.importance).slice(0, 3)
     a11y.cue(cueFor(ranked[0].type))
-    if (prefs.spokenInsights) {
+    if (prefs.spokenInsights || prefs.audioMatchMode) {
       // Faster playback says less, never later: the speed policy caps detail and drops lower-priority insights.
       const detail = capDetail(prefs.speechDetail, policy.detailCap)
       for (const card of ranked) {
@@ -377,18 +383,18 @@ export default function App() {
     if (prefs.periodicRecap === 'shifts' && policy.minPriority === 0 && ranked.some(c => SHIFT_TYPES.has(c.type) && c.severity === 'High')) {
       a11y.say({ text: matchStatus(snap, as), priority: 0, kind: 'recap', key: `recap:${key}:${snap.clock.minute}`, clock: snap.clock.label, lang: voiceLang, label: as.opt.periodicRecap[0], source: 'match', at: snap.clock.second })
     }
-  }, [snap?.insights, snap?.matchId, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [snap?.insights, snap?.matchId, snap?.epoch, snapshotReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // A language switch changes the wording of insights already on screen without producing a new match event.
   // Answer that explicit viewer action once, after its localized snapshot arrives; never replay the entire feed.
   const narratedLanguage = useRef(profile.language)
   useEffect(() => {
-    if (!snap || narratedLanguage.current === profile.language) return
+    if (!snap || !snapshotReady || narratedLanguage.current === profile.language) return
     narratedLanguage.current = profile.language
     if (replayId || !speechEnabled(prefs)) return
     const recent = snap.insights.filter(i => i.second <= snap.clock.second && snap.clock.second - i.second <= 180)
       .sort((a, b) => b.second - a.second)
-    const card = prefs.spokenInsights ? (
+    const card = (prefs.spokenInsights || prefs.audioMatchMode) ? (
       recent.find(i => i.id === selected && shouldSpeak(i, prefs.speechDetail)) ??
       recent.find(i => shouldSpeak(i, prefs.speechDetail))
     ) : undefined
@@ -403,12 +409,12 @@ export default function App() {
         clock: snap.clock.label, lang: voiceLang, label: as.opt.audioMatchMode[0], source: 'ui',
       }, { allowRepeat: true })
     }
-  }, [snap?.profile.language, profile.language, snap?.matchId, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [snap?.profile.language, profile.language, snap?.matchId, snap?.epoch, snapshotReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- accessibility: score, half-time, recaps
   const matchState = useRef<{ key: string; minute: number; home: number; away: number; finished: boolean } | null>(null)
   useEffect(() => {
-    if (!snap) return
+    if (!snap || !snapshotReady) return
     const key = `${snap.matchId}:${snap.epoch}`
     const prev = matchState.current
     const now = { key, minute: snap.clock.minute, home: snap.score.home, away: snap.score.away, finished: snap.finished }
@@ -432,10 +438,10 @@ export default function App() {
       a11y.speech.clearKind('recap') // an older recap still waiting is stale
       status(`recap:${key}:${now.minute}`, matchStatus(snap, as), 0, 'recap')
     }
-  }, [snap]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [snap, snapshotReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const speakStatus = () => {
-    if (snap) a11y.say({ text: matchStatus(snap, as), priority: 1, kind: 'status', clock: snap.clock.label, lang: voiceLang, label: as.opt.audioMatchMode[0] }, { allowRepeat: true })
+    if (snap && snapshotReady) a11y.say({ text: matchStatus(snap, as), priority: 1, kind: 'status', clock: snap.clock.label, lang: voiceLang, label: as.opt.audioMatchMode[0] }, { allowRepeat: true })
   }
   // Turning Audio Match Mode on gives an immediate status, so the user knows it works.
   const audioModeWasOn = useRef(prefs.audioMatchMode)
@@ -475,7 +481,7 @@ export default function App() {
   }
 
   const readAloud = (text: string, kind: string, label?: string) =>
-    a11y.say({ text, priority: 1, kind, label, lang: voiceLang, clock: snap?.clock.label }, { allowRepeat: true })
+    snapshotReady && a11y.say({ text, priority: 1, kind, label, lang: voiceLang, clock: snap?.clock.label }, { allowRepeat: true })
 
   if (!snap) {
     return (
@@ -485,8 +491,11 @@ export default function App() {
     )
   }
 
+  const focusCard = focus?.insightId ? snap.insights.find(i => i.id === focus.insightId) : undefined
+  const focusCaption = focusCard ? `${focusCard.minute}' · ${focusCard.narrative.headline}` : focus?.caption
+
   return (
-    <div className="app">
+    <div className="app" aria-busy={!snapshotReady}>
       {/* Keyboard and screen-reader users can go straight to the insights, past the match chrome. */}
       <a className="skip-link" href="#tab-panel" onClick={(e) => {
         e.preventDefault()
@@ -502,17 +511,17 @@ export default function App() {
         </div>
 
         {/* Not a live region: the clock changes every second. Goals are announced through the shared announcer. */}
-        <div className="scoreboard" role="group" aria-label={`${snap.home.shortName} ${snap.score.home}, ${snap.away.shortName} ${snap.score.away}, ${spokenClock(snap.clock.second, profile.language)}`}>
+        <div className="scoreboard" role="group" aria-label={`${snap.home.shortName} ${snap.score.home}, ${snap.away.shortName} ${snap.score.away}, ${spokenClock(snap.clock.second, displayedLanguage)}`}>
           <span className="team-name"><span className="team-swatch" style={{ background: HOME_COLOR }} />{snap.home.shortName}</span>
           <span className="score">{snap.score.home} – {snap.score.away}</span>
           <span className="team-name">{snap.away.shortName}<span className="team-swatch swatch-away" style={{ background: AWAY_COLOR }} /></span>
-          <span className="clock" aria-label={spokenClock(snap.clock.second, profile.language)}>{snap.clock.label}</span>
+          <span className="clock" aria-label={spokenClock(snap.clock.second, displayedLanguage)}>{snap.clock.label}</span>
         </div>
 
         <div className="controls-right">
           <div className="viewer-utilities">
             {!guide && <button className="chip guide-entry" onClick={() => goGuide(GUIDE_START)} title={`${s.home.tour} ${s.guide.entryHint}`}>{s.guide.entry}</button>}
-            <A11yButton lang={profile.language} onOpen={() => setCenterOpen(true)} highlight={guide === 'viewers'} />
+            <A11yButton lang={displayedLanguage} onOpen={() => setCenterOpen(true)} highlight={guide === 'viewers'} />
             <label className={`control-label ${guide === 'viewers' ? 'guide-target' : ''}`}>{s.language}
               <select value={profile.language} onChange={(e) => update({ language: e.target.value as Lang })}>
                 {(meta?.languages ?? [{ code: 'en', name: 'English' }]).map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
@@ -550,7 +559,7 @@ export default function App() {
                 )}
               </>
             )}
-            <a className="broadcast-link" href={broadcastHref('broadcast', import.meta.env.BASE_URL, location.search, sessionId, profile.language)} target="_blank" rel="noreferrer">{s.broadcast}</a>
+            <a className="broadcast-link" href={broadcastHref('broadcast', import.meta.env.BASE_URL, location.search, sessionId, displayedLanguage)} target="_blank" rel="noreferrer">{s.broadcast}</a>
           </div>
         </div>
       </header>
@@ -587,23 +596,23 @@ export default function App() {
                   onAgents={() => openVerification(card.id)} />
               )))}
             {tab === 'highlights' && <HighlightsPanel snap={snap} s={s} onShow={(h) => void showHighlight(h)} onReplay={openReplay} />}
-            {tab === 'recap' && <RecapPanel snap={snap} s={s} profile={profile} styles={meta?.recapStyles ?? ['Casual', 'Analyst', 'Broadcast', 'Social']} />}
+            {tab === 'recap' && <RecapPanel snap={snap} s={s} profile={displayedProfile} styles={meta?.recapStyles ?? ['Casual', 'Analyst', 'Broadcast', 'Social']} />}
             {tab === 'agents' && (() => {
               // The insight being explained, with the same evidence actions as its card (WHY? > SHOW ME > Evidence Replay).
               const card = snap.insights.find(i => i.id === selected)
-              return <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} card={card} profile={streamProfile} defaultAccessible s={s}
+              return <AgentWorkflowPanel key={`${snap.matchId}:${snap.epoch}`} insightId={selected} card={card} profile={{ ...streamProfile, language: displayedLanguage }} defaultAccessible s={s}
                 onWhy={card ? () => setWhy(card) : undefined} onShow={card ? () => void showInsight(card) : undefined} onReplay={card ? () => openReplay(card.id) : undefined} />
             })()}
           </div>
         </aside>
 
         <div className="left">
-          <div className="pitch-wrap" id="match-evidence" tabIndex={-1} role="region" aria-label={focus ? `${s.showMe}: ${focus.caption}` : `${snap.home.name} v ${snap.away.name}`}>
+          <div className="pitch-wrap" id="match-evidence" tabIndex={-1} role="region" aria-label={focus ? `${s.showMe}: ${focusCaption}` : `${snap.home.name} v ${snap.away.name}`}>
             <Pitch home={snap.home} away={snap.away} trail={snap.recentEvents} focus={focus?.events ?? null}
-              focusTeamId={focus?.teamId} ariaLabel={focus ? focus.caption : `${snap.home.shortName} v ${snap.away.shortName}`} />
+              focusTeamId={focus?.teamId} ariaLabel={focus ? (focusCaption ?? '') : `${snap.home.shortName} v ${snap.away.shortName}`} />
             {focus && (
               <div className="pitch-overlay-bar">
-                <span className="pitch-caption"><strong>{s.showMe}:</strong> {focus.caption}</span>
+                <span className="pitch-caption"><strong>{s.showMe}:</strong> {focusCaption}</span>
                 <span style={{ display: 'flex', gap: 6 }}>
                   {prefs.describeVisuals && (
                     <button className="chip" onClick={() => {
@@ -633,7 +642,7 @@ export default function App() {
             </div>
             {description && focus && <p className="pitch-description"><strong>{as.describe.title}:</strong> {description}</p>}
           </div>
-          {snap.focusedPlayer && <PlayerPanel player={snap.focusedPlayer} lang={profile.language}
+          {snap.focusedPlayer && <PlayerPanel player={snap.focusedPlayer} lang={displayedLanguage}
             name={players.find(p => p.id === snap.focusedPlayer?.playerId)?.name ?? snap.focusedPlayer.playerId} />}
           <MetricsStrip snap={snap} s={s} />
         </div>
@@ -665,14 +674,14 @@ export default function App() {
       {replayId && (
         <Suspense fallback={<div className="replay-root"><div className="replay-status">{s.replay.loading}</div></div>}>
           <ReplayView insightId={replayId} card={snap.insights.find(i => i.id === replayId)} home={snap.home} away={snap.away} s={s}
-            lang={profile.language} onClose={() => setReplayId(null)} />
+            lang={displayedLanguage} onClose={() => setReplayId(null)} />
         </Suspense>
       )}
 
-      {guide && <JudgeGuide step={guide} s={s} lang={profile.language} onGo={goGuide} onExit={() => setGuide(null)} onOpenA11y={() => setCenterOpen(true)} />}
-      <SpeechBar lang={profile.language} overReplay={!!replayId} onStatus={prefs.audioMatchMode ? speakStatus : undefined} />
-      {centerOpen && <AccessibilityCenter lang={profile.language} onClose={() => setCenterOpen(false)} onKeyboardHelp={() => { setCenterOpen(false); setKeysOpen(true) }} />}
-      {keysOpen && <KeyboardHelp lang={profile.language} onClose={() => setKeysOpen(false)} />}
+      {guide && <JudgeGuide step={guide} s={s} lang={displayedLanguage} onGo={goGuide} onExit={() => setGuide(null)} onOpenA11y={() => setCenterOpen(true)} />}
+      <SpeechBar lang={displayedLanguage} overReplay={!!replayId} onStatus={prefs.audioMatchMode ? speakStatus : undefined} />
+      {centerOpen && <AccessibilityCenter lang={displayedLanguage} onClose={() => setCenterOpen(false)} onKeyboardHelp={() => { setCenterOpen(false); setKeysOpen(true) }} />}
+      {keysOpen && <KeyboardHelp lang={displayedLanguage} onClose={() => setKeysOpen(false)} />}
     </div>
   )
 }

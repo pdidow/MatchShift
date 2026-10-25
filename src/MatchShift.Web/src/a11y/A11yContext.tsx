@@ -74,6 +74,7 @@ export function A11yProvider({ children }: { children: ReactNode }) {
     speech.rate = prefs.speechRate
     speech.volume = prefs.speechVolume
   }, [speech, prefs.speechRate, prefs.speechVolume])
+  useEffect(() => { speech.setPreferredVoices(prefs.voicePreferences) }, [speech, prefs.voicePreferences])
   useEffect(() => { if (!anySpeech) speech.stopAll() }, [speech, anySpeech])
   useEffect(() => { if (!prefs.replayAudioDescription) speech.clearKind('replay') }, [speech, prefs.replayAudioDescription])
 

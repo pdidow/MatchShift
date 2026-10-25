@@ -12,7 +12,7 @@ class Synth implements SynthLike {
   current: UtteranceLike | null = null
   cancelled = 0
   getVoices(): VoiceLike[] { return [{ name: 'English', lang: 'en-GB' }] }
-  speak(u: UtteranceLike) { this.spoken.push(u); this.current = u }
+  speak(u: UtteranceLike) { this.spoken.push(u); this.current = u; u.onstart?.() }
   cancel() { this.cancelled++; this.current = null }
   pause() {}
   resume() {}
