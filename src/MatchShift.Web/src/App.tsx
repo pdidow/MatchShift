@@ -190,7 +190,7 @@ export default function App() {
       setProfile(p => ({ ...p, focusPlayerId: null }))
   }, [detail, snap?.matchId, profile.focusTeamId, profile.focusPlayerId])
 
-  useEffect(() => { setWhy(null); setFocus(null); setSelected(null); setReplayId(null) }, [snap?.matchId, snap?.epoch])
+  useEffect(() => { setWhy(null); setFocus(null); setSelected(null); setReplayId(null) }, [received?.matchId, received?.epoch])
   useEffect(() => { setDescription(null) }, [focus])
   // SHOW ME can be below the feed on a phone. Move both the viewport and keyboard focus to its evidence.
   useEffect(() => {
@@ -378,6 +378,32 @@ export default function App() {
       a11y.say({ text: matchStatus(snap, as), priority: 0, kind: 'recap', key: `recap:${key}:${snap.clock.minute}`, clock: snap.clock.label, lang: voiceLang, label: as.opt.periodicRecap[0], source: 'match', at: snap.clock.second })
     }
   }, [snap?.insights, snap?.matchId, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A language switch changes the wording of insights already on screen without producing a new match event.
+  // Answer that explicit viewer action once, after its localized snapshot arrives; never replay the entire feed.
+  const narratedLanguage = useRef(profile.language)
+  useEffect(() => {
+    if (!snap || narratedLanguage.current === profile.language) return
+    narratedLanguage.current = profile.language
+    if (replayId || !speechEnabled(prefs)) return
+    const recent = snap.insights.filter(i => i.second <= snap.clock.second && snap.clock.second - i.second <= 180)
+      .sort((a, b) => b.second - a.second)
+    const card = prefs.spokenInsights ? (
+      recent.find(i => i.id === selected && shouldSpeak(i, prefs.speechDetail)) ??
+      recent.find(i => shouldSpeak(i, prefs.speechDetail))
+    ) : undefined
+    if (card) {
+      a11y.say({
+        text: insightSpeech(card, capDetail(prefs.speechDetail, policy.detailCap), prefs.simplified, as, teamName, opponentOf),
+        priority: 1, kind: 'insight', label: card.narrative.typeLabel,
+        clock: `${card.minute}'`, lang: voiceLang, source: 'ui',
+      }, { allowRepeat: true })
+    } else if (prefs.audioMatchMode || prefs.spokenInsights) {
+      a11y.say({ text: matchStatus(snap, as), priority: 1, kind: 'status',
+        clock: snap.clock.label, lang: voiceLang, label: as.opt.audioMatchMode[0], source: 'ui',
+      }, { allowRepeat: true })
+    }
+  }, [snap?.profile.language, profile.language, snap?.matchId, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- accessibility: score, half-time, recaps
   const matchState = useRef<{ key: string; minute: number; home: number; away: number; finished: boolean } | null>(null)
