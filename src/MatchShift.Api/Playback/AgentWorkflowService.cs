@@ -28,6 +28,7 @@ public sealed class AgentWorkflowService(
 
     private readonly TimeProvider _time = time ?? TimeProvider.System;
     private readonly ConcurrentDictionary<string, Handle> _handles = new();
+    private readonly object _startGate = new();
     private readonly SemaphoreSlim _slots = new(Math.Max(1, options.MaxConcurrentWorkflows));
     private readonly InsightWorkflowRunner _offline = new(new OfflineTemplateAgentFactory(), runner.Limits);
     private readonly CancellationTokenSource _stopping = new();
@@ -76,6 +77,13 @@ public sealed class AgentWorkflowService(
     /// </summary>
     public StartResult GetOrStart(DemoSession session, Insight insight, ViewerProfile profile, bool accessibility, WorkflowTrigger trigger,
         string? client = null)
+    {
+        // Atomically de-duplicate and reserve: simultaneous pollers must not consume multiple run allowances.
+        lock (_startGate) return StartLocked(session, insight, profile, accessibility, trigger, client);
+    }
+
+    private StartResult StartLocked(DemoSession session, Insight insight, ViewerProfile profile, bool accessibility, WorkflowTrigger trigger,
+        string? client)
     {
         client ??= CurrentClient();
         var match = session.Match;

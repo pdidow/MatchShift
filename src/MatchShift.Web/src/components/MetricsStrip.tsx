@@ -2,10 +2,10 @@ import type { Snapshot } from '../api'
 import type { Strings } from '../i18n'
 import { performanceLabels } from './PlayerPanel'
 import { AWAY_COLOR, HOME_COLOR } from './Pitch'
-
-const pct = (v: number) => `${Math.round(v * 100)}%`
+import { formatNumber, formatPercent } from '../languages'
 
 export function MetricsStrip({ snap, s }: { snap: Snapshot; s: Strings }) {
+  const pct = (v: number) => formatPercent(v, snap.profile.language)
   const labels = performanceLabels(snap.profile.language)
   const m = snap.metrics
   const home = Math.round(m.homeControl)
@@ -64,7 +64,7 @@ export function MetricsStrip({ snap, s }: { snap: Snapshot; s: Strings }) {
                 <span className="label"><i className={i === 1 ? 'dot-away' : 'dot-home'} style={{ width: 8, height: 8, borderRadius: '50%', background: i === 0 ? HOME_COLOR : AWAY_COLOR, display: 'inline-block' }} />{team.shortName}</span>
                 <span className="big-number">{Math.round(t.pressure)}</span>
                 <div className="mini-bar"><div className={i === 1 ? 'fill-away' : undefined} style={{ width: `${t.pressure}%`, background: i === 0 ? HOME_COLOR : AWAY_COLOR }} /></div>
-                <span className="label">{s.shots} {t.shots} · xQ {t.chanceQuality.toFixed(2)}</span>
+                <span className="label">{s.shots} {t.shots} · xQ {formatNumber(t.chanceQuality, snap.profile.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             )
           })}

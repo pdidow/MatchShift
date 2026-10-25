@@ -4,6 +4,7 @@ import { de, it, pt } from './stringsMore'
 
 // Strings for accessibility features. Templates use {slot} placeholders; numbers come from structured evidence.
 const en = {
+  locale: localeOf('en'),
   open: 'Accessibility',
   title: 'Accessibility Center',
   intro: 'Everything here is optional and off by default. Turn on only what helps you - the rest of MatchShift stays as it is.',
@@ -39,7 +40,7 @@ const en = {
   testPhrase: 'MatchShift speech is on.',
   keyboardHelp: 'Keyboard shortcuts',
   status: { speech: 'Speech on', transcript: 'Transcript', highContrast: 'High contrast', colorVision: 'Colour vision mode', largeText: 'Large text', reducedMotion: 'Reduced motion', reduceFlashing: 'Reduced effects', simplified: 'Simplified', soundCues: 'Sound cues' },
-  speech: { mute: 'Mute speech', unmute: 'Unmute speech', pause: 'Pause speech', resume: 'Resume speech', repeat: 'Repeat last', transcript: 'Transcript', hide: 'Hide transcript', noVoice: 'This device has no voice for this language - the browser picks the closest voice, and the text is shown.', unsupported: 'Speech is not available in this browser - showing text instead.', speaking: 'Speaking', idle: 'Speech ready', clear: 'Clear', empty: 'Nothing spoken yet.', replayEntry: 'Speak again', statusNow: 'Match status' },
+  speech: { mute: 'Mute speech', unmute: 'Unmute speech', pause: 'Pause speech', resume: 'Resume speech', repeat: 'Repeat last', transcript: 'Transcript', hide: 'Hide transcript', noVoice: 'No matching voice is available for this language. Narration is shown as text until a compatible voice is available.', unsupported: 'Speech is not available in this browser - showing text instead.', speaking: 'Speaking', idle: 'Speech ready', clear: 'Clear', empty: 'Nothing spoken yet.', replayEntry: 'Speak again', statusNow: 'Match status' },
   why: { read: 'Read explanation', readChange: 'Read what changed', fact: 'Fact', inference: 'Inference', explanation: 'Possible explanation', confidence: 'Confidence', evidence: 'Supporting evidence', between: 'between {from} and {to}', changed: 'At minute {minute}, MatchShift detected a change. Before the change, {metric} was {before}{beforeWindow}. Afterwards it was {after}{afterWindow}.' },
   describe: { button: 'Describe this', title: 'Description' },
   simplified: { more: 'More detail', less: 'Less detail' },
@@ -70,7 +71,7 @@ const en = {
   replay: { audioDescription: 'Audio description', eventList: 'Event list', hideList: 'Hide list', repeat: 'Repeat description', listTitle: 'Replay events', on: 'on', off: 'off' },
   // --- spoken / described text -----------------------------------------------------------------
   status_: {
-    minutes: '{minute} minutes played.',
+    minutes: '{duration} played.',
     level: 'The match is level, {home} {hs}, {away} {as}.',
     lead: '{leader} lead {ls} to {ts}.',
     control: '{team} have had the upper hand in the last ten minutes.',
@@ -144,6 +145,7 @@ const en = {
 export type A11yStrings = typeof en
 
 const fr: A11yStrings = {
+  locale: localeOf('fr'),
   open: 'Accessibilité',
   title: "Centre d'accessibilité",
   intro: "Tout ici est facultatif et désactivé par défaut. Activez seulement ce qui vous aide - le reste de MatchShift ne change pas.",
@@ -179,7 +181,7 @@ const fr: A11yStrings = {
   testPhrase: 'La voix de MatchShift est activée.',
   keyboardHelp: 'Raccourcis clavier',
   status: { speech: 'Voix activée', transcript: 'Transcription', highContrast: 'Contraste élevé', colorVision: 'Vision des couleurs', largeText: 'Grand texte', reducedMotion: 'Mouvement réduit', reduceFlashing: 'Effets réduits', simplified: 'Simplifié', soundCues: 'Signaux sonores' },
-  speech: { mute: 'Couper la voix', unmute: 'Réactiver la voix', pause: 'Mettre en pause', resume: 'Reprendre', repeat: 'Répéter', transcript: 'Transcription', hide: 'Masquer la transcription', noVoice: "Cet appareil n'a pas de voix pour cette langue - le navigateur choisit la plus proche, et le texte est affiché.", unsupported: "La synthèse vocale n'est pas disponible - affichage du texte.", speaking: 'Lecture', idle: 'Voix prête', clear: 'Effacer', empty: "Rien n'a encore été lu.", replayEntry: 'Relire', statusNow: 'État du match' },
+  speech: { mute: 'Couper la voix', unmute: 'Réactiver la voix', pause: 'Mettre en pause', resume: 'Reprendre', repeat: 'Répéter', transcript: 'Transcription', hide: 'Masquer la transcription', noVoice: 'Aucune voix compatible n’est disponible pour cette langue. La narration reste affichée en texte en attendant une voix compatible.', unsupported: "La synthèse vocale n'est pas disponible - affichage du texte.", speaking: 'Lecture', idle: 'Voix prête', clear: 'Effacer', empty: "Rien n'a encore été lu.", replayEntry: 'Relire', statusNow: 'État du match' },
   why: { read: "Lire l'explication", readChange: 'Lire ce qui a changé', fact: 'Fait', inference: 'Inférence', explanation: 'Explication possible', confidence: 'Confiance', evidence: 'Preuves', between: 'entre {from} et {to}', changed: 'À la {minute}e minute, MatchShift a détecté un changement. Avant, {metric} était de {before}{beforeWindow}. Ensuite, {after}{afterWindow}.' },
   describe: { button: 'Décrire', title: 'Description' },
   simplified: { more: 'Plus de détails', less: 'Moins de détails' },
@@ -209,7 +211,7 @@ const fr: A11yStrings = {
   },
   replay: { audioDescription: 'Audiodescription', eventList: 'Liste des événements', hideList: 'Masquer la liste', repeat: 'Répéter la description', listTitle: 'Événements du replay', on: 'activée', off: 'désactivée' },
   status_: {
-    minutes: '{minute} minutes de jeu.',
+    minutes: '{duration} de jeu.',
     level: 'Le score est de parité, {home} {hs}, {away} {as}.',
     lead: '{leader} mène {ls} à {ts}.',
     control: '{team} domine depuis dix minutes.',
@@ -281,6 +283,7 @@ const fr: A11yStrings = {
 }
 
 const es: A11yStrings = {
+  locale: localeOf('es'),
   open: 'Accesibilidad',
   title: 'Centro de accesibilidad',
   intro: 'Todo aquí es opcional y está desactivado por defecto. Activa solo lo que te ayude: el resto de MatchShift no cambia.',
@@ -316,7 +319,7 @@ const es: A11yStrings = {
   testPhrase: 'La voz de MatchShift está activada.',
   keyboardHelp: 'Atajos de teclado',
   status: { speech: 'Voz activada', transcript: 'Transcripción', highContrast: 'Alto contraste', colorVision: 'Visión del color', largeText: 'Texto grande', reducedMotion: 'Movimiento reducido', reduceFlashing: 'Efectos reducidos', simplified: 'Simplificado', soundCues: 'Señales sonoras' },
-  speech: { mute: 'Silenciar voz', unmute: 'Activar voz', pause: 'Pausar voz', resume: 'Reanudar voz', repeat: 'Repetir', transcript: 'Transcripción', hide: 'Ocultar transcripción', noVoice: 'Este dispositivo no tiene voz para este idioma: el navegador elige la más cercana y se muestra el texto.', unsupported: 'La síntesis de voz no está disponible: se muestra el texto.', speaking: 'Hablando', idle: 'Voz lista', clear: 'Borrar', empty: 'Aún no se ha leído nada.', replayEntry: 'Volver a leer', statusNow: 'Estado del partido' },
+  speech: { mute: 'Silenciar voz', unmute: 'Activar voz', pause: 'Pausar voz', resume: 'Reanudar voz', repeat: 'Repetir', transcript: 'Transcripción', hide: 'Ocultar transcripción', noVoice: 'No hay una voz compatible para este idioma. La narración se muestra como texto hasta que haya una voz compatible.', unsupported: 'La síntesis de voz no está disponible: se muestra el texto.', speaking: 'Hablando', idle: 'Voz lista', clear: 'Borrar', empty: 'Aún no se ha leído nada.', replayEntry: 'Volver a leer', statusNow: 'Estado del partido' },
   why: { read: 'Leer explicación', readChange: 'Leer qué cambió', fact: 'Hecho', inference: 'Inferencia', explanation: 'Posible explicación', confidence: 'Confianza', evidence: 'Evidencia', between: 'entre {from} y {to}', changed: 'En el minuto {minute}, MatchShift detectó un cambio. Antes, {metric} era {before}{beforeWindow}. Después, {after}{afterWindow}.' },
   describe: { button: 'Describir', title: 'Descripción' },
   simplified: { more: 'Más detalle', less: 'Menos detalle' },
@@ -346,7 +349,7 @@ const es: A11yStrings = {
   },
   replay: { audioDescription: 'Audiodescripción', eventList: 'Lista de eventos', hideList: 'Ocultar lista', repeat: 'Repetir descripción', listTitle: 'Eventos de la repetición', on: 'activada', off: 'desactivada' },
   status_: {
-    minutes: '{minute} minutos jugados.',
+    minutes: 'Tiempo jugado: {duration}.',
     level: 'El partido está empatado, {home} {hs}, {away} {as}.',
     lead: '{leader} gana {ls} a {ts}.',
     control: '{team} ha dominado los últimos diez minutos.',

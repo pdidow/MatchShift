@@ -3,6 +3,7 @@ import type { Lang } from '../api'
 import { useA11y, useDialog } from './A11yContext'
 import { activeFeatures, speechEnabled } from './prefs'
 import { a11yStrings } from './strings'
+import { languageOf } from '../languages'
 
 /** Topbar button + a subtle status line that appears only when at least one option is on. */
 export function A11yButton({ lang, onOpen, highlight = false }: { lang: Lang; onOpen: () => void; highlight?: boolean }) {
@@ -29,9 +30,10 @@ export function SpeechBar({ lang, overReplay, onStatus }: { lang: Lang; overRepl
   const speaking = speechEnabled(prefs)
   if (!speaking && !prefs.transcript) return null
   const st = speechState
-  const lastEntry = st.transcript[st.transcript.length - 1]
-  const caption = st.current ?? lastEntry
-  const canRepeat = st.transcript.some(e => e.spoken)
+  const entries = st.transcript.filter(e => languageOf(e.lang) === lang)
+  const lastEntry = entries.at(-1)
+  const caption = st.current && languageOf(st.current.lang) === lang ? st.current : lastEntry
+  const canRepeat = speech.canRepeat
 
   return (
     <>
@@ -93,8 +95,8 @@ function TranscriptPanel({ lang, onClose }: { lang: Lang; onClose: () => void })
       {entries.length === 0 ? <p className="note">{s.speech.empty}</p> : (
         <ol className="transcript-list" ref={listRef}>
           {entries.map(e => (
-            <li key={e.id}>
-              <button className="transcript-entry" onClick={() => speech.replay(e)} title={s.speech.replayEntry}>
+            <li key={e.id} lang={e.lang}>
+              <button className="transcript-entry" onClick={() => speech.replay(e)} title={s.speech.replayEntry} disabled={languageOf(e.lang) !== lang}>
                 <span className="transcript-meta">
                   <time>{e.clock ?? new Date(e.at).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
                   <span className="transcript-kind">{e.label ?? e.kind}</span>

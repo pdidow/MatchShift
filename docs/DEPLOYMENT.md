@@ -87,6 +87,25 @@ Live workflow executions on the public site are capped at 10 per hour, 30 per ro
 
 ## Free tier limits
 
+### Public API admission controls
+
+The API limits each client IP to four allocated demo sessions and 240 requests per minute, with eight concurrent
+API requests per IP and 64 globally (including open event streams). Reset, seek and recap requests share a
+20-per-minute client limit. Reuse the session cookie or the existing broadcast session link; new sessions count
+against the same allowance. Clients behind a shared NAT share these limits. A full client allowance returns 429;
+a full global session pool returns 503. These process-local controls mitigate abuse but are not distributed DDoS protection.
+
+API bodies are limited to 4 KB, including chunked requests. Query length and viewer-profile inputs are bounded.
+The hosted frontend uses the API on the same origin, so cross-origin access is disabled by default. The local
+launch profiles allow `http://localhost:5173`; an intentional separate frontend can set exact `Cors:Origins` values.
+Only GET/POST and the Content-Type request header are allowed by that policy; credentials are not enabled.
+
+Recorded judge files remain public and do not consume API admission or model budgets. Live workflows are still
+anonymous and can consume the shared Foundry allowance described above. Admission limits are not authorization:
+operators who do not accept anonymous paid usage should disable live mode until an authenticated start path is deployed.
+The older `Narration:Provider=foundry` path does not use the four-agent run quota; keep it set to `template` on the
+public host. Review trusted proxy/client-IP handling before relying on any IP-based limit.
+
 F1: 60 CPU minutes per day, 1 GB memory, 32-bit worker, no Always On (the app sleeps after idle and cold-starts),
 single instance. Demo sessions and the agent-run cache are in memory and reset on restart; the hourly and daily run caps are persisted in `%HOME%\data` and survive restarts (verified on the F1 host); the per-client cap is in memory.
 The web host is free; **Foundry model inference is billed separately** per token (about 4 calls and ~10k tokens per

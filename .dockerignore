@@ -7,3 +7,12 @@ datasets/out
 .git
 .vs
 .env
+**/.env
+**/.env.*
+**/*.local.json
+**/*.pubxml
+**/*.publishsettings
+artifacts
+.codex
+.agents
+.aws

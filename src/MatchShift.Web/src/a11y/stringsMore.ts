@@ -1,9 +1,11 @@
 import type { A11yStrings } from './strings'
+import { localeOf } from '../languages'
 
 // Accessibility strings for German, Italian and European Portuguese. Complete objects (no fallback to English):
 // the type checker enforces that every key exists.
 
 export const de: A11yStrings = {
+  locale: localeOf('de'),
   open: 'Barrierefreiheit',
   title: 'Barrierefreiheit',
   intro: 'Alles hier ist optional und standardmäßig ausgeschaltet. Schalten Sie nur ein, was Ihnen hilft - der Rest von MatchShift bleibt, wie er ist.',
@@ -39,7 +41,7 @@ export const de: A11yStrings = {
   testPhrase: 'Die Sprachausgabe von MatchShift ist eingeschaltet.',
   keyboardHelp: 'Tastenkürzel',
   status: { speech: 'Sprache an', transcript: 'Transkript', highContrast: 'Hoher Kontrast', colorVision: 'Farbsehmodus', largeText: 'Großer Text', reducedMotion: 'Weniger Bewegung', reduceFlashing: 'Weniger Effekte', simplified: 'Vereinfacht', soundCues: 'Tonsignale' },
-  speech: { mute: 'Sprache stumm', unmute: 'Sprache an', pause: 'Sprache pausieren', resume: 'Sprache fortsetzen', repeat: 'Letztes wiederholen', transcript: 'Transkript', hide: 'Transkript ausblenden', noVoice: 'Dieses Gerät hat keine Stimme für diese Sprache - der Browser wählt die passendste Stimme, und der Text wird angezeigt.', unsupported: 'Sprachausgabe ist in diesem Browser nicht verfügbar - stattdessen wird Text angezeigt.', speaking: 'Spricht', idle: 'Sprache bereit', clear: 'Leeren', empty: 'Noch nichts gesprochen.', replayEntry: 'Erneut sprechen', statusNow: 'Spielstand' },
+  speech: { mute: 'Sprache stumm', unmute: 'Sprache an', pause: 'Sprache pausieren', resume: 'Sprache fortsetzen', repeat: 'Letztes wiederholen', transcript: 'Transkript', hide: 'Transkript ausblenden', noVoice: 'Für diese Sprache ist keine passende Stimme verfügbar. Die Erzählung wird als Text angezeigt, bis eine passende Stimme verfügbar ist.', unsupported: 'Sprachausgabe ist in diesem Browser nicht verfügbar - stattdessen wird Text angezeigt.', speaking: 'Spricht', idle: 'Sprache bereit', clear: 'Leeren', empty: 'Noch nichts gesprochen.', replayEntry: 'Erneut sprechen', statusNow: 'Spielstand' },
   why: { read: 'Erklärung vorlesen', readChange: 'Veränderung vorlesen', fact: 'Fakt', inference: 'Deutung', explanation: 'Mögliche Erklärung', confidence: 'Konfidenz', evidence: 'Belege', between: 'zwischen {from} und {to}', changed: 'In Minute {minute} hat MatchShift eine Veränderung erkannt. Vorher lag {metric} bei {before}{beforeWindow}. Danach lag der Wert bei {after}{afterWindow}.' },
   describe: { button: 'Beschreiben', title: 'Beschreibung' },
   simplified: { more: 'Mehr Details', less: 'Weniger Details' },
@@ -69,7 +71,7 @@ export const de: A11yStrings = {
   },
   replay: { audioDescription: 'Audiodeskription', eventList: 'Ereignisliste', hideList: 'Liste ausblenden', repeat: 'Beschreibung wiederholen', listTitle: 'Ereignisse im Replay', on: 'an', off: 'aus' },
   status_: {
-    minutes: '{minute} Minuten gespielt.',
+    minutes: '{duration} gespielt.',
     level: 'Unentschieden, {home} {hs}, {away} {as}.',
     lead: '{leader} führt {ls} zu {ts}.',
     control: '{team} hatte in den letzten zehn Minuten die Oberhand.',
@@ -141,6 +143,7 @@ export const de: A11yStrings = {
 }
 
 export const it: A11yStrings = {
+  locale: localeOf('it'),
   open: 'Accessibilità',
   title: "Centro per l'accessibilità",
   intro: 'Tutto qui è facoltativo e disattivato di default. Attiva solo ciò che ti aiuta: il resto di MatchShift rimane com’è.',
@@ -176,7 +179,7 @@ export const it: A11yStrings = {
   testPhrase: 'La voce di MatchShift è attiva.',
   keyboardHelp: 'Scorciatoie da tastiera',
   status: { speech: 'Voce attiva', transcript: 'Trascrizione', highContrast: 'Contrasto elevato', colorVision: 'Modalità daltonismo', largeText: 'Testo grande', reducedMotion: 'Meno movimento', reduceFlashing: 'Meno effetti', simplified: 'Semplificato', soundCues: 'Segnali sonori' },
-  speech: { mute: 'Disattiva voce', unmute: 'Riattiva voce', pause: 'Metti in pausa la voce', resume: 'Riprendi la voce', repeat: 'Ripeti l’ultimo', transcript: 'Trascrizione', hide: 'Nascondi trascrizione', noVoice: 'Questo dispositivo non ha una voce per questa lingua: il browser sceglie la voce più vicina e il testo viene mostrato.', unsupported: 'La voce non è disponibile in questo browser: viene mostrato il testo.', speaking: 'In riproduzione', idle: 'Voce pronta', clear: 'Cancella', empty: 'Ancora nulla di letto.', replayEntry: 'Rileggi', statusNow: 'Situazione della partita' },
+  speech: { mute: 'Disattiva voce', unmute: 'Riattiva voce', pause: 'Metti in pausa la voce', resume: 'Riprendi la voce', repeat: 'Ripeti l’ultimo', transcript: 'Trascrizione', hide: 'Nascondi trascrizione', noVoice: 'Non è disponibile una voce compatibile per questa lingua. La narrazione resta visibile come testo finché non sarà disponibile una voce compatibile.', unsupported: 'La voce non è disponibile in questo browser: viene mostrato il testo.', speaking: 'In riproduzione', idle: 'Voce pronta', clear: 'Cancella', empty: 'Ancora nulla di letto.', replayEntry: 'Rileggi', statusNow: 'Situazione della partita' },
   why: { read: 'Leggi la spiegazione', readChange: 'Leggi cosa è cambiato', fact: 'Fatto', inference: 'Interpretazione', explanation: 'Possibile spiegazione', confidence: 'Affidabilità', evidence: 'Prove a supporto', between: 'tra {from} e {to}', changed: 'Al minuto {minute} MatchShift ha rilevato un cambiamento. Prima del cambiamento, {metric} era {before}{beforeWindow}. Dopo era {after}{afterWindow}.' },
   describe: { button: 'Descrivi', title: 'Descrizione' },
   simplified: { more: 'Più dettagli', less: 'Meno dettagli' },
@@ -206,7 +209,7 @@ export const it: A11yStrings = {
   },
   replay: { audioDescription: 'Audiodescrizione', eventList: 'Elenco eventi', hideList: 'Nascondi elenco', repeat: 'Ripeti descrizione', listTitle: 'Eventi del replay', on: 'attiva', off: 'disattivata' },
   status_: {
-    minutes: '{minute} minuti giocati.',
+    minutes: 'Tempo giocato: {duration}.',
     level: 'La partita è in parità, {home} {hs}, {away} {as}.',
     lead: '{leader} conduce {ls} a {ts}.',
     control: '{team} ha avuto la meglio negli ultimi dieci minuti.',
@@ -278,6 +281,7 @@ export const it: A11yStrings = {
 }
 
 export const pt: A11yStrings = {
+  locale: localeOf('pt'),
   open: 'Acessibilidade',
   title: 'Centro de acessibilidade',
   intro: 'Tudo aqui é opcional e está desligado por omissão. Ligue apenas o que o ajuda - o resto da MatchShift fica igual.',
@@ -313,7 +317,7 @@ export const pt: A11yStrings = {
   testPhrase: 'A voz da MatchShift está ligada.',
   keyboardHelp: 'Atalhos de teclado',
   status: { speech: 'Voz ligada', transcript: 'Transcrição', highContrast: 'Alto contraste', colorVision: 'Modo de visão de cores', largeText: 'Texto grande', reducedMotion: 'Menos movimento', reduceFlashing: 'Menos efeitos', simplified: 'Simplificado', soundCues: 'Sinais sonoros' },
-  speech: { mute: 'Silenciar voz', unmute: 'Ativar voz', pause: 'Pausar voz', resume: 'Retomar voz', repeat: 'Repetir o último', transcript: 'Transcrição', hide: 'Ocultar transcrição', noVoice: 'Este dispositivo não tem voz para este idioma - o navegador escolhe a voz mais próxima e o texto é mostrado.', unsupported: 'A voz não está disponível neste navegador - é mostrado o texto.', speaking: 'A falar', idle: 'Voz pronta', clear: 'Limpar', empty: 'Ainda nada foi dito.', replayEntry: 'Dizer outra vez', statusNow: 'Estado do jogo' },
+  speech: { mute: 'Silenciar voz', unmute: 'Ativar voz', pause: 'Pausar voz', resume: 'Retomar voz', repeat: 'Repetir o último', transcript: 'Transcrição', hide: 'Ocultar transcrição', noVoice: 'Não existe uma voz compatível para este idioma. A narração é apresentada em texto até estar disponível uma voz compatível.', unsupported: 'A voz não está disponível neste navegador - é mostrado o texto.', speaking: 'A falar', idle: 'Voz pronta', clear: 'Limpar', empty: 'Ainda nada foi dito.', replayEntry: 'Dizer outra vez', statusNow: 'Estado do jogo' },
   why: { read: 'Ler explicação', readChange: 'Ler o que mudou', fact: 'Facto', inference: 'Interpretação', explanation: 'Explicação possível', confidence: 'Confiança', evidence: 'Provas de suporte', between: 'entre {from} e {to}', changed: 'Ao minuto {minute}, a MatchShift detetou uma mudança. Antes da mudança, {metric} era {before}{beforeWindow}. Depois passou a {after}{afterWindow}.' },
   describe: { button: 'Descrever', title: 'Descrição' },
   simplified: { more: 'Mais detalhe', less: 'Menos detalhe' },
@@ -343,7 +347,7 @@ export const pt: A11yStrings = {
   },
   replay: { audioDescription: 'Audiodescrição', eventList: 'Lista de eventos', hideList: 'Ocultar lista', repeat: 'Repetir descrição', listTitle: 'Eventos da repetição', on: 'ligada', off: 'desligada' },
   status_: {
-    minutes: '{minute} minutos jogados.',
+    minutes: 'Tempo jogado: {duration}.',
     level: 'O jogo está empatado, {home} {hs}, {away} {as}.',
     lead: '{leader} vence por {ls} a {ts}.',
     control: 'O {team} esteve por cima nos últimos dez minutos.',

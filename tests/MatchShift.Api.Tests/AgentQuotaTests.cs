@@ -132,6 +132,18 @@ public class AgentQuotaTests
     }
 
     [Fact]
+    public async Task Concurrent_identical_starts_reserve_only_one_live_run()
+    {
+        var (service, model, session, insight, quota) = Live(perHour: 100, perDay: 100, perClient: 100);
+        var handles = await Task.WhenAll(Enumerable.Range(0, 24).Select(_ => Task.Run(() =>
+            service.GetOrStart(session, insight, ViewerProfile.Default, true, WorkflowTrigger.OnDemand).Handle!)));
+        Assert.All(handles, handle => Assert.Same(handles[0], handle));
+        await handles[0].Completion;
+        Assert.Equal(1, quota.Status().RunsLast24Hours);
+        Assert.Equal(4, model.Calls.Count);
+    }
+
+    [Fact]
     public async Task Exhausted_quota_gives_offline_template_never_live_or_verified_and_calls_no_model()
     {
         var (service, model, session, insight, _) = Live(perHour: 0);

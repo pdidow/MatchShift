@@ -15,6 +15,7 @@ import type { BallVisualizationSettings } from './ballVisualization'
 import { ballStrings } from './ballStrings'
 import type { ReplayTick } from './scene'
 import { currentEvent, formatTime, layout, locate, matchClock, stepEvent } from './timeline'
+import { spokenClock } from '../languages'
 import type { CameraPreset, ReplayEvent, ReplaySequence } from './types'
 import { coverage, eventRole, positionShare } from './provenance'
 import { AboutReplay, EventStatus, EvidenceSummary, RoleTag } from './ReplayTrust'
@@ -248,7 +249,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
     if (placed && tick.clipIndex !== prev.clip && seq.clips.length > 1) {
       // BEFORE / AFTER transitions are critical: they frame the evidence.
       const comparison = cover?.clips[tick.clipIndex]?.supporting === 0 ? `. ${s.replayUi.clipComparison}` : ''
-      say({ text: fill(as.ad.clip, { label: clipLabel(placed.clip.key), clock: placed.clip.events[0]?.clock ?? '' }) + comparison, kind: 'replay', source: 'replay',
+      say({ text: fill(as.ad.clip, { label: clipLabel(placed.clip.key), clock: placed.clip.events[0] ? spokenClock(placed.clip.events[0].matchSecond, lang) : '' }) + comparison, kind: 'replay', source: 'replay',
         priority: 2, at: placed.offset, lang: adLang, label: r.title })
     }
     if (jumped) {
@@ -271,7 +272,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
         if (text) say({ text, kind: 'replay', source: 'replay', priority, at, lang: adLang, clock: e.clock, label: r.title })
       }
     }
-  }, [tick, audioDescription]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tick, audioDescription, lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stop narration when the replay closes.
   useEffect(() => () => speech.clearKind('replay'), [speech])
@@ -387,7 +388,7 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
             <span className="replay-time">{formatTime(tick.time)} / {formatTime(tick.duration)}</span>
           </div>
 
-          <Scrubber label={r.timeline} seq={seq} total={timeline.total} time={tick.time} placed={timeline.placed}
+          <Scrubber lang={lang} label={r.timeline} seq={seq} total={timeline.total} time={tick.time} placed={timeline.placed}
             onSeek={(t) => sceneRef.current?.seek(t)} describe={describe} />
 
           <div className="replay-options">
@@ -457,7 +458,8 @@ export default function ReplayView({ insightId, card, home, away, s, lang, onClo
   )
 }
 
-function Scrubber({ seq, total, time, placed, onSeek, describe, label }: {
+function Scrubber({ seq, total, time, placed, onSeek, describe, label, lang }: {
+  lang: Lang
   seq: ReplaySequence
   total: number
   time: number
@@ -475,7 +477,7 @@ function Scrubber({ seq, total, time, placed, onSeek, describe, label }: {
   const pct = (t: number) => `${(t / Math.max(total, 0.001)) * 100}%`
   return (
     <div className="replay-scrubber" ref={ref} role="slider" tabIndex={0} aria-label={label} aria-valuemin={0} aria-valuemax={Math.round(total)} aria-valuenow={Math.round(time)}
-      aria-valuetext={`${formatTime(time)} / ${formatTime(total)}`}
+      aria-valuetext={`${spokenClock(time, lang)} / ${spokenClock(total, lang)}`}
       onKeyDown={(e) => {
         if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); onSeek(Math.min(total, time + 1)) }
         else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); onSeek(Math.max(0, time - 1)) }

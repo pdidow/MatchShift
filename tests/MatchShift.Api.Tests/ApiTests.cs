@@ -7,9 +7,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace MatchShift.Api.Tests;
 
-public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class ApiTests : IDisposable
 {
-    private readonly HttpClient Client = factory.CreateClient();
+    // Each test models a fresh application; public admission limits must not leak across independent tests.
+    private readonly WebApplicationFactory<Program> factory = new();
+    private readonly HttpClient Client;
+    public ApiTests() => Client = factory.CreateClient();
+    public void Dispose() { Client.Dispose(); factory.Dispose(); }
 
     private async Task<JsonElement> Get(string url)
     {

@@ -145,7 +145,7 @@ describe('speech for German, Italian and Portuguese', () => {
     expect(chooseVoice(device.filter(x => !x.lang.startsWith('de')), 'de-DE')).toBeNull()
   })
 
-  it('every utterance carries the right lang, with or without a matching voice', () => {
+  it('every utterance has a matching voice, otherwise narration stays text-only', () => {
     const synth = new Synth(device)
     const q = queueOn(synth)
     for (const lang of NEW) {
@@ -164,9 +164,7 @@ describe('speech for German, Italian and Portuguese', () => {
     for (const lang of NEW) {
       q2.setLanguage(speechLang(lang))
       q2.say({ text: a11yStrings(lang).testPhrase, kind: 'insight', lang: speechLang(lang) })
-      const u = englishOnly.spoken.at(-1)!
-      expect(u.lang).toBe(speechLang(lang))
-      expect(u.voice).toBeNull()                                          // never an English voice for German/Italian/Portuguese
+      expect(englishOnly.spoken).toHaveLength(0)                         // never allow a browser English fallback
       expect(q2.getState().missingVoice).toBe(speechLang(lang))           // the localized no-voice notice is shown
       englishOnly.end()
     }

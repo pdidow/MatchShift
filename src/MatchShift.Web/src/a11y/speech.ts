@@ -11,6 +11,8 @@
 //  - mute / pause / resume / repeat last; the speech rate is the viewer's setting and is never scaled by playback speed
 //  - every message is also kept as text (captions + transcript), even when muted, silenced or no voice exists
 
+import { languageOf, localeOf as speechLocale } from '../languages'
+
 export type Priority = 0 | 1 | 2 // 0 = low (detail, replay narration), 1 = normal, 2 = critical (goals, dangerous moments)
 
 /** Who a cue belongs to. "ui" is something the viewer asked for (read aloud, test voice) and is never timeline-bound. */
@@ -123,8 +125,8 @@ const localeOf = (lang: string) => lang.toLowerCase().replace('_', '-')
 
 /**
  * Picks the voice for a BCP-47 locale: an exact locale match, then any voice of the same base language (the platform
- * default first, then a local voice), else null — the utterance still carries `lang`, so the browser chooses. A voice
- * of a different language is never chosen explicitly. Voices are the viewer's browser/OS voices, never the server's.
+ * default first, then a local voice), else null. The queue must not speak without a compatible voice: browsers can
+ * ignore utterance.lang and fall back to an English default. Voices are the viewer's browser/OS voices.
  */
 export function chooseVoice(voices: VoiceLike[], lang: string): VoiceLike | null {
   const exact = voices.filter(v => localeOf(v.lang) === localeOf(lang))
@@ -177,6 +179,7 @@ export class SpeechQueue {
   private readonly onVoicesChanged = () => {
     this.voices = this.synth?.getVoices() ?? []
     if (this.state.missingVoice && chooseVoice(this.voices, this.state.missingVoice)) this.update({ missingVoice: null })
+    this.pump() // Late voices may speak only cues that are still relevant to the current timeline.
   }
 
   /** Detach from the browser synthesiser (tests, or if the queue is ever replaced). */
@@ -190,11 +193,14 @@ export class SpeechQueue {
    * so narration in the old language never continues after a switch. Messages in the new language are kept.
    */
   setLanguage(lang: string) {
+    if (!languageOf(lang)) return
+    lang = speechLocale(lang)
     if (this.language === lang) return
     this.language = lang
     const base = baseOf(lang)
     this.queue = this.queue.filter(q => baseOf(q.lang) === base)
     if (this.currentItem && baseOf(this.currentItem.lang) !== base) this.cancelCurrent()
+    this.lastSpoken = null
     if (this.state.missingVoice && baseOf(this.state.missingVoice) !== base) this.update({ missingVoice: null })
   }
 
@@ -210,6 +216,8 @@ export class SpeechQueue {
 
   /** Cues waiting (not counting the one speaking). Bounded: at most one per source. */
   get pending() { return this.queue.length }
+
+  get canRepeat() { return this.lastSpoken !== null }
 
   /**
    * The current position of a timeline. Waiting cues of that source that are no longer current are dropped at once. A
@@ -262,6 +270,9 @@ export class SpeechQueue {
 
   /** Queue a message. Returns false if it was a duplicate. */
   say(message: SpeechMessage, options?: { allowRepeat?: boolean }): boolean {
+    // Never relabel stale English text as French, including async callbacks and transcript replay.
+    if (!languageOf(message.lang) || (this.language && baseOf(message.lang) !== baseOf(this.language))) return false
+    message = { ...message, lang: this.language ?? speechLocale(message.lang) }
     const source: SpeechSource = message.source ?? (message.kind === 'replay' ? 'replay' : options?.allowRepeat ? 'ui' : 'match')
     if (message.key && !options?.allowRepeat) {
       if (this.spokenKeys.has(message.key)) return false
@@ -277,10 +288,9 @@ export class SpeechQueue {
     // Audio focus: while Evidence Replay is open, match narration is text only and never queues behind the replay.
     if (source === 'match' && this.focus === 'replay') { this.emit(); return true }
 
-    // Voices are loaded but none speaks this language: still speak with utterance.lang set (the browser picks the best it
-    // has) and surface a notice so the viewer knows pronunciation may suffer; the text is always in the transcript.
+    // Missing or still-loading voices are text-only until a matching voice is available. Never use the OS default.
     const voice = this.voiceFor(message.lang)
-    if (voice === undefined) this.update({ missingVoice: message.lang })
+    if (!voice) this.update({ missingVoice: message.lang })
     else if (this.state.missingVoice === message.lang) this.update({ missingVoice: null })
 
     const item: Queued = { ...message, priority, source, createdAt: this.now(), entry }
@@ -391,12 +401,16 @@ export class SpeechQueue {
       if (bestIndex < 0 || cueRank(this.queue[i]) > cueRank(this.queue[bestIndex])) bestIndex = i
     }
     if (bestIndex < 0) return
-    const item = this.queue.splice(bestIndex, 1)[0]
+    const item = this.queue[bestIndex]
+    const voice = this.voiceFor(item.lang)
+    if (!voice) { this.update({ missingVoice: item.lang }); return }
+    if (this.state.missingVoice) this.update({ missingVoice: null })
+    this.queue.splice(bestIndex, 1)
     const u = this.makeUtterance(item.text)
     u.lang = item.lang
     u.rate = this.rate
     u.volume = this.volume
-    u.voice = this.voiceFor(item.lang) ?? null
+    u.voice = voice
     const token = ++this.token
     const done = () => {
       if (token !== this.token) return
@@ -415,13 +429,11 @@ export class SpeechQueue {
   }
 
   /**
-   * Voice for a language: a matching voice, null if voices are not available yet (let the browser choose),
-   * or undefined if voices are available but none matches (fall back to text).
+   * Refresh at dispatch as well as voiceschanged: some browsers change the list without delivering that event.
    */
-  private voiceFor(lang: string): VoiceLike | null | undefined {
-    if (this.voices.length === 0) this.voices = this.synth?.getVoices() ?? []
-    if (this.voices.length === 0) return null
-    return chooseVoice(this.voices, lang) ?? undefined
+  private voiceFor(lang: string): VoiceLike | null {
+    this.voices = this.synth?.getVoices() ?? []
+    return chooseVoice(this.voices, lang)
   }
 
   private pushTranscript(entry: TranscriptEntry) {

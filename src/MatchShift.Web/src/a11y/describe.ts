@@ -4,6 +4,7 @@ import type { InsightCard, InsightEvents, PitchEvent, Snapshot } from '../api'
 import type { ReplayEvent, ReplayPlayer } from '../replay/types'
 import type { A11yStrings } from './strings'
 import { fill } from './strings'
+import { formatMinutes } from '../languages'
 import type { Priority } from './speech'
 import type { PeriodicRecap, SpeechDetail } from './prefs'
 
@@ -57,7 +58,7 @@ export function insightSpeech(card: InsightCard, detail: SpeechDetail, simplifie
   teamName: (id?: string) => string, opponentOf: (id?: string) => string): string {
   const n = card.narrative
   const team = teamName(card.teamId)
-  const intro = `${card.minute}'. ${n.typeLabel}${team ? `, ${team}` : ''}.`
+  const intro = `${formatMinutes(card.minute, s.locale)}. ${n.typeLabel}${team ? `, ${team}` : ''}.`
   const agent = verifiedAgent(card)
   if (simplified) return join(intro, agent?.simplifiedExplanation ?? simplifiedText(card, s, teamName, opponentOf))
   if (detail === 'major') return join(intro, n.headline)
@@ -95,7 +96,7 @@ export function whatChanged(card: InsightCard, s: A11yStrings): string | null {
   if (!primary?.baseline) return null
   const win = (w?: string) => {
     const m = w?.match(/^(\d+)'?\s*-\s*(\d+)'?$/)
-    return m ? ` ${fill(s.why.between, { from: `${m[1]}'`, to: `${m[2]}'` })}` : ''
+    return m ? ` ${fill(s.why.between, { from: formatMinutes(Number(m[1]), s.locale), to: formatMinutes(Number(m[2]), s.locale) })}` : ''
   }
   return fill(s.why.changed, {
     minute: card.minute,
@@ -111,7 +112,7 @@ export function whatChanged(card: InsightCard, s: A11yStrings): string | null {
 export function matchStatus(snap: Snapshot, s: A11yStrings): string {
   const st = s.status_
   const { home, away } = snap.score
-  const parts = [fill(st.minutes, { minute: snap.clock.minute })]
+  const parts = [fill(st.minutes, { duration: formatMinutes(snap.clock.minute, s.locale) })]
   if (home === away) parts.push(fill(st.level, { home: snap.home.shortName, hs: home, away: snap.away.shortName, as: away }))
   else {
     const homeLeads = home > away
@@ -220,7 +221,7 @@ export function describeReplayEvent(e: ReplayEvent, players: ReplayPlayer[], hom
     case 'TACKLE': return fill(ad.tackle, { actor, target: target || '…' })
     case 'CLEARANCE': return fill(ad.clearance, { actor })
     case 'SAVE': return fill(ad.save, { actor })
-    case 'CORNER': return fill(ad.corner, { team: isHome ? 'Home' : 'Away' })
+    case 'CORNER': return fill(ad.corner, { team: isHome ? ad.home : ad.away })
     case 'FOUL': return fill(ad.foul, { actor })
     default: return null
   }

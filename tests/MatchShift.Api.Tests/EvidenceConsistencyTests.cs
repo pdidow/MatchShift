@@ -14,11 +14,14 @@ namespace MatchShift.Api.Tests;
 /// The card's supporting-event count, WHY?, SHOW ME, the Evidence Replay, the agents' InsightContext and the broadcast
 /// overlay must all agree on what the supporting evidence is. Context-only events may be drawn, but never counted.
 /// </summary>
-public class EvidenceConsistencyTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class EvidenceConsistencyTests : IDisposable
 {
     private const string Flagship = "MS-FLAGSHIP-001-I015";
     private const string ContextEvent = "MS-FLAGSHIP-001-E00797";
-    private readonly HttpClient Client = factory.CreateClient();
+    private readonly WebApplicationFactory<Program> factory = new();
+    private readonly HttpClient Client;
+    public EvidenceConsistencyTests() => Client = factory.CreateClient();
+    public void Dispose() { Client.Dispose(); factory.Dispose(); }
     private readonly string Session = Guid.NewGuid().ToString();
 
     private string Url(string path) => $"{path}{(path.Contains('?') ? '&' : '?')}session={Session}";

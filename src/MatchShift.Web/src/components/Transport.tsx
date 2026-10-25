@@ -1,6 +1,7 @@
 import type { HighlightCard, Snapshot } from '../api'
 import { api } from '../api'
 import type { Strings } from '../i18n'
+import { formatMinutes, spokenClock } from '../languages'
 
 interface Props {
   snap: Snapshot
@@ -35,7 +36,7 @@ export function Transport({ snap, speeds, s, onHighlight }: Props) {
       </div>
       <div style={{ width: 230 }}>
         <div className="scrubber" onClick={seekFromClick} role="slider" aria-label={s.minute} aria-valuemin={0} aria-valuemax={90}
-          aria-valuenow={snap.clock.minute} tabIndex={0}
+          aria-valuenow={snap.clock.minute} aria-valuetext={spokenClock(snap.clock.second, snap.profile.language)} tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight') void api.seek(Math.min(90, snap.clock.second / 60 + 1))
             if (e.key === 'ArrowLeft') void api.seek(Math.max(0, snap.clock.second / 60 - 1))
@@ -49,7 +50,7 @@ export function Transport({ snap, speeds, s, onHighlight }: Props) {
               className={`marker ${h.kind === 'Goal' ? 'goal' : h.kind === 'TacticalShift' || h.kind === 'SubstitutionImpact' ? 'shift' : ''}`}
               style={{ left: `${(h.second / 5400) * 100}%` }}
               title={`${h.minute}' ${h.headline}`}
-              aria-label={`${h.minute}' ${h.headline}`}
+              aria-label={`${formatMinutes(h.minute, snap.profile.language)}. ${h.headline}`}
               onClick={(e) => { e.stopPropagation(); onHighlight(h) }}
             />
           ))}

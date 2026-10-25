@@ -6,6 +6,7 @@ import type { SpeechMessage, SpeechState } from './speech'
 import { SpeechQueue } from './speech'
 import type { Cue } from './sounds'
 import { playCue } from './sounds'
+import { localeOf } from '../languages'
 
 interface A11yContextValue {
   prefs: A11yPrefs
@@ -20,6 +21,7 @@ interface A11yContextValue {
   say: (message: SpeechMessage, options?: { allowRepeat?: boolean }) => boolean
   /** Screen-reader announcement through a live region (polite by default; assertive for critical news). */
   announce: (text: string, assertive?: boolean) => void
+  setLanguage: (language: string) => void
   cue: (cue: Cue) => void
 }
 
@@ -82,6 +84,24 @@ export function A11yProvider({ children }: { children: ReactNode }) {
   const [polite, setPolite] = useState('')
   const [assertive, setAssertive] = useState('')
   const lastAnnounced = useRef<{ text: string; at: number }>({ text: '', at: 0 })
+  const announcementTimers = useRef(new Set<number>())
+  const clearAnnouncements = useCallback(() => {
+    for (const timer of announcementTimers.current) window.clearTimeout(timer)
+    announcementTimers.current.clear()
+  }, [])
+  useEffect(() => clearAnnouncements, [clearAnnouncements])
+  const language = useRef<string | null>(null)
+  const setLanguage = useCallback((next: string) => {
+    const locale = localeOf(next)
+    if (language.current === locale) return
+    language.current = locale
+    speech.setLanguage(locale)
+    document.documentElement.lang = locale
+    clearAnnouncements()
+    lastAnnounced.current = { text: '', at: 0 }
+    setPolite('')
+    setAssertive('')
+  }, [speech, clearAnnouncements])
   const announce = useCallback((text: string, isAssertive = false) => {
     const now = Date.now()
     if (text === lastAnnounced.current.text && now - lastAnnounced.current.at < 5000) return
@@ -89,7 +109,8 @@ export function A11yProvider({ children }: { children: ReactNode }) {
     const set = isAssertive ? setAssertive : setPolite
     // Clear first so the same region reliably announces the new text.
     set('')
-    window.setTimeout(() => set(text), 60)
+    const timer = window.setTimeout(() => { announcementTimers.current.delete(timer); set(text) }, 60)
+    announcementTimers.current.add(timer)
   }, [])
 
   const cue = useCallback((c: Cue) => { if (prefs.soundCues) playCue(c, prefs.speechVolume) }, [prefs.soundCues, prefs.speechVolume])
@@ -97,8 +118,8 @@ export function A11yProvider({ children }: { children: ReactNode }) {
   const value = useMemo<A11yContextValue>(() => ({
     prefs, setPrefs, update, systemReducedMotion,
     reducedMotion: effectiveReducedMotion(prefs, systemReducedMotion),
-    speech, speechState, say, announce, cue,
-  }), [prefs, setPrefs, update, systemReducedMotion, speech, speechState, say, announce, cue])
+    speech, speechState, say, announce, setLanguage, cue,
+  }), [prefs, setPrefs, update, systemReducedMotion, speech, speechState, say, announce, setLanguage, cue])
 
   return (
     <Ctx.Provider value={value}>

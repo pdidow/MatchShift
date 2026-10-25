@@ -55,7 +55,7 @@ public static class DemoEndpoints
                     m.Match.HomeTeam.Squad.Select(SnapshotBuilder.Player).ToList(), m.Match.AwayTeam.Squad.Select(SnapshotBuilder.Player).ToList()))
                 : Results.NotFound());
 
-        var demo = api.MapGroup("/demo");
+        var demo = api.MapGroup("/demo").AddEndpointFilter(ApiSecurity.ValidateProfile);
 
         demo.MapPost("/reset", (ResetRequest? request, DemoSession session, MatchCatalog catalog) =>
         {
@@ -66,7 +66,7 @@ public static class DemoEndpoints
             }
             else session.Reset();
             return Results.NoContent();
-        });
+        }).RequireRateLimiting(ApiSecurity.ExpensivePolicy);
         demo.MapPost("/play", (DemoSession s) => { s.Play(); return Results.NoContent(); });
         demo.MapPost("/pause", (DemoSession s) => { s.Pause(); return Results.NoContent(); });
         demo.MapPost("/speed", (SpeedRequest r, DemoSession s) =>
@@ -75,7 +75,13 @@ public static class DemoEndpoints
             s.SetSpeed(r.Speed);
             return Results.NoContent();
         });
-        demo.MapPost("/seek", (SeekRequest r, DemoSession s) => { s.Seek((int)Math.Round(r.Minute * 60)); return Results.NoContent(); });
+        demo.MapPost("/seek", (SeekRequest r, DemoSession s) =>
+        {
+            if (!double.IsFinite(r.Minute) || r.Minute < 0 || r.Minute > 120)
+                return Results.BadRequest("Minute must be between 0 and 120.");
+            s.Seek((int)Math.Round(r.Minute * 60));
+            return Results.NoContent();
+        }).RequireRateLimiting(ApiSecurity.ExpensivePolicy);
 
         demo.MapGet("/state", (string? lang, string? mode, string? team, string? player, bool? a11y, DemoSession s, AgentWorkflowService agents) =>
             Snapshot(s, SnapshotBuilder.Profile(lang, mode, team, player), agents, a11y == true));
@@ -215,7 +221,7 @@ public static class DemoEndpoints
             if (s.Epoch != epoch) return Results.Conflict(new { message = "Playback changed; request the recap again." });
             if (narrative.VerificationNote?.Contains("Template used", StringComparison.Ordinal) == true) MatchShiftMetrics.NarrativesFallback.Add(1);
             return Results.Ok(new { facts, narrative });
-        });
+        }).RequireRateLimiting(ApiSecurity.ExpensivePolicy);
 
         return app;
     }

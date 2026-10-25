@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { chooseVoice, SpeechQueue } from './speech'
 import type { SynthLike, UtteranceLike, VoiceLike } from './speech'
 import { a11yStrings, speechLang } from './strings'
-import { describeReplayEvent } from './describe'
+import { describeReplayEvent, matchStatus } from './describe'
+import { LANGUAGES, formatMinutes, formatNumber, formatPercent, spokenClock } from '../languages'
+import type { Snapshot } from '../api'
 import type { ReplayEvent, ReplayPlayer } from '../replay/types'
 
 // Speech is the viewer's browser/OS Web Speech API. These tests mock it, so no installed voices are needed.
@@ -86,25 +88,27 @@ describe('speech queue language handling', () => {
     }
   })
 
-  it('sets utterance.lang even when no voice matches, and still speaks', () => {
+  it('does not allow a browser default to read French when no compatible voice exists', () => {
     const synth = new Synth([v('Microsoft David', 'en-US', { default: true })])
     const q = queueOn(synth)
     q.say({ text: 'Bonjour', kind: 'insight', lang: 'fr-FR' })
-    expect(synth.spoken).toHaveLength(1)
-    expect(synth.spoken[0].lang).toBe('fr-FR')
-    expect(synth.spoken[0].voice).toBeNull()
+    expect(synth.spoken).toHaveLength(0)
+    expect(q.getState().transcript.at(-1)).toMatchObject({ text: 'Bonjour', lang: 'fr-FR', spoken: false })
     expect(q.getState().missingVoice).toBe('fr-FR')
   })
 
-  it('handles voices that load late (voiceschanged) without re-speaking anything', () => {
+  it('waits for voiceschanged, then speaks once using an actual matching voice', () => {
     const synth = new Synth([])
     const q = queueOn(synth)
     q.say({ text: 'Bonjour', kind: 'insight', lang: 'fr-FR' })
-    expect(synth.spoken[0].voice).toBeNull() // not loaded yet: lang set, browser chooses
-    expect(synth.spoken[0].lang).toBe('fr-FR')
-    synth.end()
+    expect(synth.spoken).toHaveLength(0)
     synth.loadVoices(windowsChrome)
-    expect(synth.spoken).toHaveLength(1) // loading voices never replays speech
+    expect(synth.spoken).toHaveLength(1)
+    expect(synth.spoken[0].lang).toBe('fr-FR')
+    expect(synth.spoken[0].voice?.lang).toBe('fr-FR')
+    synth.loadVoices(windowsChrome)
+    expect(synth.spoken).toHaveLength(1)
+    synth.end()
     q.say({ text: 'Encore', kind: 'insight', lang: 'fr-FR' })
     expect(synth.spoken[1].voice?.name).toBe('Google français')
     expect(synth.listeners.size).toBe(1)
@@ -150,6 +154,81 @@ describe('speech queue language handling', () => {
   })
 })
 
+describe('numeric speech and runtime switching in all six languages', () => {
+  const voices = LANGUAGES.map(l => v(l.name, l.locale))
+  const minuteUnits = { en: ['minute', 'minutes'], fr: ['minute', 'minutes'], es: ['minuto', 'minutos'], de: ['Minute', 'Minuten'], it: ['minuto', 'minuti'], pt: ['minuto', 'minutos'] }
+
+  for (const { code, locale } of LANGUAGES) {
+    it(`${code}: formats minutes, score, percent and clock and dispatches with the selected voice`, () => {
+      const synth = new Synth([v('English default', 'en-US', { default: true }), ...voices])
+      const q = queueOn(synth)
+      q.setLanguage(code) // UI code uses the same registry as full locale tags.
+      for (const minute of [1, 15, 45]) {
+        const snap = { clock: { minute }, score: { home: 2, away: 1 }, home: { shortName: 'Northbridge' }, away: { shortName: 'Westhaven' }, metrics: { homeControl: 50 } } as Snapshot
+        const duration = formatMinutes(minute, code)
+        expect(duration).toBe(`${minute} ${minuteUnits[code][minute === 1 ? 0 : 1]}`)
+        const text = matchStatus(snap, a11yStrings(code))
+        expect(text).toContain(duration)
+        expect(text).toContain('2')
+        expect(text).toContain('1')
+        if (code !== 'en') expect(text).not.toContain('minutes played')
+        q.say({ text, kind: 'status', lang: code })
+        expect(synth.spoken.at(-1)).toMatchObject({ text, lang: locale, voice: { lang: locale } })
+        synth.end()
+      }
+      const numeric = `${formatPercent(0.31, code)}; ${formatPercent(0.9, code)}; ${formatNumber(1.25, code)}; ${spokenClock(905, code)}`
+      expect(numeric).toContain(code === 'en' ? '1.25' : '1,25')
+      expect(numeric).toContain(formatMinutes(15, code))
+      expect(numeric).not.toContain('15:05')
+      q.say({ text: numeric, kind: 'status', lang: code })
+      expect(synth.spoken.at(-1)).toMatchObject({ text: numeric, lang: locale, voice: { lang: locale } })
+    })
+
+    it(`English → ${code} → English cancels old speech and rejects stale callbacks/repeats`, () => {
+      const synth = new Synth(voices)
+      const q = queueOn(synth)
+      q.setLanguage('en')
+      q.say({ text: '15 minutes', kind: 'status', lang: 'en' })
+      const old = q.getState().transcript.at(-1)!
+      q.setLanguage(code)
+      if (code !== 'en') {
+        expect(q.repeatLast()).toBe(false)
+        expect(q.replay(old)).toBe(false)
+        expect(q.say({ text: 'Stale English callback', kind: 'status', lang: 'en' })).toBe(false)
+      } else synth.end()
+      q.say({ text: formatMinutes(15, code), kind: 'status', lang: code })
+      expect(synth.spoken.at(-1)?.lang).toBe(locale)
+      q.setLanguage('en')
+      if (code === 'en') synth.end()
+      q.say({ text: '45 minutes', kind: 'status', lang: 'en' })
+      expect(synth.spoken.at(-1)?.lang).toBe('en-GB')
+    })
+  }
+
+  it('drops stale replay cues while voices are loading instead of narrating them late', () => {
+    const synth = new Synth([])
+    const q = queueOn(synth)
+    q.setLanguage('fr')
+    q.setTimeline('replay', 0, true)
+    q.say({ text: 'Passe', kind: 'replay', lang: 'fr', at: 0, validFor: 1 })
+    q.setTimeline('replay', 5, true)
+    synth.loadVoices(voices)
+    expect(synth.spoken).toEqual([])
+  })
+
+  it('rechecks a voice removed between enqueue and dispatch', () => {
+    const synth = new Synth(voices)
+    const q = queueOn(synth)
+    q.setLanguage('fr')
+    q.say({ text: 'Première', kind: 'status', lang: 'fr' })
+    q.say({ text: 'Deuxième', kind: 'status', lang: 'fr' })
+    synth.voices = voices.filter(x => x.lang.startsWith('en'))
+    synth.end()
+    expect(synth.spoken).toHaveLength(1)
+    expect(q.getState().missingVoice).toBe('fr-FR')
+  })
+})
+
 describe('replay audio description follows the viewer language', () => {
   const players: ReplayPlayer[] = [{ id: 'WHA-9', teamId: 'WHA', isHome: false, shirtNumber: 9, name: 'Kwame Addo-Sterling', shortName: 'Addo-Sterling', position: 'Striker', isGoalkeeper: false }]
   const event: ReplayEvent = { eventId: 'E1', sequence: 1, time: 0, endTime: 1, matchSecond: 3500, clock: '58:20', type: 'Shot', outcome: 'OnTarget',
@@ -173,5 +252,21 @@ describe('replay audio description follows the viewer language', () => {
     expect(fr).toContain("L'équipe à l'extérieur")
     expect(es).toContain('El equipo visitante')
     expect(`${fr} ${es}`).not.toMatch(/\b(Home|Away)\b/)
+  })
+
+  it('localizes corner teams, shirt numbers and shot distances in every supported language', () => {
+    for (const { code, locale } of LANGUAGES) {
+      const s = a11yStrings(code)
+      const corner = describeReplayEvent({ ...event, type: 'Corner', label: 'CORNER' }, players, 'NBR', s)!
+      expect(corner).toContain(s.ad.away)
+      const shot = describeReplayEvent({ ...event, x: 12 }, players, 'NBR', s)!
+      expect(shot).toContain('9')
+      expect(shot).toContain('13') // Westhaven attacks towards x=0: about 13 metres from goal.
+      const synth = new Synth([v(code, locale)])
+      const q = queueOn(synth)
+      q.setLanguage(code)
+      q.say({ text: shot, kind: 'replay', lang: code })
+      expect(synth.spoken[0]).toMatchObject({ lang: locale, voice: { lang: locale } })
+    }
   })
 })

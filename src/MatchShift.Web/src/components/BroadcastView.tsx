@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, sessionId, subscribeDemo, type Snapshot, type Lang } from '../api'
-import { isLang } from '../languages'
+import { isLang, localeOf } from '../languages'
 import { t } from '../i18n'
 import { broadcastCopy } from '../broadcastCopy'
 import { broadcastHref, broadcastRoute } from '../broadcastRoute'
@@ -13,6 +13,7 @@ export function BroadcastView() {
   const lang: Lang = isLang(requested) ? requested : 'en'
     useEffect(() => {
         document.body.classList.add('broadcast-body')
+        document.documentElement.lang = localeOf(lang)
 
         const profile = { mode: 'Studio' as const, language: lang }
 

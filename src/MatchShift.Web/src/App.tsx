@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { HighlightCard, InsightCard, InsightEvents, Lang, MatchDetail, MatchSummary, Meta, Profile, Snapshot, ViewerMode } from './api'
 import { api, profileQuery, sessionId, subscribeDemo } from './api'
 import { t } from './i18n'
@@ -23,7 +23,7 @@ import { JudgeGuide } from './guide/JudgeGuide'
 import type { GuideStep } from './guide/guide'
 import { FLAGSHIP, GUIDE_START, GUIDE_STEPS, findFlagship, wantsGuideFromUrl } from './guide/guide'
 import { evidenceLegend, splitEvidence } from './evidence'
-import { isLang } from './languages'
+import { isLang, spokenClock } from './languages'
 import { broadcastHref } from './broadcastRoute'
 import { capDetail, insightCueClass, matchNarrationPolicy, matchTimelineLive } from './a11y/narrationPolicy'
 import { ReplayAudioFocus } from './a11y/audioFocus'
@@ -50,7 +50,10 @@ const loadProfile = (): Profile => {
   }
   try {
     const raw = localStorage.getItem('matchshift.profile')
-    if (raw) return JSON.parse(raw) as Profile
+    if (raw) {
+      const saved = JSON.parse(raw) as Profile
+      return { ...saved, language: isLang(saved.language) ? saved.language : 'en' }
+    }
   } catch { /* storage unavailable: use defaults */ }
   return { mode: 'Analyst', language: 'en' }
 }
@@ -60,7 +63,10 @@ export default function App() {
   const [matches, setMatches] = useState<MatchSummary[]>([])
   const [detail, setDetail] = useState<MatchDetail | null>(null)
   const [profile, setProfile] = useState<Profile>(loadProfile)
-  const [snap, setSnap] = useState<Snapshot | null>(null)
+  const [received, setSnap] = useState<Snapshot | null>(null)
+  // Never render or narrate an old-language server/demo snapshot under the new language's labels and voice.
+  const snap = received?.profile.language === profile.language ? received : null
+  const currentLanguage = useRef(profile.language)
   const currentSnapshot = useRef(snap)
   currentSnapshot.current = snap
   const [connected, setConnected] = useState(false)
@@ -73,14 +79,17 @@ export default function App() {
 
   // Optional accessibility layer (everything off by default).
   const a11y = useA11y()
-  const { prefs } = a11y
+  const { prefs, setLanguage } = a11y
   // Ask the agent workflow for accessible (spoken / nonvisual) output only when this viewer uses those features.
   const wantsAccessible = speechEnabled(prefs) || prefs.describeVisuals || prefs.simplified
   const streamProfile = useMemo<Profile>(() => ({ ...profile, accessible: wantsAccessible }), [profile, wantsAccessible])
   const as = a11yStrings(profile.language)
   const voiceLang = speechLang(profile.language)
   // Switching language drops and stops queued narration in the old language, so it never keeps playing.
-  useEffect(() => { a11y.speech.setLanguage(voiceLang) }, [a11y.speech, voiceLang])
+  useLayoutEffect(() => {
+    currentLanguage.current = profile.language
+    setLanguage(voiceLang)
+  }, [setLanguage, profile.language, voiceLang])
   const [centerOpen, setCenterOpen] = useState(false)
   const [keysOpen, setKeysOpen] = useState(false)
   const [description, setDescription] = useState<string | null>(null)
@@ -105,12 +114,15 @@ export default function App() {
   )
 
   useEffect(() => {
+    const acceptSnapshot = (next: Snapshot) => {
+      if (next.profile.language === currentLanguage.current) setSnap(next)
+    }
     // GitHub Pages / static demo mode
     if (subscribeDemo) {
       return subscribeDemo(
         streamProfile,
         (next) => {
-          setSnap(next)
+          acceptSnapshot(next)
           setConnected(true)
         },
         (ok) => setConnected(ok),
@@ -127,7 +139,7 @@ export default function App() {
           if (res.ok) {
             const next = (await res.json()) as Snapshot
             if (!stop) {
-              setSnap(next)
+              acceptSnapshot(next)
               setConnected(true)
             }
           }
@@ -150,7 +162,7 @@ export default function App() {
 
     source.addEventListener('snapshot', (e) => {
       errors = 0
-      setSnap(JSON.parse((e as MessageEvent).data) as Snapshot)
+      acceptSnapshot(JSON.parse((e as MessageEvent).data) as Snapshot)
     })
 
     source.onopen = () => setConnected(true)
@@ -192,8 +204,6 @@ export default function App() {
   }, [focus])
   useEffect(() => { setWhy(null); setFocus(null) }, [profile])
 
-  useEffect(() => { document.documentElement.lang = profile.language }, [profile.language])
-
   const flagship = snap ? findFlagship(snap.matchId, snap.insights) : undefined
   const scrollToCard = (id: string) => window.setTimeout(() =>
     document.getElementById(`card-${id}`)?.scrollIntoView({ block: 'nearest', behavior: a11y.reducedMotion ? 'auto' : 'smooth' }), 60)
@@ -207,7 +217,14 @@ export default function App() {
     scrollToCard(flagship.id)
   }, [awaitFlagship, flagship?.id, snap?.epoch]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const update = (patch: Partial<Profile>) => setProfile((p) => ({ ...p, ...patch }))
+  const update = (patch: Partial<Profile>) => {
+    if (patch.language) {
+      // Cancel speech and delayed live-region announcements synchronously with the selector interaction.
+      currentLanguage.current = patch.language
+      setLanguage(patch.language)
+    }
+    setProfile((p) => ({ ...p, ...patch }))
+  }
   const openVerification = (insightId?: string) => {
     if (insightId) setSelected(insightId)
     setWhy(null)
@@ -221,7 +238,7 @@ export default function App() {
 
   const showInsight = async (card: InsightCard) => {
     const events = await api.insightEvents(card.id)
-    if (currentSnapshot.current?.matchId !== snap?.matchId || currentSnapshot.current?.epoch !== snap?.epoch) return
+    if (currentLanguage.current !== profile.language || currentSnapshot.current?.matchId !== snap?.matchId || currentSnapshot.current?.epoch !== snap?.epoch) return
     setSelected(card.id)
     setWhy(null)
     setFocus({ events, caption: `${card.minute}' · ${card.narrative.headline}`, teamId: card.teamId, insightId: card.id })
@@ -244,7 +261,7 @@ export default function App() {
     const card = snap?.insights.find((i) => i.id === h.insightId)
     if (card) return showInsight(card)
     const events = await api.highlightEvents(h.id)
-    if (currentSnapshot.current?.matchId !== snap?.matchId || currentSnapshot.current?.epoch !== snap?.epoch) return
+    if (currentLanguage.current !== profile.language || currentSnapshot.current?.matchId !== snap?.matchId || currentSnapshot.current?.epoch !== snap?.epoch) return
     setFocus({ events, caption: `${h.minute}' · ${h.headline}`, teamId: h.teamId })
   }
 
@@ -459,11 +476,11 @@ export default function App() {
         </div>
 
         {/* Not a live region: the clock changes every second. Goals are announced through the shared announcer. */}
-        <div className="scoreboard" role="group" aria-label={`${snap.home.shortName} ${snap.score.home}, ${snap.away.shortName} ${snap.score.away}, ${snap.clock.label}`}>
+        <div className="scoreboard" role="group" aria-label={`${snap.home.shortName} ${snap.score.home}, ${snap.away.shortName} ${snap.score.away}, ${spokenClock(snap.clock.second, profile.language)}`}>
           <span className="team-name"><span className="team-swatch" style={{ background: HOME_COLOR }} />{snap.home.shortName}</span>
           <span className="score">{snap.score.home} – {snap.score.away}</span>
           <span className="team-name">{snap.away.shortName}<span className="team-swatch swatch-away" style={{ background: AWAY_COLOR }} /></span>
-          <span className="clock" aria-label={`${s.minute} ${snap.clock.minute}`}>{snap.clock.label}</span>
+          <span className="clock" aria-label={spokenClock(snap.clock.second, profile.language)}>{snap.clock.label}</span>
         </div>
 
         <div className="controls-right">

@@ -12,6 +12,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 builder.Services.AddProblemDetails();
+builder.Services.AddDemoSecurity();
 builder.Services.AddSingleton<MatchCatalog>();
 builder.Services.AddSingleton<NarrationQueue>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NarrationQueue>());
@@ -30,14 +31,34 @@ builder.Services.AddSingleton(sp =>
 builder.Services.AddSingleton<AgentWorkflowService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AgentWorkflowService>());
 builder.Services.AddMatchShiftTelemetry(builder.Configuration);
-builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
-    .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173"])
-    .AllowAnyHeader().AllowAnyMethod()));
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+{
+    var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
+    // Hosted UI and API are same-origin. Local development opts in through launch configuration.
+    if (origins.Length > 0) p.WithOrigins(origins);
+    p.WithMethods("GET", "POST").WithHeaders("Content-Type");
+}));
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
+if (!app.Environment.IsDevelopment()) app.UseHsts();
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+        context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+        context.Response.Headers["Content-Security-Policy"] = "frame-ancestors 'self'; object-src 'none'; base-uri 'self'";
+        return Task.CompletedTask;
+    });
+    await next(context);
+});
+app.UseRouting();
 app.UseCors();
+app.UseRateLimiter();
+app.Use(ApiSecurity.GuardRequest);
 app.UseDefaultFiles();
 // Fingerprinted build assets are cached for good; index.html and stable-named files (crowd audio) are re-checked on every
 // load, so a redeploy is picked up straight away (see StaticCachePolicy).

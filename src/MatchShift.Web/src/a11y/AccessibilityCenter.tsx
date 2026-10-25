@@ -4,6 +4,7 @@ import { useA11y, useDialog } from './A11yContext'
 import type { A11yPrefs, PresetId } from './prefs'
 import { applyPreset, matchingPreset } from './prefs'
 import { a11yStrings, speechLang } from './strings'
+import { formatNumber, formatPercent } from '../languages'
 
 interface Props {
   lang: Lang
@@ -104,8 +105,8 @@ export function AccessibilityCenter({ lang, onClose, onKeyboardHelp }: Props) {
             {choice('periodicRecap', [['off', s.periodic.off], ['5', s.periodic['5']], ['10', s.periodic['10']], ['halftime', s.periodic.halftime], ['shifts', s.periodic.shifts]])}
             {toggle('replayAudioDescription')}
             {toggle('describeVisuals')}
-            {slider('speechRate', 0.5, 2, 0.1, (v) => `${v.toFixed(1)}×`)}
-            {slider('speechVolume', 0, 1, 0.1, (v) => `${Math.round(v * 100)}%`)}
+            {slider('speechRate', 0.5, 2, 0.1, (v) => `${formatNumber(v, lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}×`)}
+            {slider('speechVolume', 0, 1, 0.1, (v) => formatPercent(v, lang))}
             {toggle('soundCues')}
             <div className="a11y-row">
               <button type="button" onClick={() => speech.say({ text: s.testPhrase, kind: 'test', lang: speechLang(lang), priority: 1 }, { allowRepeat: true })}>

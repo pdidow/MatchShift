@@ -4,6 +4,8 @@ namespace MatchShift.Api.Playback;
 public sealed class SessionRegistry(MatchCatalog catalog, NarrationQueue queue) : IDisposable
 {
     private readonly Dictionary<string, DemoSession> _sessions = [];
+    private readonly Dictionary<string, string> _owners = [];
+    public const int MaxSessionsPerClient = 4;
     private readonly object _gate = new();
     public DemoSession Resolve(HttpContext http)
     {
@@ -14,12 +16,16 @@ public sealed class SessionRegistry(MatchCatalog catalog, NarrationQueue queue) 
         lock (_gate)
         {
             foreach (var old in _sessions.Where(kv => DateTime.UtcNow - kv.Value.LastAccess > TimeSpan.FromMinutes(30)).ToArray())
-            { old.Value.Close(); _sessions.Remove(old.Key); }
+            { old.Value.Close(); _sessions.Remove(old.Key); _owners.Remove(old.Key); }
             if (!_sessions.TryGetValue(id, out var session))
             {
+                var owner = ApiSecurity.ClientKey(http);
+                if (_owners.Values.Count(value => value == owner) >= MaxSessionsPerClient)
+                    throw new BadHttpRequestException("Demo session limit reached. Reuse an existing session.", 429);
                 if (_sessions.Count >= 32) throw new BadHttpRequestException("Demo session capacity reached. Retry later.", 503);
                 session = new DemoSession(catalog, queue) { Id = id };
                 _sessions[id] = session;
+                _owners[id] = owner;
             }
             session.Touch();
             if (supplied is null) http.Response.Cookies.Append("matchshift-session", id,
@@ -28,5 +34,5 @@ public sealed class SessionRegistry(MatchCatalog catalog, NarrationQueue queue) 
         }
     }
     public IReadOnlyList<DemoSession> All { get { lock (_gate) return _sessions.Values.ToArray(); } }
-    public void Dispose() { lock (_gate) { foreach (var session in _sessions.Values) session.Close(); _sessions.Clear(); } }
+    public void Dispose() { lock (_gate) { foreach (var session in _sessions.Values) session.Close(); _sessions.Clear(); _owners.Clear(); } }
 }

@@ -141,16 +141,13 @@ describe('speech queue', () => {
     expect(synth.spoken.map(u => u.text)).toEqual(['one', 'one'])
   })
 
-  it('uses a voice for the language; without one it still speaks with the right lang and flags it', () => {
+  it('uses a compatible voice, otherwise preserves text and shows a notice without speaking', () => {
     const { synth, queue } = makeQueue()
     queue.say({ text: 'bonjour', kind: 'insight', lang: 'fr-FR' })
     expect(synth.spoken[0].voice?.name).toBe('Français')
     synth.end()
     queue.say({ text: 'hola', kind: 'insight', lang: 'es-ES' })
-    // No Spanish voice on this device: the browser chooses (never an explicit English voice), lang is still es-ES.
-    expect(synth.spoken).toHaveLength(2)
-    expect(synth.spoken[1].lang).toBe('es-ES')
-    expect(synth.spoken[1].voice).toBeNull()
+    expect(synth.spoken).toHaveLength(1) // No Spanish voice: never let the browser choose English.
     expect(queue.getState().missingVoice).toBe('es-ES')
     expect(queue.getState().transcript.at(-1)?.text).toBe('hola')
   })
@@ -225,7 +222,7 @@ describe('insight descriptions', () => {
     const c = card('ATTACK_CHANNEL_SHIFT', 'High')
     const major = insightSpeech(c, 'major', false, en, teamName, opponentOf)
     const detailed = insightSpeech(c, 'detailed', false, en, teamName, opponentOf)
-    expect(major).toBe("63'. Match shift, Westhaven. Westhaven switch to the right.")
+    expect(major).toBe('63 minutes. Match shift, Westhaven. Westhaven switch to the right.')
     expect(detailed).toContain('They are targeting the right flank.')
     expect(detailed).toContain('A fresh winger.')
   })
@@ -236,7 +233,7 @@ describe('insight descriptions', () => {
     expect(why).toContain('Fact: Attacks down the right rose from 31% to 90%.')
     expect(why).toContain('Confidence: High.')
     expect(why).toContain("Attacks down the right (share): 31% → 90% (0'-50' → 50'-62')")
-    expect(whatChanged(c, en)).toBe("At minute 63, MatchShift detected a change. Before the change, Attacks down the right (share) was 31% between 0' and 50'. Afterwards it was 90% between 50' and 62'.")
+    expect(whatChanged(c, en)).toBe('At minute 63, MatchShift detected a change. Before the change, Attacks down the right (share) was 31% between 0 minutes and 50 minutes. Afterwards it was 90% between 50 minutes and 62 minutes.')
     expect(whatChanged(card('GOAL', 'High', 'ChanceQuality', null), en)).toBeNull()
   })
 })
