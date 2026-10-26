@@ -12,6 +12,8 @@ builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 builder.Services.AddProblemDetails();
+builder.Services.AddHttpClient("speech", c => c.MaxResponseContentBufferSize = 1_000_000);
+builder.Services.AddSingleton<MatchShift.Api.Speech.SpeechFallback>();
 builder.Services.AddDemoSecurity();
 builder.Services.AddSingleton<MatchCatalog>();
 builder.Services.AddSingleton<NarrationQueue>();
@@ -70,6 +72,7 @@ app.UseStaticFiles(staticFiles);
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", synthetic = true }));
 app.MapMatchShiftApi();
+app.MapPost("/api/speech", (MatchShift.Api.Speech.SpeechRequest request, HttpContext context, MatchShift.Api.Speech.SpeechFallback speech) => speech.Synthesize(request, context)).RequireRateLimiting(ApiSecurity.ExpensivePolicy);
 app.MapFallbackToFile("index.html", staticFiles);
 
 app.Run();

@@ -70,7 +70,7 @@ export function SpeechBar({ lang, overReplay, onStatus }: { lang: Lang; overRepl
             {caption.clock && <span className="speech-clock">{caption.clock}</span>}{caption.text}
           </p>
         )}
-        {(!st.supported || st.missingVoice || st.error) && speaking && <p className="speech-note">{st.missingVoice ? s.speech.noVoice : st.error ? s.speech.failed : s.speech.unsupported}</p>}
+        {(!st.supported || st.missingVoice || st.error) && speaking && <p className="speech-note" role="status">{st.missingVoice ? s.speech.noVoice : st.error ? s.speech.failed : s.speech.unsupported}</p>}
       </div>
       {showTranscript && prefs.transcript && <TranscriptPanel lang={lang} onClose={() => setShowTranscript(false)} />}
     </>

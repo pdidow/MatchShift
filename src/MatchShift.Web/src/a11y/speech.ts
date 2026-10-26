@@ -1,4 +1,4 @@
-// The single MatchShift speech coordinator on top of the Web Speech API (window.speechSynthesis).
+// The single MatchShift speech coordinator: browser voices first, bounded server Speech fallback.
 //  - one voice at a time, highest priority first
 //  - TIMELINE-AWARE: a cue names the second it describes on its own clock (match or replay); once that clock has moved
 //    past the cue's relevance window the cue is dropped, never spoken late. The timeline never waits for speech.
@@ -11,6 +11,7 @@
 //  - mute / pause / resume / repeat last; the speech rate is the viewer's setting and is never scaled by playback speed
 //  - every message is also kept as text (captions + transcript), even when muted, silenced or no voice exists
 
+import { browserCloudSpeech, type CloudSpeech } from './cloudSpeech'
 import { languageOf, localeOf as speechLocale } from '../languages'
 
 export type Priority = 0 | 1 | 2 // 0 = low (detail, replay narration), 1 = normal, 2 = critical (goals, dangerous moments)
@@ -95,9 +96,9 @@ export interface SpeechState {
   muted: boolean
   current: TranscriptEntry | null
   transcript: TranscriptEntry[]
-  /** Language for which no installed voice was found (speech falls back to text). */
+  /** Missing local voice in environments without a cloud transport. */
   missingVoice: string | null
-  /** Browser speech engine failed after a compatible voice was selected. */
+  /** All available narration paths failed; the transcript remains available. */
   error: string | null
 }
 
@@ -133,7 +134,9 @@ const localeOf = (lang: string) => lang.toLowerCase().replace('_', '-')
  */
 export function chooseVoice(voices: VoiceLike[], lang: string, excluded: readonly string[] = [], preferredName?: string): VoiceLike | null {
   const usable = voices.filter(v => !excluded.includes(`${localeOf(v.lang)}:${v.name}`))
-  const exact = usable.filter(v => localeOf(v.lang) === localeOf(lang))
+  const french = baseOf(lang) === 'fr'
+  const preferredLocale = french ? (usable.some(v => localeOf(v.lang) === 'fr-ca') ? 'fr-ca' : 'fr-fr') : localeOf(lang)
+  const exact = usable.filter(v => localeOf(v.lang) === preferredLocale)
   const same = exact.length > 0 ? exact : usable.filter(v => baseOf(v.lang) === baseOf(lang))
   if (same.length === 0) return null
   return same.find(v => v.name === preferredName) ?? same.find(v => v.default) ?? same.find(v => (v as { localService?: boolean }).localService) ?? same[0]
@@ -150,6 +153,11 @@ export class SpeechQueue {
   private readonly now: () => number
   private queue: Queued[] = []
   private currentItem: Queued | null = null
+  private cloud: CloudSpeech | null
+  private cloudAbort: AbortController | null = null
+  private startTimer: ReturnType<typeof setTimeout> | undefined
+  private voiceTimer: ReturnType<typeof setTimeout> | undefined
+  private voicesWaited = false
   private token = 0
   private spokenKeys = new Set<string>()
   private lastSpoken: Queued | null = null
@@ -166,17 +174,19 @@ export class SpeechQueue {
     replay: { playing: true },
   }
 
-  constructor(options?: { synth?: SynthLike | null; makeUtterance?: (text: string) => UtteranceLike; now?: () => number }) {
+  constructor(options?: { synth?: SynthLike | null; makeUtterance?: (text: string) => UtteranceLike; now?: () => number; cloud?: CloudSpeech | null }) {
     const browserSynth = typeof window !== 'undefined' && 'speechSynthesis' in window ? (window.speechSynthesis as unknown as SynthLike) : null
     this.synth = options?.synth !== undefined ? options.synth : browserSynth
     this.makeUtterance = options?.makeUtterance ?? ((text) => new SpeechSynthesisUtterance(text) as unknown as UtteranceLike)
+    this.cloud = options?.cloud !== undefined ? options.cloud : (!options && typeof window !== 'undefined' && 'AudioContext' in window ? browserCloudSpeech() : null)
     this.now = options?.now ?? (() => Date.now())
-    this.state = { supported: !!this.synth, speaking: false, paused: false, muted: false, current: null, transcript: [], missingVoice: null, error: null }
+    this.state = { supported: !!this.synth || !!this.cloud, speaking: false, paused: false, muted: false, current: null, transcript: [], missingVoice: null, error: null }
     // Voices often load after the page (getVoices() can be empty at first). One listener refreshes the cached list and
     // clears a "missing voice" notice that was only due to voices not having loaded yet.
     this.synth?.addEventListener?.('voiceschanged', this.onVoicesChanged)
   }
 
+  private failedVoices = new Set<string>()
   private voices: VoiceLike[] = []
   private language: string | null = null
   private preferredVoices: Record<string, string> = {}
@@ -300,13 +310,13 @@ export class SpeechQueue {
       text: message.text, lang: message.lang, spoken: false,
     }
     this.pushTranscript(entry)
-    if (!this.synth || this.state.muted) { this.emit(); return true }
+    if ((!this.synth && !this.cloud) || this.state.muted) { this.emit(); return true }
     // Audio focus: while Evidence Replay is open, match narration is text only and never queues behind the replay.
     if (source === 'match' && this.focus === 'replay') { this.emit(); return true }
 
     // Missing or still-loading voices are text-only until a matching voice is available. Never use the OS default.
     const voice = this.voiceFor(message.lang)
-    if (!voice) this.update({ missingVoice: message.lang })
+    if (!voice && !this.cloud) this.update({ missingVoice: message.lang })
     else if (this.state.missingVoice === message.lang) this.update({ missingVoice: null })
 
     const item: Queued = { ...message, priority, source, createdAt: this.now(), entry }
@@ -364,14 +374,14 @@ export class SpeechQueue {
   }
 
   pause() {
-    if (!this.synth) return
-    this.synth.pause()
+    this.synth?.pause()
+    this.cloud?.pause()
     this.update({ paused: true })
   }
 
   resume() {
-    if (!this.synth) return
-    this.synth.resume()
+    this.synth?.resume()
+    this.cloud?.resume()
     this.update({ paused: false })
     this.pump()
   }
@@ -397,6 +407,11 @@ export class SpeechQueue {
   clearTranscript() { this.update({ transcript: [] }) }
 
   private cancelCurrent() {
+    clearTimeout(this.startTimer)
+    clearTimeout(this.voiceTimer)
+    this.voiceTimer = undefined
+    this.cloudAbort?.abort()
+    this.cloudAbort = null
     this.token++
     this.currentItem = null
     this.synth?.cancel()
@@ -404,7 +419,7 @@ export class SpeechQueue {
   }
 
   private pump() {
-    if (!this.synth || this.currentItem || this.state.paused || this.state.muted) return
+    if ((!this.synth && !this.cloud) || this.currentItem || this.state.paused || this.state.muted) return
     const now = this.now()
     this.queue = this.queue.filter(q => now - q.createdAt <= (q.ttlMs ?? DEFAULT_TTL[q.priority]) && this.isRelevant(q)
       && !(q.source === 'match' && this.focus === 'replay'))
@@ -419,7 +434,16 @@ export class SpeechQueue {
     if (bestIndex < 0) return
     const item = this.queue[bestIndex]
     const voice = this.voiceFor(item.lang, item.attemptedVoices)
-    if (!voice) { this.update({ missingVoice: item.lang }); return }
+    if (!voice) {
+      if (!this.cloud) { this.update({ missingVoice: item.lang }); return }
+      if (this.synth && !this.voicesWaited) {
+        if (!this.voiceTimer) this.voiceTimer = setTimeout(() => { this.voicesWaited = true; this.voiceTimer = undefined; this.pump() }, 600)
+        return
+      }
+      this.queue.splice(bestIndex, 1)
+      this.speakCloud(item)
+      return
+    }
     if (this.state.missingVoice) this.update({ missingVoice: null })
     this.queue.splice(bestIndex, 1)
     const u = this.makeUtterance(item.text)
@@ -431,6 +455,7 @@ export class SpeechQueue {
     let started = false
     const markSpoken = () => {
       if (token !== this.token || started) return
+      clearTimeout(this.startTimer)
       started = true
       item.entry.spoken = true
       for (const e of item.merged ?? []) e.spoken = true
@@ -440,6 +465,7 @@ export class SpeechQueue {
     const done = () => {
       if (token !== this.token) return
       if (!started) markSpoken() // Some engines omit onstart but still report successful completion.
+      clearTimeout(this.startTimer)
       this.token++
       this.currentItem = null
       this.update({ speaking: false, current: null })
@@ -448,7 +474,12 @@ export class SpeechQueue {
     const failed = (event?: { error?: string }) => {
       if (token !== this.token) return
       this.token++
+      clearTimeout(this.startTimer)
       const code = event?.error ?? 'synthesis-failed'
+      if (this.cloud) {
+        this.failedVoices.add(`${localeOf(voice.lang)}:${voice.name}`)
+        this.synth?.cancel(); this.speakCloud(item); return
+      }
       this.currentItem = null
       // Firefox and Windows can expose a voice that its engine cannot actually start. Try another voice of the SAME
       // language; never fall back to an English default for French (or another selected language).
@@ -469,7 +500,43 @@ export class SpeechQueue {
     u.onerror = failed
     this.currentItem = item
     this.update({ speaking: true, current: item.entry, error: null })
-    try { this.synth.speak(u) } catch { failed({ error: 'synthesis-failed' }) }
+    const checkStart = () => {
+      if (token !== this.token || started) return
+      if (this.state.paused) this.startTimer = setTimeout(checkStart, 2500)
+      else failed({ error: 'synthesis-start-timeout' })
+    }
+    if (this.cloud) this.startTimer = setTimeout(checkStart, 2500)
+    try { this.synth!.speak(u) } catch { failed({ error: 'synthesis-failed' }) }
+  }
+
+  private speakCloud(item: Queued) {
+    const cloud = this.cloud
+    if (!cloud) return
+    const token = ++this.token
+    const abort = new AbortController()
+    this.cloudAbort = abort
+    this.currentItem = item
+    this.update({ speaking: true, current: item.entry, missingVoice: null, error: null })
+    const timeout = setTimeout(() => abort.abort(), 60_000)
+    cloud.play(item.text, item.lang, this.rate, this.volume, abort.signal, () => {
+      if (token !== this.token) return
+      item.entry.spoken = true
+      for (const entry of item.merged ?? []) entry.spoken = true
+      this.lastSpoken = item
+      this.emit()
+    }, () => token === this.token && this.isRelevant(item)).catch(error => {
+      if (token !== this.token) return
+      console.warn('MatchShift narration fallback failed', error instanceof Error ? error.message : 'speech-error')
+      this.update({ error: 'synthesis-failed' })
+    }).finally(() => {
+      clearTimeout(timeout)
+      if (token !== this.token) return
+      if (abort.signal.aborted) this.update({ error: 'synthesis-failed' })
+      this.cloudAbort = null
+      this.currentItem = null
+      this.update({ speaking: false, current: null })
+      this.pump()
+    })
   }
 
   /**
@@ -477,7 +544,7 @@ export class SpeechQueue {
    */
   private voiceFor(lang: string, excluded: readonly string[] = []): VoiceLike | null {
     this.voices = this.synth?.getVoices() ?? []
-    return chooseVoice(this.voices, lang, excluded, this.preferredVoices[baseOf(lang)])
+    return chooseVoice(this.voices, lang, [...excluded, ...this.failedVoices], this.preferredVoices[baseOf(lang)])
   }
 
   private pushTranscript(entry: TranscriptEntry) {
