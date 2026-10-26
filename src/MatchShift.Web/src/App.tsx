@@ -4,6 +4,7 @@ import { api, profileQuery, sessionId, subscribeDemo } from './api'
 import { t } from './i18n'
 import { MomentumChart, PressureChart } from './components/Charts'
 import { InsightCardView } from './components/InsightCard'
+import { LoadingScreen } from './components/LoadingScreen'
 import { MetricsStrip } from './components/MetricsStrip'
 import { HighlightsPanel, Logo, RecapPanel } from './components/Panels'
 import { AgentWorkflowPanel } from './components/AgentWorkflow'
@@ -484,11 +485,7 @@ export default function App() {
     snapshotReady && a11y.say({ text, priority: 1, kind, label, lang: voiceLang, clock: snap?.clock.label }, { allowRepeat: true })
 
   if (!snap) {
-    return (
-      <>
-        <p className="empty" role="status">MatchShift · {connected ? '…' : s.connecting}</p>
-      </>
-    )
+    return <LoadingScreen tagline={s.tagline} badge={s.synthetic} message={connected ? s.loading : s.connecting} />
   }
 
   const focusCard = focus?.insightId ? snap.insights.find(i => i.id === focus.insightId) : undefined

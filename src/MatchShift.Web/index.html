@@ -4,11 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/startup.css" />
     <title>MatchShift</title>
     <meta name="description" content="Football intelligence that explains itself. All data is synthetic." />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="startup-screen" role="status" aria-live="polite">
+        <div class="startup-content">
+          <div class="startup-brand">
+            <svg width="38" height="38" viewBox="0 0 32 32" aria-hidden="true">
+              <rect x="1" y="1" width="30" height="30" rx="8" fill="#0a0f18" stroke="#39e6b0" stroke-width="2" />
+              <path d="M7 21 L13 15 L17 19 L25 10" fill="none" stroke="#39e6b0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="25" cy="10" r="2.6" fill="#eef2f8" />
+            </svg>
+            <span class="startup-name">MatchShift</span>
+            <span class="startup-badge">Synthetic data</span>
+          </div>
+          <p class="startup-tagline">Football intelligence you can question, verify, and replay.</p>
+          <div class="startup-progress" aria-hidden="true"></div>
+          <p class="startup-status">Loading MatchShift…</p>
+          <noscript><p class="startup-status">Please enable JavaScript to open MatchShift.</p></noscript>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

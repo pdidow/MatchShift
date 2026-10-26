@@ -1,0 +1,25 @@
+/* Available before the application bundle: shared by the HTML shell and React's data-loading state. */
+.startup-screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #0e1420;
+  color: #eef2f8;
+  font-family: Inter, system-ui, sans-serif;
+  box-sizing: border-box;
+}
+.startup-content { width: min(100%, 520px); text-align: center; }
+.startup-brand { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.startup-brand svg { width: 38px; height: 38px; flex-shrink: 0; }
+.startup-name { font: 700 32px/1 'Barlow Condensed', 'Arial Narrow', sans-serif; letter-spacing: .5px; text-transform: uppercase; }
+.startup-badge { border: 1px solid #806b32; border-radius: 999px; padding: 4px 9px; color: #f2c14e; font-size: 10px; line-height: 1.2; letter-spacing: 1px; text-transform: uppercase; }
+.startup-tagline { margin: 16px 0 32px; color: #b3bdcf; font-size: 14px; line-height: 1.65; text-wrap: balance; }
+.startup-progress { width: 160px; height: 3px; margin: 0 auto; overflow: hidden; border-radius: 3px; background: #243049; }
+.startup-progress::after { content: ''; display: block; width: 55%; height: 100%; background: #39e6b0; border-radius: inherit; animation: startup-travel 1.6s ease-in-out infinite alternate; }
+.startup-status { margin: 16px 0 0; color: #b3bdcf; font-size: 12px; line-height: 1.5; }
+@keyframes startup-travel { from { transform: translateX(-100%); } to { transform: translateX(185%); } }
+@media (prefers-reduced-motion: reduce) { .startup-progress::after { animation: none; margin: auto; } }
+html[data-reduced-motion='true'] .startup-progress::after { animation: none; margin: auto; }
+@media (max-width: 380px) { .startup-brand { gap: 10px; } .startup-name { font-size: 28px; } .startup-badge { font-size: 9px; } }
