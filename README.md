@@ -60,7 +60,25 @@ Open the [judge demo](https://matchshift-pd.azurewebsites.net/?demo=judge), or c
 **RECORDED DEMO** replays the real result of a prior verified workflow. **OFFLINE TEMPLATE** makes no model call and is not AI-verified. Normal hosted use remains live-capable.
 Insight used: `MS-FLAGSHIP-001-I015`.
 
+After the guide, click **Broadcast Preview** in the top bar to see the same moment as on-air graphics ([below](#broadcast-preview-second-screen)).
+
 The submission video's [English captions and transcript](docs/video/) and [audio and voice credits](docs/VIDEO_CREDITS.md) are available in the repository.
+
+## Broadcast Preview (second screen)
+
+Broadcast Preview shows how MatchShift's insights could look as on-air graphics, driven by the same match you are watching in the app.
+
+1. Start the match with **Play** (or open the [judge demo](https://matchshift-pd.azurewebsites.net/?demo=judge)).
+2. Click **Broadcast Preview** in the top bar. It opens in a new tab linked to your session and current language.
+3. Keep controlling the match from the main app. Play, pause, seek and speed changes are reflected in the preview, which has no controls of its own.
+
+The preview shows the scoreline and clock, the synthetic event animation, and a lower-third graphic for the most important insight from the last two match minutes. That graphic uses the Studio wording and is labelled with where that wording came from (for example `template`). The preview always uses Studio presentation, whatever viewer mode the main app is in. If you change language later, open the preview again.
+
+For a clean graphics layer, use **Overlay output** (`/overlay`), linked from the preview. It is a transparent lower-third only, suitable as a browser source in tools such as OBS. Both routes share playback through `session=<UUID>`; separate browser sessions stay isolated.
+
+No video is streamed or transmitted. This is a broadcast-oriented prototype, not a production video integration.
+
+![Broadcast Preview - scoreline, synthetic event animation and the flagship attack-channel insight as a lower-third graphic](docs/img/broadcast-preview.png)
 
 ## Languages
 
@@ -102,7 +120,8 @@ synthetic events → deterministic analytics → grounded InsightContext → Tac
   topology + trace in the Agents tab. See [agents](docs/AGENTS.md).
 - **Player focus and passing** - analyst passing totals, long-ball-share shift detection, player summaries with
   event IDs and timelines, and player-related insights ranked first.
-- **Broadcast Preview** - `/broadcast` previews broadcast-style graphics over synthetic event animation; `/overlay` is the cleaner transparent graphics output. Neither route transmits video. Independent session IDs keep viewer controls separate.
+- **Broadcast Preview** - a second-screen, broadcast-style view that follows the app's playback; `/overlay` is the
+  transparent graphics-only output. See [Broadcast Preview](#broadcast-preview-second-screen).
 - **Broadcast UI** - React + TypeScript: live pitch, insight feed, momentum and pressure charts, highlight
   scrubber, playback at 1x/2x/5x/10x with seeking, recaps, language and viewer-mode switching.
 - **Microsoft stack** - Azure App Service hosts the app; Microsoft Agent Framework uses Microsoft Foundry `gpt-4.1-mini` through managed identity. Foundry Evaluations measures output quality. Application Insights (OpenTelemetry) and Fabric-ready exports (JSONL / CSV / Parquet) are also present. Container Apps definitions are an alternative deployment option, not the current host.
@@ -274,7 +293,7 @@ dotnet run --project src/MatchShift.Api --launch-profile http   # open http://lo
 
 Or Docker: `docker build -t matchshift . && docker run -p 8080:8080 matchshift` → http://localhost:8080
 
-Press **Play**. 1x = 30 match-seconds per real second (a full match in 3 minutes); 2x is the demo default.
+Press **Play**. 1x = 30 match-seconds per real second (a full match in 3 minutes); 2x is the demo default. Click **Broadcast Preview** to open the synchronized broadcast-graphics view in a second tab.
 
 ## Tests and evaluation
 
